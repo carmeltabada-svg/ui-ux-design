@@ -1,0 +1,46 @@
+{
+  "name": "email-templates",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@formkit/addons": "^2.1.2",
+    "@formkit/nuxt": "^2.1.2",
+    "@iconify-json/lucide": "^1.2.127",
+    "@nuxt/ui": "^4.11.0",
+    "@tiptap/core": "3.31.2",
+    "@tiptap/extension-color": "3.31.2",
+    "@tiptap/extension-highlight": "3.31.2",
+    "@tiptap/extension-image": "^3.31.2",
+    "@tiptap/extension-table": "3.31.2",
+    "@tiptap/extension-table-cell": "3.31.2",
+    "@tiptap/extension-table-header": "3.31.2",
+    "@tiptap/extension-table-row": "3.31.2",
+    "@tiptap/extension-text-align": "3.31.2",
+    "@tiptap/extension-text-style": "3.31.2",
+    "@tiptap/extensions": "3.31.2",
+    "@tiptap/starter-kit": "3.31.2",
+    "@tiptap/vue-3": "3.31.2",
+    "microdiff": "^1.6.0",
+    "nuxt": "^4.5.2",
+    "pagedjs": "^0.4.3",
+    "tailwindcss": "^4.3.3",
+    "tiptap-pagination-plus": "^3.1.0",
+    "vue3-colorpicker": "^2.3.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^10.9.1",
+    "typescript": "^6.0.3",
+    "vue-tsc": "^3.3.11"
+  },
+  "packageManager": "pnpm@11.24.0"
+}

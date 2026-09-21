@@ -1,0 +1,623 @@
+<title>Outlook-Proof Patterns</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f5f3ee;
+    --surface: #ffffff;
+    --surface-sunk: #efece3;
+    --ink: #211d16;
+    --ink-soft: #6b6555;
+    --line: #ddd6c4;
+    --line-soft: #e8e2d2;
+    --accent: #2f5aa0;
+    --accent-ink: #1d3c72;
+    --accent-soft: #e3ebf7;
+    --warn: #9a5a1f;
+    --warn-soft: #f6ead7;
+    --ok: #3f6b45;
+    --ok-soft: #e7f0e3;
+    --code-bg: #1c1a15;
+    --code-ink: #eee7d4;
+    --code-accent: #f2b23a;
+    --code-string: #b7d99a;
+    --code-comment: #8b8470;
+    --shadow: 0 1px 2px rgba(33,29,22,0.06), 0 8px 24px -12px rgba(33,29,22,0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17150f;
+      --surface: #201d16;
+      --surface-sunk: #1a1811;
+      --ink: #ece6d6;
+      --ink-soft: #a39d89;
+      --line: #37331f;
+      --line-soft: #2b2818;
+      --accent: #7ba3e0;
+      --accent-ink: #bcd4f2;
+      --accent-soft: #223349;
+      --warn: #e0a659;
+      --warn-soft: #3a2c17;
+      --ok: #8fc496;
+      --ok-soft: #1e2f1d;
+      --code-bg: #0e0d09;
+      --code-ink: #e9e2cd;
+      --code-accent: #f2b23a;
+      --code-string: #b7d99a;
+      --code-comment: #6f6a56;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #17150f;
+    --surface: #201d16;
+    --surface-sunk: #1a1811;
+    --ink: #ece6d6;
+    --ink-soft: #a39d89;
+    --line: #37331f;
+    --line-soft: #2b2818;
+    --accent: #7ba3e0;
+    --accent-ink: #bcd4f2;
+    --accent-soft: #223349;
+    --warn: #e0a659;
+    --warn-soft: #3a2c17;
+    --ok: #8fc496;
+    --ok-soft: #1e2f1d;
+    --code-bg: #0e0d09;
+    --code-ink: #e9e2cd;
+    --code-accent: #f2b23a;
+    --code-string: #b7d99a;
+    --code-comment: #6f6a56;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.6;
+    padding-inline: max(16px, calc((100vw - 1180px) / 2));
+  }
+
+  a { color: var(--accent); }
+
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; text-wrap: balance; color: var(--ink); }
+
+  .shell {
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-block: 40px 96px;
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 28px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .masthead .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 10px;
+  }
+  .masthead h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .masthead p.dek {
+    max-width: 54ch;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .masthead .meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    text-align: right;
+    line-height: 1.7;
+    white-space: nowrap;
+  }
+  .masthead .meta strong { color: var(--ink); font-weight: 500; }
+
+  /* ---------- Sidebar / TOC ---------- */
+  nav.toc {
+    position: sticky;
+    top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-self: start;
+  }
+  nav.toc .toc-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 10px;
+  }
+  nav.toc a {
+    display: block;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); background: var(--surface-sunk); }
+  nav.toc a.current { color: var(--accent-ink); border-left-color: var(--accent); font-weight: 500; }
+  nav.toc .toc-sub { padding-left: 22px; font-size: 12.5px; }
+
+  main { min-width: 0; display: flex; flex-direction: column; gap: 56px; }
+
+  section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 24px; }
+
+  .sec-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .sec-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  section h2 { font-size: 23px; font-weight: 600; margin: 0; }
+  section > p.lede { max-width: 68ch; color: var(--ink-soft); margin: -6px 0 4px; }
+
+  /* ---------- Pattern card ---------- */
+  .pattern {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .pattern-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line-soft);
+    flex-wrap: wrap;
+  }
+  .pattern-head h3 {
+    font-size: 16.5px;
+    font-weight: 500;
+    margin: 0;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--ink);
+  }
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .tag.bug { background: var(--warn-soft); color: var(--warn); }
+  .tag.fixed { background: var(--ok-soft); color: var(--ok); }
+  .tag.pattern-tag { background: var(--accent-soft); color: var(--accent-ink); }
+
+  .pattern-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .pattern-body p { margin: 0; }
+  .pattern-body p.why { color: var(--ink-soft); font-size: 14px; }
+
+  .kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 14px;
+    font-size: 13.5px;
+  }
+  .kv dt { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); padding-top: 2px; }
+  .kv dd { margin: 0; color: var(--ink); }
+
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
+  pre .c { color: var(--code-comment); font-style: italic; }
+  pre .k { color: var(--code-accent); }
+  pre .s { color: var(--code-string); }
+  code.inline {
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--surface-sunk);
+    border: 1px solid var(--line-soft);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.88em;
+  }
+
+  /* ---------- Field/spec grid used in intro ---------- */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .stat-row .stat {
+    background: var(--surface);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat .stat-num { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .stat .stat-label { font-size: 11.5px; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.02em; }
+
+  /* ---------- Callout ---------- */
+  .callout {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--line-soft);
+    background: var(--surface-sunk);
+    font-size: 13.5px;
+  }
+  .callout.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 30%, var(--line-soft)); }
+  .callout .icon { font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--warn); flex-shrink: 0; }
+  .callout p { margin: 0; }
+
+  /* ---------- Two-up diagram row ---------- */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .compare .col {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .compare .col.bad { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 25%, var(--line)); }
+  .compare .col.good { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 25%, var(--line)); }
+  .compare .col h4 { margin: 0; font-size: 12px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
+  .compare .col.bad h4 { color: var(--warn); }
+  .compare .col.good h4 { color: var(--ok); }
+  .compare .col p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Checklist ---------- */
+  .checklist { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .checklist li { list-style: none; }
+  .checklist ul { margin: 0; padding: 0; }
+  .checklist li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 13.5px;
+    background: var(--surface);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li .mark {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ok);
+    flex-shrink: 0;
+  }
+  .checklist li strong { font-weight: 500; }
+  .checklist li span.detail { color: var(--ink-soft); }
+
+  footer {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; }
+    nav.toc { position: static; flex-direction: row; flex-wrap: wrap; }
+    nav.toc .toc-sub { display: none; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .compare { grid-template-columns: 1fr; }
+    .masthead .meta { text-align: left; }
+  }
+</style>
+
+<div class="shell">
+
+  <div class="masthead">
+    <div>
+      <p class="eyebrow">Reference &middot; Email Builder Engineering</p>
+      <h1>Outlook-Proof Patterns</h1>
+      <p class="dek">Nine implementation patterns for building a Tiptap-based email editor whose output survives Outlook's Word rendering engine — kept as a working reference to reuse across future design/build rounds, not just this project.</p>
+    </div>
+    <div class="meta">
+      Source&nbsp;project: <strong>GoTeam AMS &middot; Templates</strong><br>
+      Stack: <strong>Nuxt&nbsp;4 &middot; Tiptap&nbsp;v3 &middot; Nuxt&nbsp;UI&nbsp;v4</strong><br>
+      Updated <strong>14 Sep 2026</strong>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <p class="toc-label">Contents</p>
+    <a href="#why" class="current">Why Outlook breaks things</a>
+    <a href="#rendering">01 &middot; Rendering pipeline</a>
+    <a href="#p-merge">02 &middot; Style merge, not overwrite</a>
+    <a href="#p-fonttags">03 &middot; Legacy font tags</a>
+    <a href="#p-buttons">04 &middot; Bulletproof buttons</a>
+    <a href="#p-crop">05 &middot; Pixel crop, not CSS fit</a>
+    <a href="#p-trailing">06 &middot; Footer-aware trailing node</a>
+    <a href="#p-move">07 &middot; Insert-before-strip</a>
+    <a href="#p-select">08 &middot; Scoped stopEvent</a>
+    <a href="#p-href">09 &middot; Fake href, real export</a>
+    <a href="#checklist">Porting checklist</a>
+  </nav>
+
+  <main>
+
+    <section id="why">
+      <div class="sec-head"><h2>Why Outlook breaks things</h2></div>
+      <p class="lede">Outlook for Windows doesn't render HTML with a browser engine — it hands the message to Word's HTML renderer. Word supports a subset of CSS from roughly 2000, ignores the rest silently, and applies its own paste-mode rules on top. Every pattern below exists because something that looks correct in Chrome renders wrong, or not at all, once it passes through that pipeline.</p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-num">0</span><span class="stat-label">object-fit support</span></div>
+        <div class="stat"><span class="stat-num">640×140</span><span class="stat-label">header banner crop</span></div>
+        <div class="stat"><span class="stat-num">640×100</span><span class="stat-label">footer banner crop</span></div>
+        <div class="stat"><span class="stat-num">9</span><span class="stat-label">patterns catalogued</span></div>
+      </div>
+    </section>
+
+    <section id="rendering">
+      <div class="sec-head"><span class="sec-num">01</span><h2>Two renderers, one document</h2></div>
+      <p class="lede">The editor and the export function never share output — they read the same Tiptap document but disagree on purpose. Design tools this way whenever the editing surface (browser-rendered) and the delivery surface (a foreign rendering engine, a printed page, a different app) have different capabilities.</p>
+      <div class="compare">
+        <div class="col">
+          <h4>Editing surface</h4>
+          <p>Vue NodeViews render live in the browser. Full CSS available: flex, custom NodeView chrome, hover states, drag handles. Optimized for manipulation, not fidelity.</p>
+        </div>
+        <div class="col">
+          <h4>Export surface</h4>
+          <p><code class="inline">emailExportHtml.ts</code> walks the same document a second time and rebuilds it as nested tables with inline styles and legacy tags — optimized for surviving Word's renderer, never shown on screen.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="p-merge">
+      <div class="sec-head"><span class="sec-num">02</span><h2>Merge inline styles, never overwrite</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>mergeStyle()</h3>
+          <span class="tag fixed">Root cause of the fidelity round</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">The original export code replaced an element's <code class="inline">style</code> attribute wholesale with computed defaults, silently discarding anything already set — that's why callout/banner fills, text color, and highlight color kept vanishing on paste even though the editor showed them correctly.</p>
+          <pre>function mergeStyle(existing: string, defaults: Record&lt;string, string&gt;) {
+  <span class="c">// existing declarations win — defaults only fill gaps</span>
+  const parsed = { ...defaults, ...parseStyle(existing) }
+  return Object.entries(parsed)
+    .map(([k, v]) =&gt; `${k}:${v}`)
+    .join(';')
+}</pre>
+          <p>Applied everywhere the export pipeline touches an element that might already carry author styling: table cells, headers, blockquotes, banners.</p>
+        </div>
+      </article>
+    </section>
+
+    <section id="p-fonttags">
+      <div class="sec-head"><span class="sec-num">03</span><h2>Legacy &lt;font&gt; tags for character runs</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>wrapCharacterRunsInFont() + stampMsoHighlight()</h3>
+          <span class="tag pattern-tag">Word quirk</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">Text color, size, and highlight are set with modern CSS in the editor (<code class="inline">color</code>, <code class="inline">background-color</code>, <code class="inline">font-size</code>). Word's "Merge Formatting" paste mode — a client-side setting outside the app's control — drops modern character-run CSS but honors the ancient <code class="inline">&lt;font color&gt;</code> tag and Word's own <code class="inline">mso-highlight</code> property.</p>
+          <div class="kv">
+            <dt>Color</dt><dd>wrap the run in <code class="inline">&lt;font color="#…"&gt;</code> in addition to the CSS</dd>
+            <dt>Highlight</dt><dd>stamp both <code class="inline">background:</code> and <code class="inline">mso-highlight:</code> on the span</dd>
+            <dt>Size</dt><dd><code class="inline">pxToFontSize()</code> maps px to Word's 1–7 <code class="inline">&lt;font size&gt;</code> scale</dd>
+          </div>
+          <div class="callout warn">
+            <span class="icon">note</span>
+            <p>"Merge Formatting" itself can't be fixed from the app side — it's a per-recipient Outlook preference. These tags are a hedge that makes the common case (Keep Source Formatting, or Merge Formatting with the fallback tags present) survive; there's no HTML that defeats a user's own paste-mode choice.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="p-buttons">
+      <div class="sec-head"><span class="sec-num">04</span><h2>The bulletproof-button table</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>tableizeButtons()</h3>
+          <span class="tag bug">Bug: button rendered oversized</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">A styled <code class="inline">&lt;a&gt;</code> with padding renders correctly in every browser but stretches to fill its container in Word — the classic email-dev complaint. The standard fix is a single-cell table where the cell is forced to its minimum content width.</p>
+          <pre>&lt;table role="presentation" cellpadding="0" cellspacing="0"&gt;
+  &lt;tr&gt;
+    &lt;td <span class="k">width="1"</span> <span class="k">style="white-space:nowrap; mso-padding-alt:12px 24px;"</span>
+        bgcolor="#2f5aa0"&gt;
+      &lt;a href="..." style="color:#fff; text-decoration:none; display:block;"&gt;
+        Click Here
+      &lt;/a&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;</pre>
+          <p><code class="inline">width="1"</code> looks wrong but is the trick — it forces Word's table layout down to the cell's minimum, and <code class="inline">white-space:nowrap</code> stops the label wrapping once the cell is that narrow, so it re-expands to fit the text exactly.</p>
+        </div>
+      </article>
+    </section>
+
+    <section id="p-crop">
+      <div class="sec-head"><span class="sec-num">05</span><h2>Crop pixels, don't fake it with CSS</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>cropImageToAspect()</h3>
+          <span class="tag bug">Corrected mid-session</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">First attempt: <code class="inline">object-fit: cover</code> plus fixed width/height attributes. Looked right in the browser, distorted in real Outlook — Word has no concept of <code class="inline">object-fit</code>, so it forces the raw image into the stated box. The client correction was explicit: keep the full-width, no-padding banner behavior, but make the pixels themselves already the right shape.</p>
+          <pre>async function cropImageToAspect(src: string, aspect: { w: number; h: number }, outputWidth = 1280) {
+  const img = await loadImage(src)
+  const canvas = document.createElement('canvas')
+  canvas.width = outputWidth
+  canvas.height = Math.round(outputWidth * (aspect.h / aspect.w))
+  const ctx = canvas.getContext('2d')!
+  <span class="c">// cover-style crop: scale to fill, center-crop the overflow axis</span>
+  drawCover(ctx, img, canvas.width, canvas.height)
+  return canvas.toDataURL('image/png')  <span class="c">// stored — not recomputed on every render</span>
+}</pre>
+          <p>Because the stored <code class="inline">src</code> is already exactly 640×140 or 640×100, no CSS trick is needed on either the editor surface or the export surface — the two renderers finally agree, because there's nothing left for either of them to interpret.</p>
+        </div>
+      </article>
+    </section>
+
+    <section id="p-trailing">
+      <div class="sec-head"><span class="sec-num">06</span><h2>Trailing-node safety, with one exception</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>EmailTrailingNode</h3>
+          <span class="tag fixed">Client correction: don't disable it globally</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">StarterKit's built-in <code class="inline">TrailingNode</code> re-appends an empty paragraph whenever the document ends on a non-text atom — normally good UX (always somewhere to keep typing) but it re-created the exact empty-space-below-the-footer bug on every transaction. Disabling it outright broke that same safety net for tables, callouts, and header/plain images. The fix is the one-line exception, not the blanket flag.</p>
+          <pre>appendTransaction: (transactions, _oldState, state) =&gt; {
+  if (!transactions.some(tr =&gt; tr.docChanged)) return null
+  const last = state.doc.lastChild
+  if (!last) return null
+  if (last.type.name === 'paragraph') return null
+  <span class="k">if (last.type.name === 'image' && last.attrs.role === 'footer') return null</span>
+  return state.tr.insert(state.doc.content.size, state.schema.nodes.paragraph.create())
+}</pre>
+        </div>
+      </article>
+    </section>
+
+    <section id="p-move">
+      <div class="sec-head"><span class="sec-num">07</span><h2>Insert first, strip second</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>moveToEdge()</h3>
+          <span class="tag bug">Caused an actual tab hang</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">Auto-positioning a header/footer image to the true top/bottom of the document, then cleaning up the empty paragraph it leaves behind, seems like strip-then-insert. Doing it in that order can walk the document to zero block children mid-transaction — ProseMirror's schema minimum silently refills a new empty paragraph the instant that happens, and a naive cleanup loop sees that fresh paragraph as "still empty" and deletes it again. Forever. A real infinite loop, not just a logic gap.</p>
+          <div class="compare">
+            <div class="col bad">
+              <h4>Strip, then insert</h4>
+              <p>Doc can hit 0 children mid-transaction → schema auto-refills a paragraph → cleanup loop never terminates.</p>
+            </div>
+            <div class="col good">
+              <h4>Insert, then strip</h4>
+              <p>The image itself always satisfies the schema minimum, so childCount never hits zero — every other empty sibling can be removed safely.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="p-select">
+      <div class="sec-head"><span class="sec-num">08</span><h2>Scope stopEvent to the chrome, not the node</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>EmailImage NodeView options</h3>
+          <span class="tag bug">Made the image unselectable</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">An unconditional <code class="inline">stopEvent: () =&gt; true</code> was meant to stop the settings-gear popover from triggering ProseMirror's own selection logic — but it swallowed every event on the node, including a plain click on the image itself, so the image could never be selected (and the alignment toolbar could never apply to it).</p>
+          <pre>addNodeView() {
+  return VueNodeViewRenderer(EmailImageNodeView, {
+    stopEvent: ({ event }) =&gt;
+      <span class="k">!!(event.target as HTMLElement | null)?.closest('[data-email-image-chrome]')</span>
+  })
+}</pre>
+          <p>Only events that originate inside the gear popover's marked chrome are swallowed — a click anywhere else on the node falls through to ProseMirror's default click-to-<code class="inline">NodeSelection</code> behavior, same as any other atom.</p>
+        </div>
+      </article>
+    </section>
+
+    <section id="p-href">
+      <div class="sec-head"><span class="sec-num">09</span><h2>Fake the href on screen, make it real on export</h2></div>
+      <article class="pattern">
+        <div class="pattern-head">
+          <h3>ButtonLink.href ↔ data-href</h3>
+          <span class="tag fixed">Final fix, after two failed attempts</span>
+        </div>
+        <div class="pattern-body">
+          <p class="why">A real <code class="inline">&lt;a href&gt;</code> in the editor competes with ProseMirror for the click — intercepting the click event (<code class="inline">preventDefault</code>, then a manual <code class="inline">mousedown</code> handler resolving position via <code class="inline">posAtDOM</code>) worked in one test and silently navigated the tab in the next. Removing the real <code class="inline">href</code> entirely removes the competition instead of refereeing it — a bare <code class="inline">&lt;a&gt;</code> with no <code class="inline">href</code> is not navigable by any browser.</p>
+          <pre><span class="c">// tiptapExtensions.ts — the node's own attribute definition</span>
+href: {
+  default: '',
+  parseHTML: el =&gt; el.getAttribute('data-href') || '',
+  renderHTML: attrs =&gt; ({ 'data-href': attrs.href || '' })
+}
+
+<span class="c">// emailExportHtml.ts — the export step is the only place a real href appears</span>
+const href = el.getAttribute('data-href') || '#'</pre>
+          <div class="callout">
+            <span class="icon">gotcha</span>
+            <p>A node's <code class="inline">renderHTML({ HTMLAttributes })</code> parameter is the already-merged <em>output</em> of every attribute's own <code class="inline">renderHTML</code> — not the raw node attrs. An attribute whose own <code class="inline">renderHTML</code> intentionally returns <code class="inline">{}</code> (like <code class="inline">align</code> here, which only affects a wrapping element) will read back as <code class="inline">undefined</code> from <code class="inline">HTMLAttributes</code>. Read <code class="inline">node.attrs.align</code> directly instead.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="checklist">
+      <div class="sec-head"><h2>Porting checklist</h2></div>
+      <p class="lede">Before reusing any of this on a new template surface — a different email builder, a PDF export, a print stylesheet — walk this list.</p>
+      <div class="checklist">
+        <ul>
+          <li><span class="mark">01</span><span><strong>Does the target renderer disagree with the browser?</strong> <span class="detail">If export and edit surfaces are the same engine, most of this doesn't apply — go straight to a shared render path instead of two.</span></span></li>
+          <li><span class="mark">02</span><span><strong>Merge styles, never overwrite them,</strong> <span class="detail">anywhere the export pipeline touches an element a user may have already styled.</span></span></li>
+          <li><span class="mark">03</span><span><strong>Never crop or resize with CSS</strong> <span class="detail">if the target renderer might not honor the CSS property doing the work — crop the actual pixels once, at insert time.</span></span></li>
+          <li><span class="mark">04</span><span><strong>Order transaction operations around schema minimums.</strong> <span class="detail">Insert the node that will satisfy the minimum before stripping anything, never after.</span></span></li>
+          <li><span class="mark">05</span><span><strong>Scope stopEvent to the smallest DOM region that needs it,</strong> <span class="detail">not the whole node — the default click-to-select behavior is usually worth keeping.</span></span></li>
+          <li><span class="mark">06</span><span><strong>If a live element competes with the framework for a click,</strong> <span class="detail">remove the competing native behavior at the source rather than intercepting the event.</span></span></li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>GoTeam AMS &middot; Templates builder</span>
+    <span>Kept as a living reference — extend it each time a new pattern earns its place.</span>
+  </footer>
+
+</div>

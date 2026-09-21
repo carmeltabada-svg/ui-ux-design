@@ -1,0 +1,33 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Test artifacts
+test-results
+playwright-report
+blob-report
+playwright/.cache
+
+# Claude Code local tooling (not part of the app)
+.claude/settings.local.json
+
+# Local env files
+.env
+.env.*
+!.env.example

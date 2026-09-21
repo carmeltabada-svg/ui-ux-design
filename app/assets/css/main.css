@@ -1,0 +1,387 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* Any overlay that locks body scroll (dropdown menus, modals, slideovers)
+   sets `overflow: hidden` directly on <body>. That has two bad side effects:
+   (1) it makes <body> its own scroll-clip container, which stops it from
+   propagating an "I need to scroll" signal up to <html> - so <html> drops
+   its scrollbar mid-interaction and the page's visible width changes for as
+   long as the overlay is open, while the overlay library *also* adds its
+   own compensating `padding-right` to <body> to make up for a scrollbar it
+   assumes just disappeared, fighting the first effect. (2) <body> having
+   its own overflow is exactly the condition `position: sticky` uses to
+   decide what a sticky descendant sticks *within* - every sticky element in
+   this app (the sidebar, the sticky page headers) is meant to stick
+   relative to the real page scroll on <html>, but once body has its own
+   overflow they start sticking relative to body's own (non-scrolling, so
+   not moving) box instead, and appear to fly off past the top or bottom of
+   the viewport. Forcing body to stay `overflow: visible` always removes the
+   trigger for both - body never actually goes to `overflow: hidden`, so
+   <html>'s own scrollbar state (and every sticky element) stays exactly as
+   it would with no overlay open at all. Deliberately *not* forcing a
+   permanent `scrollbar-gutter` reservation on <html> here - that would
+   leave a dead unfilled strip on any page whose content doesn't reach the
+   bottom of the viewport (or, like the form builder, scrolls internally
+   instead of at the page level) instead of the scrollbar simply not
+   appearing where it isn't needed. */
+html {
+  scroll-behavior: smooth;
+}
+body {
+  overflow: visible !important;
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* A scrollable region's content edge fading out instead of stopping dead at
+   a hard line - the same "sliding under glass" cue used for the templates
+   list under its sticky toolbar, generalized as one utility for every other
+   scrollable drawer/dropdown/panel in the app. `-y` fades the top+bottom
+   edges (a vertical list); `-x` fades the left+right edges.
+
+   `.fade-scroll-y`/`.fade-scroll-x` are only *markers* - they carry no mask
+   of their own. `app/plugins/fadeScroll.client.ts` watches every element
+   that carries one (via ResizeObserver + a body-wide MutationObserver, since
+   several of these are popover/drawer content that mounts later or resizes
+   as its own content changes) and toggles `.is-overflowing` on it exactly
+   when that element's content is actually taller/wider than its own box -
+   that's the actual mask trigger below. A short list that fits with room to
+   spare gets no fade at all, since there's nothing to scroll to. */
+.fade-scroll-y.is-overflowing {
+  mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
+}
+.fade-scroll-x.is-overflowing {
+  mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+}
+
+@theme static {
+  --font-sans: 'Public Sans', sans-serif;
+
+  --color-green-50: #EFFDF5;
+  --color-green-100: #D9FBE8;
+  --color-green-200: #B3F5D1;
+  --color-green-300: #75EDAE;
+  --color-green-400: #00DC82;
+  --color-green-500: #00C16A;
+  --color-green-600: #00A155;
+  --color-green-700: #007F45;
+  --color-green-800: #016538;
+  --color-green-900: #0A5331;
+  --color-green-950: #052E16;
+}
+
+:root {
+  /* original design always uses a single flat #386BE6, not a Tailwind blue shade ramp */
+  --ui-primary: #386BE6;
+
+  /* Nuxt UI's default neutral/status tokens compile to oklch(), which
+     html2canvas (form-preview.vue's PDF export) can't parse - it clones and
+     walks the whole document's computed styles, so even ancestors outside the
+     captured element trip it. Pinned to hex equivalents so any future
+     html2canvas/print-style capture works app-wide, not just one page. */
+  --ui-text: #334155;
+  --ui-text-muted: #64748b;
+  --ui-text-dimmed: #94a3b8;
+  --ui-text-highlighted: #0f172a;
+  --ui-text-toned: #475569;
+  --ui-bg-muted: #f8fafc;
+  --ui-bg-elevated: #f1f5f9;
+  --ui-bg-accented: #e2e8f0;
+  --ui-bg-inverted: #0f172a;
+  --ui-border: #e2e8f0;
+  --ui-border-muted: #e2e8f0;
+  --ui-border-accented: #cbd5e1;
+  --ui-border-inverted: #0f172a;
+  --ui-warning: #f59e0b;
+  --ui-error: #ef4444;
+  --ui-info: #3b82f6;
+}
+
+.dark {
+  --ui-primary: #386BE6;
+}
+
+/* every {{TOKEN}} / sample value is highlighted by default so users can spot
+   placeholders at a glance; clicking one syncs + highlights its pair in a
+   stronger, more saturated blue so the "just clicked" state stands out from
+   the soft always-on default */
+.tok-hl {
+  background-color: rgba(56, 107, 230, 0.09);
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+}
+.tok-hl:hover {
+  background-color: rgba(56, 107, 230, 0.18);
+}
+.tok-hl.tok-active {
+  background-color: rgba(56, 107, 230, 0.35);
+  color: #1e3a8a;
+  box-shadow: 0 0 0 1px rgba(56, 107, 230, 0.65);
+  animation: tok-pulse 0.6s ease;
+}
+@keyframes tok-pulse {
+  0% { background-color: rgba(56, 107, 230, 0.6); }
+  100% { background-color: rgba(56, 107, 230, 0.35); }
+}
+
+/* custom two-line tooltip for placeholder tokens (name above, {{CODE}} below),
+   replacing the browser's native title tooltip - always light, regardless of
+   system color scheme */
+[data-tip-name] {
+  position: relative;
+}
+[data-tip-name]:hover::after {
+  content: attr(data-tip-name) "\A" attr(data-tip-code);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 6px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: pre-line;
+  text-align: center;
+  width: max-content;
+  max-width: 220px;
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+/* Tiptap body editor content - Tailwind resets remove default list/quote styling */
+/* A long unbroken run of characters (no spaces - a URL, a pasted ID, or
+   someone just holding down a key) otherwise overflowed straight past its
+   container's edge instead of wrapping, both here and in the sample preview
+   panel (EmailPreviewPane.vue) which shares this same class - `overflow-wrap`
+   lets the browser break mid-word only when a line genuinely has nowhere
+   else to break, so normal text still wraps at spaces first. */
+.prose-tiptap {
+  overflow-wrap: break-word;
+}
+.prose-tiptap ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.prose-tiptap ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.prose-tiptap blockquote {
+  border-left: 3px solid var(--ui-border);
+  padding-left: 0.75rem;
+  color: var(--ui-text-muted);
+  font-style: italic;
+}
+.prose-tiptap h2 {
+  /* Was 1.1em (~15.4px against the editor's own 14px base) - barely bigger
+     than the toolbar's own "Large" text-size option (18px, see
+     BlockToolbar.vue's fontSizeItems), so the two read as nearly the same
+     size with only bold weight telling them apart. A real heading should be
+     a clearly bigger step up than a plain large-text run, not just bolder
+     at nearly the same size. */
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.4em 0;
+}
+.prose-tiptap p {
+  margin: 0.5em 0;
+}
+.prose-tiptap a {
+  color: var(--ui-primary);
+  text-decoration: underline;
+}
+/* A fallback only - `EmailImageNodeView.vue` sets width/height/display/
+   margin/border directly as an inline style per-role (plain/header/footer,
+   see `emailImageStyle()` in tiptapExtensions.ts), which always wins over
+   this stylesheet rule for any property both define. What actually still
+   applies from here is `border-radius` (a plain image keeps soft corners; a
+   header/footer explicitly zeroes it back out for a true edge-to-edge look -
+   see emailImageStyle's own comment on that). */
+.prose-tiptap img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+  margin: 0 0 1em;
+}
+.prose-tiptap img.ProseMirror-selectednode {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: 2px;
+}
+/* ProseMirror always needs an editable text node directly after a block
+   atom (an image included) so there's somewhere to place the cursor to keep
+   typing below it - that empty paragraph itself is necessary and can't be
+   removed, but it still carries the same `margin: 0.5em 0` as any other
+   paragraph (see `.prose-tiptap p` above), which on top of its own line
+   height read as a noticeably large dead gap directly under an image that
+   otherwise has zero margin of its own (a header/footer banner especially -
+   see `emailImageStyle()` in tiptapExtensions.ts). Zeroing just its top
+   margin keeps the cursor line but collapses that gap back down to roughly
+   one normal line height instead of a line-and-a-half's worth of margin -
+   note this is purely an in-editor cosmetic (the actual copy/EML export
+   drops this empty paragraph's row entirely rather than just shrinking it,
+   see `isBlankContent` in emailExportHtml.ts - that's what fixes the dead
+   white space actually showing up once pasted). */
+.prose-tiptap [data-email-image-node] + p.is-empty {
+  margin: 0;
+}
+.prose-tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+/* tiptap-pagination-plus's own CSS sets the `<table>` element itself to
+   `display: contents` (see its injected `.rm-with-pagination table` rule) -
+   it dissolves the table's own box so its page-break gap divs can be
+   inserted between rows, splitting a table across pages. That leaves
+   `tbody` as the element that actually establishes the table's real layout
+   box (the plugin's own CSS explicitly sets `tbody { display: table }`),
+   so `width: 100%` on `table` itself has nothing to apply to - only `tbody`
+   does, and without `table-layout: fixed` there the browser falls back to
+   each column's own intrinsic content width instead of splitting the full
+   page width evenly, which is why a freshly-inserted table rendered small
+   instead of spanning the page the way a real Word table does. */
+.prose-tiptap table tbody {
+  table-layout: fixed;
+  width: 100%;
+}
+.prose-tiptap th,
+.prose-tiptap td {
+  border: 1px solid var(--ui-border);
+  padding: 6px 10px;
+  text-align: left;
+  /* Containing block for .selectedCell:after and the column-resize handle
+     below - both are absolutely positioned against their own cell. */
+  position: relative;
+}
+/* @tiptap/extension-table's own cell-selection plugin and column-resize
+   plugin both work with no CSS at all needed for their JS/DOM logic (the
+   selection and drag math all already worked) - but neither one draws
+   anything visible without this CSS, which is why there was no visible
+   "hover behavior" on a table at all: a resizable table's column-resize
+   handle exists in the DOM on every column boundary already, it was just
+   invisible (zero visual affordance) and the multi-cell selection tint
+   never rendered either. This is Tiptap's own documented CSS for the table
+   extension, not something invented here. */
+.prose-tiptap .selectedCell:after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--ui-primary) 15%, transparent);
+  content: '';
+  pointer-events: none;
+}
+.prose-tiptap .column-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: -2px;
+  right: -2px;
+  width: 4px;
+  z-index: 3;
+  background-color: var(--ui-primary);
+  pointer-events: none;
+}
+.prose-tiptap.resize-cursor {
+  cursor: col-resize;
+}
+/* The hover affordance itself - a table cell brightens slightly on hover so
+   the table reads as an interactive grid (matching the resize-handle/
+   selection cues above), not inert text in a box. */
+.prose-tiptap td:hover,
+.prose-tiptap th:hover {
+  background-color: color-mix(in srgb, var(--ui-primary) 6%, transparent);
+}
+/* No default fill - a freshly-inserted table looks like a real Word table
+   (plain borders, no header shading) until someone explicitly turns the
+   header row's own color on via the table toolbar (see TableHeaderStyled in
+   ~/utils/tiptapExtensions.ts, which renders that choice as an inline style
+   on the `th` itself, not through this stylesheet). */
+.prose-tiptap th {
+  font-weight: 600;
+}
+.prose-tiptap mark {
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.prose-tiptap [data-callout] {
+  border-left: 3px solid rgb(137, 75, 0);
+  /* Was a fully-saturated rgb(254, 249, 194) - a vivid, glare-y yellow that
+     read as "too contrasted"/hard on the eyes to read for any length of
+     time. A light alpha tint of the same amber (same technique as the
+     message-banner below) keeps the callout's identity/border/text color
+     but as a much softer wash instead of a solid bright fill. */
+  background: rgba(202, 138, 4, 0.08);
+  color: rgb(137, 75, 0);
+  /* accent border sits flush against the left edge - only the outer corners
+     away from it (top-right/bottom-right) stay rounded */
+  border-radius: 0 6px 6px 0;
+  padding: 0.6em 0.8em;
+  margin: 0.5em 0;
+}
+.prose-tiptap [data-message-banner] {
+  border-left: 3px solid var(--ui-primary);
+  background: rgba(56, 107, 230, 0.08);
+  color: var(--ui-text);
+  border-radius: 0;
+  padding: 0.6em 0.8em;
+  margin: 0.5em 0;
+}
+.prose-tiptap [data-btn-link] {
+  display: inline-block;
+  background: var(--ui-primary);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.6em 1.4em;
+  border-radius: 8px;
+  margin: 0.5em 0;
+  cursor: default;
+}
+
+/* Tiptap Placeholder extension - ghost guidance text for empty paragraphs,
+   incl. ones inside a callout/banner/blockquote. Text is keyed off the DOM
+   ancestor (not the extension's own dynamic `placeholder` text) since which
+   container a position resolves to raced between Tiptap's incremental and
+   full-rescan decoration paths. */
+.prose-tiptap p.is-empty::before,
+.prose-tiptap p.is-editor-empty::before {
+  color: var(--ui-text-dimmed);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.prose-tiptap p.is-empty::before { content: 'Start typing your email…'; }
+.prose-tiptap [data-callout] p.is-empty::before { content: 'Write your callout message…'; }
+.prose-tiptap [data-message-banner] p.is-empty::before { content: 'Write your banner message…'; }
+.prose-tiptap blockquote p.is-empty::before { content: 'Type your quote…'; }
+/* table cells: suppress the generic per-cell placeholder (every empty cell
+   inheriting "Start typing your email..." reads as a bug, not guidance) and
+   show a single one-time hint in just the first cell instead */
+.prose-tiptap td p.is-empty::before,
+.prose-tiptap th p.is-empty::before {
+  content: '';
+}
+.prose-tiptap tr:first-child :is(td, th):first-child p.is-empty::before {
+  content: 'Fill in table details…';
+}
+
+[data-tip-name]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #ffffff;
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.12));
+  z-index: 50;
+  pointer-events: none;
+}
