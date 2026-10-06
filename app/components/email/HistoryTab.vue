@@ -1,13 +1,6 @@
-<script setup lang="ts">
-interface HistoryEntry {
-  id: string
-  label: string
-  actor: string
-  date: string
-}
-
+<script setup lang="ts" generic="T extends { id: string, label: string, actor: string, date: string }">
 interface Props {
-  entries: HistoryEntry[]
+  entries: T[]
   retired?: boolean
 }
 
@@ -16,8 +9,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 defineEmits<{
-  view: [HistoryEntry]
-  restore: [HistoryEntry]
+  view: [T]
+  restore: [T]
 }>()
 
 const expanded = ref<string>()

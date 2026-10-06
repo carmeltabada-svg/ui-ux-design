@@ -30,9 +30,9 @@ defineProps<Props>()
       <span class="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1.5 bg-primary/10 text-primary truncate max-w-full">{{ to }}</span>
     </div>
 
-    <div v-if="cc.length" class="flex items-start gap-2.5 py-1">
+    <div class="flex items-start gap-2.5 py-1">
       <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10 pt-1.5 shrink-0">CC</span>
-      <div class="flex flex-wrap gap-1.5">
+      <div v-if="cc.length" class="flex flex-wrap gap-1.5">
         <span
           v-for="r in cc"
           :key="r.email"
@@ -43,15 +43,17 @@ defineProps<Props>()
           {{ r.email }}
         </span>
       </div>
+      <span v-else class="text-xs text-dimmed pt-1.5">None</span>
     </div>
 
-    <div v-if="bcc.length" class="flex items-start gap-2.5 py-1">
+    <div class="flex items-start gap-2.5 py-1">
       <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10 pt-1.5 shrink-0">BCC</span>
-      <div class="flex flex-wrap gap-1.5">
+      <div v-if="bcc.length" class="flex flex-wrap gap-1.5">
         <span v-for="r in bcc" :key="r.email" class="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1.5 bg-primary/10 text-primary">
           {{ r.email }}
         </span>
       </div>
+      <span v-else class="text-xs text-dimmed pt-1.5">None</span>
     </div>
   </div>
 </template>

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "cognitive-walkthrough": {
+      "source": "mastepanoski/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/cognitive-walkthrough/SKILL.md",
+      "computedHash": "c69efe9148c7e00a43327dd7b8b9a50517694a15d603ee75dd42928235a2f0e4"
+    },
+    "nielsen-heuristics-audit": {
+      "source": "mastepanoski/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nielsen-heuristics-audit/SKILL.md",
+      "computedHash": "f62b323d02e15647e74d182dd84964746ccbb193ab8c03f7f5225d8cd0d5b2e1"
+    },
+    "ui-design-review": {
+      "source": "mastepanoski/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-design-review/SKILL.md",
+      "computedHash": "fd408d58d8f3ee6e9691767ee2151ca9a353350bd8b71f5ddd71d3d5763f8ce4"
+    },
+    "wcag-accessibility-audit": {
+      "source": "mastepanoski/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wcag-accessibility-audit/SKILL.md",
+      "computedHash": "8a64fda5213720bcfe16bca7716f32aea1d1c6aee34f1a46df79ecc989f01ea8"
+    }
+  }
+}

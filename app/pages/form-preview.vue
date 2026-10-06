@@ -17,7 +17,7 @@
 definePageMeta({ layout: 'blank', ssr: false })
 
 import { RETRIEVAL_FORMS, RETRIEVAL_FORM_CONTENT, PAGE_SIZES, DEFAULT_PAGE_MARGINS, type PageSize } from '~/data/retrievalForms'
-import { SAMPLE_VALUES, resolveTokensForPrint } from '~/data/templates'
+import { SAMPLE_VALUES, resolveTokensForPrint, expandCaseAssetRows, expandTicketAssets, omitReceivedDate } from '~/data/templates'
 import { backgroundStyle } from '~/utils/formBackground'
 import { provideFormFieldRegistry } from '~/utils/formFieldRegistry'
 import { provideFormSubmitAttempt } from '~/utils/formSubmitAttempt'
@@ -48,7 +48,27 @@ const form = computed(() => RETRIEVAL_FORMS.find(f => f.id === formId.value))
 // screen or on paper. There's no real ticket data in this prototype, so
 // SAMPLE_VALUES stands in for it, the same simulated-data pattern this page
 // already uses for its own ticket ref/dates.
-const content = computed(() => resolveTokensForPrint(RETRIEVAL_FORM_CONTENT[formId.value] ?? '', SAMPLE_VALUES))
+// Opened from a ticket (?ticket=<id>): use that ticket's own values, handed
+// over through localStorage by the ticket page, and leave any code it has no
+// value for as its raw {{CODE}} token instead of generic sample data. Opened
+// from the Templates/Forms editors (no ticket): SAMPLE_VALUES as before.
+const ticketValues = computed<Record<string, string> | null>(() => {
+  const id = route.query.ticket as string | undefined
+  if (!id) return null
+  try { return JSON.parse(localStorage.getItem(`ams:formPreviewValues:${id}`) ?? 'null') } catch { return null }
+})
+// Post-Retrieval Charging forms come with the case's equipment rows, so the
+// equipment table prints one row per asset in the case, not just the first.
+const caseAssetRows = computed<Record<string, string>[]>(() => {
+  try { return JSON.parse(ticketValues.value?.__CASE_ASSET_ROWS ?? '[]') } catch { return [] }
+})
+// Every confirmed asset of the ticket, for the retrieval forms' asset tables.
+const ticketAssetLines = computed(() => {
+  try { return JSON.parse(ticketValues.value?.__TICKET_ASSET_ROWS ?? '[]') } catch { return [] }
+})
+const content = computed(() => ticketValues.value
+  ? resolveTokensForPrint(expandTicketAssets(expandCaseAssetRows(ticketValues.value?.__CASE_NOT_RETURNED ? omitReceivedDate(RETRIEVAL_FORM_CONTENT[formId.value] ?? '') : (RETRIEVAL_FORM_CONTENT[formId.value] ?? ''), caseAssetRows.value), ticketAssetLines.value), ticketValues.value, true)
+  : resolveTokensForPrint(RETRIEVAL_FORM_CONTENT[formId.value] ?? '', SAMPLE_VALUES))
 const mode = computed(() => (route.query.mode as 'onsite' | 'remote') || form.value?.mode || 'onsite')
 const pageSize = computed<PageSize>(() => form.value?.pageSize || 'letter')
 
@@ -177,7 +197,7 @@ async function printForm() {
   try {
     const resolvedBody = renderFormFieldsAsStaticHtml(content.value, fieldRegistry)
     const themeColor = form.value.themeColor || '#386BE6'
-    const css = buildPrintCss(pageSize.value, form.value.margins || DEFAULT_PAGE_MARGINS, themeColor)
+    const css = buildPrintCss(pageSize.value, form.value.margins || DEFAULT_PAGE_MARGINS, themeColor, '.print-root')
     const printContent = `
       <div id="print-header-left">${letterhead.value.headerLeft}</div>
       <div id="print-header-right">${letterhead.value.headerRight}</div>

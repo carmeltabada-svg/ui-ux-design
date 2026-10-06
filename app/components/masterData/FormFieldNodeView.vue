@@ -522,7 +522,7 @@ const placeholder = computed(() => {
       </div>
       <p v-if="!attrs.hideLabel" class="text-sm text-dimmed uppercase tracking-wide mt-1 break-words">{{ attrs.label }}<span class="text-error">*</span></p>
       <p v-if="attrs.hint" class="text-xs text-dimmed mt-0.5">{{ attrs.hint }}</p>
-      <p v-if="(touched || !!submitAttempted?.value) && !hasSignature && !lockedReasons.length" class="text-xs text-error mt-0.5">Signature is required.</p>
+      <p v-if="(touched || !!submitAttempted) && !hasSignature && !lockedReasons.length" class="text-xs text-error mt-0.5">Signature is required.</p>
     </template>
 
     <!-- button_link - an action, not a question -->

@@ -98,7 +98,7 @@ const bccModel = computed<string[]>({
       <UTooltip text="GoTeam email address resolved from the retrieval ticket">
         <span class="inline-flex items-center gap-1.5 text-xs italic text-muted bg-elevated rounded-full px-3 py-1.5">
           <UIcon name="i-lucide-lock" class="size-2.5 text-dimmed" />
-          <span class="font-mono not-italic rounded px-1" style="background: rgb(254,249,194); color: rgb(137,75,0);">{{ toToken }}</span>
+          <span class="not-italic rounded px-1" style="background: rgb(254,249,194); color: rgb(137,75,0);">{{ toToken }}</span>
         </span>
       </UTooltip>
     </div>
@@ -164,7 +164,7 @@ const bccModel = computed<string[]>({
           <UPopover v-if="ccOverflow.length">
             <button
               type="button"
-              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100"
+              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-600 text-amber-600 bg-amber-50 hover:bg-amber-100"
             >
               +{{ ccOverflow.length }} more
             </button>
@@ -241,7 +241,7 @@ const bccModel = computed<string[]>({
           <UPopover v-if="bccOverflow.length">
             <button
               type="button"
-              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100"
+              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-600 text-amber-600 bg-amber-50 hover:bg-amber-100"
             >
               +{{ bccOverflow.length }} more
             </button>

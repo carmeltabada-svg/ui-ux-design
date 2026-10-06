@@ -33,6 +33,11 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   t16: { name: 'Overdue Return Notice', mode: 'onsite', when: 'Sent when an onsite return has lapsed the deadline', attachment: 'none', subject: 'URGENT: Overdue Equipment Return, Action Required | {{TM_FULL_NAME}} | Ref: {{APR_REF}}', body: "<p>Dear {{TM_FULL_NAME}},</p><p>This notice is to formally advise you that your equipment return obligation remains outstanding as of {{DATE_OF_THIS_NOTICE}}.</p><p>An Equipment Return Notice was issued to you on {{DATE_OF_ORIGINAL_NOTICE}}, with a target return date of {{ORIGINAL_TARGET_DATE}}. As of today, no return has been recorded by the GoTeam Asset Management Team. This matter has been referred to the HR and Payroll teams for appropriate action in accordance with GoTeam's standard separation and clearance procedures.</p><div data-callout><p>Pursuant to GoTeam's Asset Management Policy, the GoTeam Employee Handbook, and the terms of your employment agreement, GoTeam reserves the right to withhold the Asset Management Team's clearance sign-off until all GoTeam and client-issued equipment has been returned in full, and to escalate the matter internally for the appropriate action, which may include recovery of the assessed value of any unreturned equipment through applicable legal or claims processes.</p></div><p>This non-compliance event is formally documented and forms part of your employment record.</p><p>Your Equipment Return Acknowledgment is still open at the link below. Please complete and sign it on or before {{ACKNOWLEDGMENT_DUE_DATE}}. Signing confirms that you have received this retrieval instruction and that you commit to returning the equipment as set out above.</p><div data-message-banner><p><strong>Open your Equipment Return Acknowledgment</strong></p><p>{{ACKNOWLEDGMENT_LINK}}</p><p>This link closes on {{ACKNOWLEDGMENT_DUE_DATE}}. If it does not open, reply to this email and the Asset Management Team will assist.</p></div><p>For any questions, contact the Asset Team at {{ASSET_TEAM_EMAIL}} or {{ASSET_TEAM_MOBILE}}.</p><p>{{ASSET_TEAM_OFFICER}}<br>Asset Management Team | GoTeam<br>{{ASSET_TEAM_EMAIL}} | {{ASSET_TEAM_MOBILE}}</p>" },
   t17: { name: 'Overdue Return Notice', mode: 'remote', when: 'Sent when a remote dispatch has lapsed the deadline', attachment: 'none', subject: 'URGENT: Overdue Equipment Return, Action Required | {{TM_FULL_NAME}} | Ref: {{APR_REF}}', body: "<p>Dear {{TM_FULL_NAME}},</p><p>This notice is to formally advise you that your equipment return obligation remains outstanding as of {{DATE_OF_THIS_NOTICE}}.</p><p>An Equipment Return Notice was issued to you on {{DATE_OF_ORIGINAL_NOTICE}}, with a target dispatch date of {{ORIGINAL_TARGET_DATE}}. As of today, no shipment confirmation has been received by the GoTeam Asset Management Team. This matter has been referred to the HR and Payroll teams for appropriate action in accordance with GoTeam's standard separation and clearance procedures.</p><div data-callout><p>Pursuant to GoTeam's Asset Management Policy, the GoTeam Employee Handbook, and the terms of your employment agreement, GoTeam reserves the right to withhold the Asset Management Team's clearance sign-off until all GoTeam and client-issued equipment has been returned in full, and to escalate the matter internally for the appropriate action, which may include recovery of the assessed value of any unreturned equipment through applicable legal or claims processes.</p></div><p>This non-compliance event is formally documented and forms part of your employment record.</p><p>Your Equipment Return Acknowledgment is still open at the link below. Please complete and sign it on or before {{ACKNOWLEDGMENT_DUE_DATE}}. Signing confirms that you have received this retrieval instruction and that you commit to shipping the equipment as set out above.</p><div data-message-banner><p><strong>Open your Equipment Return Acknowledgment</strong></p><p>{{ACKNOWLEDGMENT_LINK}}</p><p>This link closes on {{ACKNOWLEDGMENT_DUE_DATE}}. If it does not open, reply to this email and the Asset Management Team will assist.</p></div><p>For any questions, contact the Asset Team at {{ASSET_TEAM_EMAIL}} or {{ASSET_TEAM_MOBILE}}.</p><p>{{ASSET_TEAM_OFFICER}}<br>Asset Management Team | GoTeam<br>{{ASSET_TEAM_EMAIL}} | {{ASSET_TEAM_MOBILE}}</p>" },
   t18: { name: 'Courier Authorization', mode: 'remote', when: 'Sent to courier account manager to authorize the shipment', attachment: 'none', subject: 'Corporate Account Authorization for Equipment Return Shipment | {{TM_FULL_NAME}} | Ref: {{APR_REF}}', body: "<p>Dear {{ACCOUNT_MANAGER_NAME}},</p><p>GoTeam is endorsing a shipment for lodgement under our corporate account and requests your assistance in advising the receiving branch in advance.</p><div data-message-banner><p><strong>Authorized Shipper and Lodgement Branch</strong></p><p>Authorized Shipper: {{TM_FULL_NAME}} (Employee ID: {{EMPLOYEE_ID}})<br>Lodgement Branch: {{BRANCH_NAME}}<br>Branch Address: {{BRANCH_ADDRESS}}<br>Corporate Account No.: {{COURIER_ACCOUNT_NUMBER}}</p><p>Kindly advise the above branch that this shipper is authorized to lodge under GoTeam's corporate account, so that they may be accommodated without delay upon arrival.</p></div><p>Equipment authorized for shipment:</p><table><tr><th>Asset Name</th><th>Qty</th></tr><tr><td>{{ASSET_NAME}}</td><td>{{ASSET_QTY}}</td></tr></table><p>Shipment details — From: {{TM_PRESENT_ADDRESS}}. To: Asset Management Team, 9th Floor, i1 Building, Jose Maria del Mar St., IT Park, Apas, Cebu City 6000. Attention: GoTeam Asset Management Team.</p><p><strong>Declared Value: {{DECLARED_VALUE}}.</strong> All freight charges are to be billed to GoTeam's corporate account ({{COURIER_ACCOUNT_NAME}}).</p><p>For verification or any inquiries regarding this authorization, please contact the Asset Team at {{ASSET_TEAM_EMAIL}} or {{ASSET_TEAM_MOBILE}}.</p><p>{{ASSET_TEAM_OFFICER}}<br>Asset Management Team | GoTeam<br>{{ASSET_TEAM_EMAIL}} | {{ASSET_TEAM_MOBILE}}</p>" },
+  // T22-T25 - A11 Post-Retrieval Charging's 4-way outcome (see DeductionOutcome/DEDUCTION_OUTCOME_META in ticketTrackers.ts and retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md, the reference console this whole group is built from). Unlike T1-T18 (all "onsite"/"remote" by return mode), these four are mode-agnostic - the outcome depends on what came back damaged/missing, not how the ticket shipped - so `mode` is set to the ticket's own mode only where the console's own asset table shape genuinely differs (it doesn't here); kept as 'remote' for TEMPLATE_GROUPS filtering consistency with the rest of A11's Unexplained-Absence-only relevance, not because these can't fire on an onsite ticket - they can, and do, on any path once "Item Damaged or Not Returned" is picked.
+  t22: { name: 'Assessment Complete, No Amount Charged', mode: 'remote', when: 'Sent when the assessment finds nothing chargeable (fair wear and tear), closes the matter outright, no form attached', attachment: 'none', subject: 'Assessment Complete, No Amount Charged | {{TM_FULL_NAME}} | {{APR_REF}}', body: "<p>Dear {{TM_FIRST_NAME}},</p><p>The equipment you returned was received on {{DATE_RECEIVED}} and assessed on {{DATE_ASSESSED}}. The assessment is complete.</p><p>No amount is charged to you. The assessment found nothing that carries a cost to you, and nothing will be deducted from your pay in connection with this equipment.</p><table><tr><th>Asset Tag</th><th>Serial Number</th><th>Asset Name</th><th>Condition on receipt</th></tr><tr><td>{{ASSET_TAG}}</td><td>{{SERIAL_NUMBER}}</td><td>{{ASSET_NAME}}</td><td>{{ASSET_CONDITION}}</td></tr></table><div data-callout><p><strong>This closes the equipment side of your record</strong></p><p>The items listed above are recorded as returned and accounted for. Your asset accountability for them is closed. Fair wear and tear over the period the equipment was with you is not a chargeable event, and no amount is recovered for it.</p></div><p>Thank you for returning the equipment. If you have any questions about this notice, reply to this email or contact the Asset Team at {{ASSET_TEAM_EMAIL}} or {{ASSET_TEAM_MOBILE}}.</p><p>{{CASE_OFFICER}}<br>Asset Management Team | GoTeam<br>{{ASSET_TEAM_EMAIL}} | {{ASSET_TEAM_MOBILE}}</p>" },
+  t23: { name: 'Notice of Assessment, Repair Quotation Pending', mode: 'remote', when: 'Sent when damage is found but a repair quotation is not back yet, an interim notice, not an authority to deduct', attachment: 'Notice of Assessment, Repair Quotation Pending', attachmentFormId: 'notice-assessment-quotation-pending', subject: 'Notice of Assessment, Repair Quotation Pending | {{TM_FULL_NAME}} | {{APR_REF}}', body: "<p>Dear {{TM_FIRST_NAME}},</p><p>The equipment you returned was received on {{DATE_RECEIVED}} and assessed on {{DATE_ASSESSED}}. The assessment found damage that needs a repair quotation from the service provider before the cost can be established.</p><p>No amount is stated in this notice and nothing is being deducted. This notice tells you what was found and what happens next. It is not an authority to deduct and it is not a finding against you.</p><table><tr><th>Asset Tag</th><th>Serial Number</th><th>Asset Name</th><th>Condition found</th></tr><tr><td>{{ASSET_TAG}}</td><td>{{SERIAL_NUMBER}}</td><td>{{ASSET_NAME}}</td><td>{{ASSET_CONDITION}}</td></tr></table><p><strong>What happens next</strong></p><table><tr><th>Step</th><th>By when</th></tr><tr><td>The Asset Management Team requests a written repair quotation</td><td>In progress</td></tr><tr><td>You are written to with the outcome, whether or not a cost is put to you</td><td>{{QUOTATION_EXPECTED_BY}}</td></tr><tr><td>If a cost is proposed, you are given time to respond before anything is signed</td><td>{{RESPONSE_DUE_TM}}</td></tr></table><div data-callout><p><strong>Where you stand while the quotation is being obtained</strong></p><p>The equipment has been returned, so your return obligation is satisfied. This notice does not hold your clearance on its own. Fair wear and tear is never charged. Where a cost is proposed, it is limited to the repair cost actually quoted and incurred, and it is recovered only under a separate Authority to Deduct that you sign and that states the amount.</p></div><p>Attached is the Notice of Assessment for your record. You may ask to see the quotation and the assessment at any time. Reply to this email or contact the Asset Team at {{ASSET_TEAM_EMAIL}} or {{ASSET_TEAM_MOBILE}}.</p><p>{{CASE_OFFICER}}<br>Asset Management Team | GoTeam<br>{{ASSET_TEAM_EMAIL}} | {{ASSET_TEAM_MOBILE}}</p>" },
+  t24: { name: 'Determination and Amount Payable', mode: 'remote', when: 'Sent once the quotation is back and a charge is proposed, the actual deduction authority', attachment: 'Authority to Deduct, Asset Loss/Damage/Non-Return', attachmentFormId: 'atd-loss-damage-non-return', subject: 'Determination and Amount Payable | {{TM_FULL_NAME}} | {{APR_REF}}', body: "<p>Dear {{TM_FIRST_NAME}},</p><p>This notice sets out the determination on the equipment covered by {{APR_REF}}, and the amount that follows from it.</p><table><tr><th>Asset Tag</th><th>Serial Number</th><th>Asset Name</th><th>Finding</th></tr><tr><td>{{ASSET_TAG}}</td><td>{{SERIAL_NUMBER}}</td><td>{{ASSET_NAME}}</td><td>{{ASSET_CONDITION}}</td></tr></table><p><strong>The amount</strong></p><table><tr><th>Basis of the amount</th><th>Supporting document</th><th>Amount</th></tr><tr><td>{{AMOUNT_BASIS}}</td><td>{{SUPPORTING_DOC_REF}}</td><td>PHP {{AMOUNT_FIGURES}}</td></tr></table><p>The amount above is the documented cost to the Company. It carries no penalty element, no handling charge and no uplift. Where the equipment is repairable, the amount is the repair cost actually quoted, not a replacement cost.</p><div data-callout><p><strong>Nothing is deducted until you sign</strong></p><p>Attached is the Authority to Deduct. No amount is taken from your pay unless you sign it. The authority covers only the amount stated above and no other amount.</p><p>If you do not agree with the finding or the amount, reply to this email by {{RESPONSE_DUE_TM}} with your account of it. Your response is recorded and considered before anything further is done, and your right to raise it through GoTeam's established channels is not affected by this notice.</p></div><p>The determination and the documents it rests on are furnished with this notice and are available to you on request. Reply to this email or contact the Asset Team at {{ASSET_TEAM_EMAIL}} or {{ASSET_TEAM_MOBILE}}.</p><p>{{CASE_OFFICER}}<br>Asset Management Team | GoTeam<br>{{ASSET_TEAM_EMAIL}} | {{ASSET_TEAM_MOBILE}}</p>" },
+  t25: { name: 'Settlement of Equipment Accountability', mode: 'remote', when: "Sent when the team member elects to keep the equipment and pay for it instead of returning it, an ownership transfer, not a damage finding", attachment: 'Authority to Deduct, Asset Settlement and Transfer', attachmentFormId: 'atd-settlement-transfer', subject: 'Settlement of Equipment Accountability | {{TM_FULL_NAME}} | {{APR_REF}}', body: "<p>Dear {{TM_FIRST_NAME}},</p><p>The Asset Management Team confirms your message of {{DATE_BUYOUT_ELECTION}}, in which you told us you are not able to return the equipment covered by {{APR_REF}} and would rather settle it and keep it.</p><p>That option is open to you, and it is your choice. GoTeam asked for the equipment back. Settling instead of returning is something we are offering, not something you are required to do. You may still return the equipment, and choosing to return it carries no consequence.</p><table><tr><th>Asset Tag</th><th>Serial Number</th><th>Asset Name</th><th>Settlement amount</th></tr><tr><td>{{ASSET_TAG}}</td><td>{{SERIAL_NUMBER}}</td><td>{{ASSET_NAME}}</td><td>{{ASSET_CONDITION}}</td></tr></table><p><strong>The amount</strong></p><table><tr><th>Basis of the amount</th><th>Supporting document</th><th>Amount</th></tr><tr><td>{{AMOUNT_BASIS}}</td><td>{{SUPPORTING_DOC_REF}}</td><td>PHP {{AMOUNT_FIGURES}}</td></tr></table><p>The settlement amount is the value of the equipment. It is not a penalty and it is not a finding against you. It carries no uplift and no handling charge.</p><div data-callout><p><strong>What signing does</strong></p><p>Attached is the Authority to Deduct, Asset Settlement and Transfer. Ownership of the equipment passes to you once the amount is recovered in full, and your obligation to return it ends at that point.</p><p>The equipment is settled as it stands, with no warranty and no further support from GoTeam or the client, and company and client software and accounts are removed from it. If you locate the equipment and decide to return it before recovery is complete, tell us and the deduction stops, with anything already deducted refunded.</p></div><p>Review the attached authority and reply by {{RESPONSE_DUE_TM}} with the signed copy if you wish to proceed. If you would rather return the equipment after all, say so in your reply and we will arrange it. Contact the Asset Team at {{ASSET_TEAM_EMAIL}} or {{ASSET_TEAM_MOBILE}}.</p><p>{{CASE_OFFICER}}<br>Asset Management Team | GoTeam<br>{{ASSET_TEAM_EMAIL}} | {{ASSET_TEAM_MOBILE}}</p>" },
 }
 
 export const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
@@ -41,7 +46,8 @@ export const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
   { label: 'Return Notices - Recalled', keys: ['t9', 't10'] },
   { label: 'Return Notices - Unexplained Absence', keys: ['t11'] },
   { label: 'Reminders and Overdue', keys: ['t12', 't13', 't14', 't15', 't16', 't17'] },
-  { label: 'Courier', keys: ['t18'] }
+  { label: 'Courier', keys: ['t18'] },
+  { label: 'Post-Retrieval Charging', keys: ['t22', 't23', 't24', 't25'] }
 ]
 
 export const TOKEN_GROUPS: { label: string; tokens: { code: string; name: string }[] }[] = [
@@ -83,8 +89,8 @@ export const TOKEN_GROUPS: { label: string; tokens: { code: string; name: string
     { code: 'ASSET_TAG', name: 'Asset tag' },
     { code: 'SERIAL_NUMBER', name: 'Serial number' },
     { code: 'ASSET_QTY', name: 'Quantity' },
-    { code: 'ASSET_TABLE', name: 'Full asset list, one line (name, tag, serial) - legacy, prefer the real table columns above' },
-    { code: 'ASSET_TABLE_QTY', name: 'Asset list, one line (name and quantity only) - legacy, prefer the real table columns above' }
+    { code: 'ASSET_TABLE', name: 'Asset table, one row per confirmed asset (name, tag, serial)' },
+    { code: 'ASSET_TABLE_QTY', name: 'Asset table with name and quantity only (courier endorsement, no serial numbers)' }
   ] },
   { label: 'Courier', tokens: [
     { code: 'COURIER_NAME', name: 'Courier name' },
@@ -109,8 +115,38 @@ export const TOKEN_GROUPS: { label: string; tokens: { code: string; name: string
   { label: 'Links', tokens: [
     { code: 'ACKNOWLEDGMENT_LINK', name: 'Acknowledgment form link' },
     { code: 'TRACKING_LINK', name: 'Shipment tracking link' }
+  ] },
+  /** A11 Post-Retrieval Charging (T22-T25/F1-F3) - sourced from Case Details Steps 2-4 (see ticketTrackers.ts's own Ticket.deductionCase* fields and DEDUCTION_AMOUNT_BASIS_LABELS) plus the ticket-wide atdReference/assetOwnerInfo. See retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md for the reference console this group is built from. */
+  { label: 'Post-Retrieval Charging', tokens: [
+    { code: 'CASE_OFFICER', name: 'Asset Team officer for this case' },
+    { code: 'ATD_REFERENCE', name: 'ATD reference number' },
+    { code: 'ASSET_OWNER', name: 'Asset owner - GoTeam or the client' },
+    { code: 'DATE_RETURN_REQUESTED', name: 'Date the return was requested' },
+    { code: 'DATE_RECEIVED', name: 'Date the equipment was received' },
+    { code: 'DATE_ASSESSED', name: 'Date the equipment was assessed' },
+    { code: 'DATE_BUYOUT_ELECTION', name: 'Date of buy-out election' },
+    { code: 'QUOTATION_EXPECTED_BY', name: 'Date the repair quotation is expected' },
+    { code: 'HEAR_BACK_BY', name: 'Date the team member will hear back by' },
+    { code: 'RESPONSE_DUE_TM', name: 'Date a response is due from the team member' },
+    { code: 'AMOUNT_BASIS', name: 'Basis of the charged/settlement amount' },
+    { code: 'SUPPORTING_DOC_REF', name: 'Supporting document reference' },
+    { code: 'AMOUNT_FIGURES', name: 'Amount in figures' },
+    { code: 'AMOUNT_WORDS', name: 'Amount in words' },
+    { code: 'ASSET_CONDITION', name: 'Condition, finding or settlement amount per item' }
   ] }
 ]
+
+/**
+ * FR-003.6 A7 ("Call confirmation ... SMS after an unanswered attempt") and
+ * FR-003.12 ("SMS-1A to SMS-11 ... Copy-paste only. No gateway integration
+ * required. Presented in a sidebar box ... a manual sent-confirmation
+ * control"). The real submission ships 11 numbered SMS templates (one per
+ * retrieval path) alongside their email counterparts - not included in this
+ * codebase - so this is the one generic follow-up text A7's own escalation
+ * step needs: a short, copy-paste SMS sent once 3 call attempts have gone
+ * unanswered, using the same {{TOKEN}} placeholders as every email template.
+ */
+export const CALL_ESCALATION_SMS_TEMPLATE = "GoTeam Asset Mgmt: Hi {{TM_FIRST_NAME}}, we've tried calling you 3 times re: your equipment return (Ref {{APR_REF}}) with no answer. Please check your email for the retrieval notice and call us back at {{ASSET_TEAM_MOBILE}} at your earliest convenience."
 
 // Real version history recorded against t16 (Overdue Return Notice · Onsite) in the source.
 export const VERSION_HISTORY_T16 = [
@@ -178,13 +214,28 @@ export const SAMPLE_VALUES: Record<string, string> = {
   TRACKING_NUMBER: 'LBC-88213904',
   ASSET_TEAM_NAME: 'Asset Management Team',
   ASSET_TEAM_ADDRESS: '9th Floor, i1 Building, Jose Maria del Mar St., IT Park, Cebu City',
-  ASSET_TEAM_MOBILE: '+63 917 000 1234',
+  ASSET_TEAM_MOBILE: '+63 9189225962',
   ASSET_TEAM_LANDLINE: '(032) 000 1234',
   ASSET_TEAM_EMAIL: 'itasset@go.team',
   ASSET_TEAM_SCHEDULE: 'Mon to Fri, 9 AM to 6 PM',
   ASSET_TEAM_OFFICER: 'Geraldene de la Torre, Asset Management Lead',
   ACKNOWLEDGMENT_LINK: 'https://forms.go.team/acknowledgment/APR-2026-04821',
-  TRACKING_LINK: 'https://lbcexpress.com/track/LBC-88213904'
+  TRACKING_LINK: 'https://lbcexpress.com/track/LBC-88213904',
+  CASE_OFFICER: 'Geraldene de la Torre',
+  ATD_REFERENCE: 'ATD-2026-0142',
+  ASSET_OWNER: 'GoTeam',
+  DATE_RETURN_REQUESTED: 'Aug 13, 2026',
+  DATE_RECEIVED: 'Aug 22, 2026',
+  DATE_ASSESSED: 'Aug 25, 2026',
+  DATE_BUYOUT_ELECTION: 'Aug 26, 2026',
+  QUOTATION_EXPECTED_BY: 'Sep 1, 2026',
+  HEAR_BACK_BY: 'Sep 3, 2026',
+  RESPONSE_DUE_TM: 'Sep 8, 2026',
+  AMOUNT_BASIS: 'Documented repair quotation',
+  SUPPORTING_DOC_REF: 'QUO-2026-0819',
+  AMOUNT_FIGURES: 'PHP 5,400.00',
+  AMOUNT_WORDS: 'Five Thousand Four Hundred Pesos Only',
+  ASSET_CONDITION: 'Cracked display, lower left corner'
 }
 
 /**
@@ -194,13 +245,43 @@ export const SAMPLE_VALUES: Record<string, string> = {
  * Pass `samples` (e.g. SAMPLE_VALUES) to render a realistic filled-in value
  * instead of the raw {{CODE}} text.
  */
-export function wrapTokens(html: string, samples?: Record<string, string>): string {
-  return html.replace(/\{\{(\w+)\}\}/g, (match, code) => {
+export function wrapTokens(html: string, samples?: Record<string, string>, statusFor?: (code: string) => PlaceholderStatus): string {
+  // Tags are matched whole, before text tokens, so a placeholder inside an
+  // attribute (a plain link's href, or a button link's data-href) is filled
+  // in right there. The tag itself carries the highlight, since a span can
+  // not live inside an attribute.
+  return html.replace(/(<[a-zA-Z][^<>]*>)|\{\{(\w+)\}\}/g, (match, tag: string | undefined, code: string) => {
+    if (tag) return wrapAttributeTokens(tag, samples, statusFor)
     const name = TOKEN_INFO[code] || code
     const display = samples ? (samples[code] ?? match) : match
     const tip = samples ? ` data-tip-name="${name}" data-tip-code="${match}"` : ''
-    return `<span class="tok-hl" data-token="${code}"${tip}>${display}</span>`
+    // Optional per-ticket status modifier (retrieval workspace only - the
+    // Templates/Master Data editors that also call wrapTokens() have no
+    // ticket to check a code's real data against, so they never pass this
+    // and every token there stays the plain default-blue .tok-hl).
+    const statusClass = statusFor ? ` tok-hl--${statusFor(code)}` : ''
+    return `<span class="tok-hl${statusClass}" data-token="${code}"${tip}>${display}</span>`
   })
+}
+
+const escapeAttr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+
+/**
+ * The tag-level half of wrapTokens: fills any {{TOKEN}} found in this tag's
+ * attributes with its value (attribute-escaped) and marks the tag itself with
+ * the same highlight class, data-token and tooltip a text token's span gets.
+ */
+function wrapAttributeTokens(tag: string, samples?: Record<string, string>, statusFor?: (code: string) => PlaceholderStatus): string {
+  const codes = [...tag.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1] as string)
+  if (!codes.length || !samples) return tag
+  const first = codes[0]!
+  let out = tag.replace(/\{\{(\w+)\}\}/g, (m, code: string) => escapeAttr(samples[code] ?? m))
+  const cls = `tok-hl${statusFor ? ` tok-hl--${statusFor(first)}` : ''}`
+  const extra = ` data-token="${first}" data-tip-name="${TOKEN_INFO[first] || first}" data-tip-code="&#123;&#123;${first}&#125;&#125;"`
+  out = /\sclass="/.test(out)
+    ? out.replace(/\sclass="([^"]*)"/, (_m, c: string) => ` class="${c} ${cls}"`)
+    : out.replace(/\s*\/?>$/, m => ` class="${cls}"${m}`)
+  return out.replace(/\s*\/?>$/, m => `${extra}${m}`)
 }
 
 /**
@@ -211,6 +292,162 @@ export function wrapTokens(html: string, samples?: Record<string, string>): stri
  * recipient actually reads or prints - the whole point is that they should
  * never see raw `{{CODE}}` placeholder syntax that never got filled in.
  */
-export function resolveTokensForPrint(html: string, samples: Record<string, string>): string {
-  return html.replace(/\{\{(\w+)\}\}/g, (_match, code) => samples[code] ?? '')
+export function resolveTokensForPrint(html: string, samples: Record<string, string>, keepUnresolved = false): string {
+  // keepUnresolved: a ticket-scoped render leaves a code it has no real value
+  // for as its raw {{CODE}} token, rather than blanking it or filling it with
+  // generic sample data.
+  // Inside a tag (a link or button href) the value is attribute-escaped.
+  return html.replace(/(<[a-zA-Z][^<>]*>)|\{\{(\w+)\}\}/g, (match, tag: string | undefined, code: string) => {
+    if (tag) return tag.replace(/\{\{(\w+)\}\}/g, (m, c: string) => (samples[c] !== undefined ? escapeAttr(samples[c]) : (keepUnresolved ? m : '')))
+    return samples[code] ?? (keepUnresolved ? match : '')
+  })
+}
+
+/**
+ * Codes that are genuinely organization-wide constants (the Asset Team's own
+ * contact details, the fixed declared shipping value) rather than anything
+ * that varies by ticket - these never have a per-ticket source and were never
+ * meant to, so the Placeholder Check below doesn't flag them as "missing
+ * ticket data" the way it flags a real per-ticket field (courier, dates,
+ * asset info) that this ticket happens not to have.
+ */
+export const ORG_CONSTANT_TOKENS = new Set([
+  'ASSET_TEAM_NAME', 'ASSET_TEAM_ADDRESS', 'ASSET_TEAM_MOBILE', 'ASSET_TEAM_LANDLINE',
+  'ASSET_TEAM_EMAIL', 'ASSET_TEAM_SCHEDULE', 'ASSET_TEAM_OFFICER', 'DECLARED_VALUE',
+  // The corporate account is held in the company's own name.
+  'COURIER_ACCOUNT_NAME'
+])
+
+/** Every distinct {{CODE}} appearing in `html`, in first-seen order. */
+export function extractTokenCodes(html: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const m of html.matchAll(/\{\{(\w+)\}\}/g)) {
+    if (!seen.has(m[1]!)) { seen.add(m[1]!); out.push(m[1]!) }
+  }
+  return out
+}
+
+export type PlaceholderStatus = 'resolved' | 'org-constant' | 'missing' | 'unrecognized'
+
+export interface PlaceholderCheckEntry {
+  code: string
+  name: string
+  status: PlaceholderStatus
+  /** what would actually print in the real, sent document right now */
+  previewValue: string
+}
+
+/**
+ * The comparison behind the Placeholder Check feature: for every {{CODE}}
+ * actually used in a piece of attached content, says whether this ticket has
+ * a real value for it or whether it's "out of context" - either falling back
+ * to generic sample text because the ticket has no data for it, or not a
+ * recognized placeholder at all (a typo, or a token invented in the editor
+ * that no real ticket field will ever fill), in which case it prints as
+ * nothing in the actual sent document (see resolveTokensForPrint above).
+ * `ticketResolvedCodes` are the codes this specific ticket supplied a real,
+ * non-empty value for - see ticketSampleValues/ticketResolvedCodes in
+ * ticket-tracker/[id].vue for how that set is built.
+ */
+/** The single source of truth behind both checkPlaceholders (the drawer) and the highlighted-preview coloring (wrapTokens' statusFor) - kept as one function so the two can never quietly disagree about what counts as resolved/missing/unrecognized for a given code. */
+export function placeholderStatusFor(code: string, ticketResolvedCodes: Set<string>): PlaceholderStatus {
+  if (!TOKEN_INFO[code]) return 'unrecognized'
+  if (ORG_CONSTANT_TOKENS.has(code)) return 'org-constant'
+  if (ticketResolvedCodes.has(code)) return 'resolved'
+  return 'missing'
+}
+
+export function checkPlaceholders(
+  html: string,
+  ticketResolvedCodes: Set<string>,
+  samples: Record<string, string>
+): PlaceholderCheckEntry[] {
+  return extractTokenCodes(html).map((code) => {
+    const status = placeholderStatusFor(code, ticketResolvedCodes)
+    const name = TOKEN_INFO[code] ?? code
+    return { code, name, status, previewValue: status === 'unrecognized' ? '' : (samples[code] ?? `{{${code}}}`) }
+  })
+}
+
+
+/**
+ * A case where the equipment never came back has no receipt, so a "Date
+ * received" line has nothing to say (and nothing to fill it from). Charging
+ * content drops that line for such cases.
+ */
+export function omitReceivedDate(html: string): string {
+  return html.replace(/Date received: \{\{DATE_RECEIVED\}\}(<br>|<\/p>)/g, (_m, tail) => tail === '</p>' ? '</p>' : '')
+}
+
+/** One asset on a ticket, as the retrieval emails and forms print it. */
+export interface TicketAssetLine { name: string, tag: string, serial: string }
+
+/**
+ * Prints every confirmed asset of a ticket, one row per asset.
+ *
+ * Integrity rules, so a row can never show a tag that belongs to another
+ * asset's name:
+ * - A row is built from ONE asset record: name, tag and serial are read from
+ *   the same object in the same pass. Separate lists are never zipped.
+ * - A token never holds several values. Each row's token holds that row's
+ *   own value, so the placeholder can still be located and highlighted.
+ * - A row that carries {{ASSET_TAG}} or {{SERIAL_NUMBER}} is a per-asset row,
+ *   and its {{ASSET_QTY}} is 1. A row with only {{ASSET_NAME}} and
+ *   {{ASSET_QTY}} is the aggregated courier table: one row per distinct
+ *   model, quantity counted from the very same list.
+ * - {{ASSET_TABLE}} and {{ASSET_TABLE_QTY}} expand to those same two tables.
+ * Charging content (its last column is {{ASSET_CONDITION}}) is left alone,
+ * because that table lists the case's own items, see expandCaseAssetRows.
+ *
+ * \`wrap\` lets the on-screen preview emit its highlight span around each
+ * filled value (the markup wrapTokens writes). Without it the value is plain
+ * escaped text, which is what gets sent and printed.
+ */
+export function expandTicketAssets(
+  html: string,
+  assets: TicketAssetLine[],
+  wrap?: (code: string, value: string) => string
+): string {
+  if (!assets.length || !html || html.includes('{{ASSET_CONDITION}}')) return html
+  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const put = (code: string, value: string) => wrap ? wrap(code, value) : esc(value)
+  const grouped: { name: string, qty: number }[] = []
+  for (const a of assets) {
+    const g = grouped.find(x => x.name === a.name)
+    if (g) g.qty++
+    else grouped.push({ name: a.name, qty: 1 })
+  }
+  const fullTable = '<table><tr><th>Asset Name</th><th>Asset Tag</th><th>Serial Number</th></tr>'
+    + assets.map(a => `<tr><td>${put('ASSET_NAME', a.name)}</td><td>${put('ASSET_TAG', a.tag)}</td><td>${put('SERIAL_NUMBER', a.serial)}</td></tr>`).join('') + '</table>'
+  const qtyTable = '<table><tr><th>Asset Name</th><th>Qty</th></tr>'
+    + grouped.map(g => `<tr><td>${put('ASSET_NAME', g.name)}</td><td>${put('ASSET_QTY', String(g.qty))}</td></tr>`).join('') + '</table>'
+  const row = (tokens: string) => new RegExp(String.raw`<tr>(?:(?!</tr>)[\s\S])*?\{\{(?:${tokens})\}\}(?:(?!</tr>)[\s\S])*</tr>`, 'g')
+  const fill = (rowHtml: string, values: Record<string, string>) =>
+    rowHtml.replace(/\{\{(ASSET_NAME|ASSET_TAG|SERIAL_NUMBER|ASSET_QTY)\}\}/g, (m, code: string) => code in values ? put(code, values[code]!) : m)
+  return html
+    .replace(/\{\{ASSET_TABLE_QTY\}\}/g, qtyTable)
+    .replace(/\{\{ASSET_TABLE\}\}/g, fullTable)
+    // Per-asset rows: any row with a tag or serial. Its quantity is 1.
+    .replace(row('ASSET_TAG|SERIAL_NUMBER'), rowHtml => assets.map(a =>
+      fill(rowHtml, { ASSET_NAME: a.name, ASSET_TAG: a.tag, SERIAL_NUMBER: a.serial, ASSET_QTY: '1' })).join(''))
+    // Aggregated rows: name and quantity only, one row per distinct model.
+    .replace(row('ASSET_QTY|ASSET_NAME'), rowHtml => grouped.map(g =>
+      fill(rowHtml, { ASSET_NAME: g.name, ASSET_QTY: String(g.qty) })).join(''))
+}
+
+/**
+ * Post-Retrieval Charging prints one table row per asset in the case. Any
+ * <tr> that carries an asset placeholder ({{ASSET_TAG}}, {{SERIAL_NUMBER}},
+ * {{ASSET_NAME}}, {{ASSET_CONDITION}}) is repeated once per row in `rows`,
+ * each copy filled with that asset's values. A value missing for a row
+ * leaves its token in place, so the placeholder check still catches it.
+ * Works on saved template/form content too - nothing in the stored HTML
+ * has to change.
+ */
+export function expandCaseAssetRows(html: string, rows: Record<string, string>[]): string {
+  if (!rows.length || !html) return html
+  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return html.replace(/<tr>(?:(?!<\/tr>)[\s\S])*?\{\{(?:ASSET_TAG|SERIAL_NUMBER|ASSET_NAME|ASSET_CONDITION)\}\}(?:(?!<\/tr>)[\s\S])*<\/tr>/g, rowHtml =>
+    rows.map(r => rowHtml.replace(/\{\{(ASSET_TAG|SERIAL_NUMBER|ASSET_NAME|ASSET_CONDITION)\}\}/g, (tok, code) => r[code] ? esc(r[code]) : tok)).join(''))
 }

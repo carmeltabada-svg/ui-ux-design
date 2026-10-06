@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui'
 interface FormOption {
   id: string
   name: string
@@ -19,16 +20,44 @@ interface Props {
   previewTooltip?: string
   /** icon on the preview action - defaults to the "opens in a new tab" glyph; pass 'i-lucide-eye' when preview opens in a modal instead */
   previewIcon?: string
+  /**
+   * Count of this attachment's placeholders that are "missing" (a real
+   * per-ticket field, but this ticket has no data for it) or "unrecognized"
+   * (not a real placeholder at all - a typo, or one invented in the editor
+   * that no ticket field will ever fill). undefined hides the action
+   * entirely rather than showing a false "0 issues" all-clear for content
+   * that was never actually checked.
+   */
+  placeholderIssueCount?: number
+  /**
+   * Preview-only mode, for showing this same chip outside a closed ticket's
+   * `inert` wrapper (see [id].vue's own comment on why `inert` can't be
+   * selectively bypassed for one descendant). Hides Edit, the Replace/Remove
+   * overflow menu, and Placeholder Check - none of those make sense once a
+   * ticket is closed - leaving only the Preview action, which is the one
+   * thing worth still reaching from a closed ticket.
+   */
+  readOnly?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), { formOptions: () => [], icon: 'i-lucide-file-text', replaceLabel: 'Replace form', previewTooltip: 'Preview form in new tab', previewIcon: 'i-lucide-external-link' })
+const props = withDefaults(defineProps<Props>(), { formOptions: () => [], icon: 'i-lucide-file-text', replaceLabel: 'Replace form', previewTooltip: 'Preview form in new tab', previewIcon: 'i-lucide-external-link', readOnly: false })
 
 const emit = defineEmits<{
   preview: []
   edit: []
   replace: [formId: string]
   remove: []
+  'check-placeholders': []
 }>()
+
+// A real two-line tooltip (title, then detail) - not one long dash-joined
+// sentence. Paired with the UTooltip's own `:ui="{ content: 'whitespace-pre-line' }"`
+// below, which is what actually makes this literal newline render as a
+// second line instead of collapsing to a space.
+const placeholderCheckTooltip = computed(() => {
+  if (!props.placeholderIssueCount) return 'Placeholder Check\nEvery placeholder has a value for this ticket'
+  return `Placeholder Check\n${props.placeholderIssueCount} placeholder${props.placeholderIssueCount === 1 ? '' : 's'} without ticket data`
+})
 
 // Reka's menu returns focus to whatever trigger opened it once an item is
 // picked - normally invisible, but this trigger sits inside a chip near the
@@ -44,7 +73,7 @@ function preventCloseAutoFocus(e: Event) {
 // one long enough to need scrolling does.
 const showFormFilter = computed(() => props.formOptions.length > 5)
 
-const overflowMenuItems = computed(() => [[
+const overflowMenuItems = computed<DropdownMenuItem[][]>(() => [[
   {
     label: props.replaceLabel,
     icon: 'i-lucide-repeat',
@@ -84,11 +113,35 @@ const overflowMenuItems = computed(() => [[
           <UIcon :name="icon" class="size-[18px]" />
         </div>
         <div class="flex flex-col leading-tight min-w-0">
-          <div class="text-sm font-semibold text-default truncate">{{ name }}</div>
-          <div class="text-xs text-muted truncate">{{ subtitle }}</div>
+          <div class="text-sm font-semibold text-blue-700 truncate">{{ name }}</div>
+          <div class="text-xs text-slate-600 truncate">{{ subtitle }}</div>
         </div>
       </div>
       <div class="flex items-center shrink-0">
+        <UTooltip v-if="!readOnly && placeholderIssueCount !== undefined" :text="placeholderCheckTooltip" :ui="{ content: 'whitespace-pre-line text-center' }">
+          <!--
+            A plain button, not UButton's `color="warning"` ghost - Nuxt UI's
+            warning/amber-500 ghost text is only ~2.5:1 against white, well
+            under WCAG 2.2's 3:1 floor for a UI component/icon (SC 1.4.11).
+            text-amber-700 (the same shade this app's own warning banners
+            already use, e.g. the "marked draft/retired" notice) measures
+            ~5:1 here, clearing both that floor and the stricter 4.5:1 text
+            threshold, so the count badge's white-on-amber-700 also holds up.
+          -->
+          <button
+            type="button"
+            aria-label="Check placeholders"
+            class="relative flex items-center justify-center size-8 rounded-md transition-colors"
+            :class="placeholderIssueCount ? 'text-amber-700 hover:bg-white' : 'text-primary hover:bg-white'"
+            @click="$emit('check-placeholders')"
+          >
+            <UIcon :name="placeholderIssueCount ? 'i-lucide-shield-alert' : 'i-lucide-list-checks'" class="size-4" />
+            <span
+              v-if="placeholderIssueCount"
+              class="absolute top-1 right-1 min-w-3.5 h-3.5 px-0.5 rounded-full bg-amber-700 text-[9px] leading-[14px] font-semibold text-white text-center"
+            >{{ placeholderIssueCount }}</span>
+          </button>
+        </UTooltip>
         <UTooltip :text="previewTooltip">
           <UButton
             color="primary"
@@ -101,31 +154,33 @@ const overflowMenuItems = computed(() => [[
             @click="$emit('preview')"
           />
         </UTooltip>
-        <UTooltip text="Edit">
-          <UButton
-            color="primary"
-            variant="ghost"
-            size="sm"
-            square
-            icon="i-lucide-pencil"
-            aria-label="Edit"
-            class="rounded-md"
-            @click="$emit('edit')"
-          />
-        </UTooltip>
-        <UDropdownMenu :items="overflowMenuItems" :ui="{ content: 'w-52' }" :content="{ align: 'start' }">
-          <UTooltip text="More options">
+        <template v-if="!readOnly">
+          <UTooltip text="Edit">
             <UButton
               color="primary"
               variant="ghost"
               size="sm"
               square
-              icon="i-lucide-more-horizontal"
-              aria-label="More options"
+              icon="i-lucide-pencil"
+              aria-label="Edit"
               class="rounded-md"
+              @click="$emit('edit')"
             />
           </UTooltip>
-        </UDropdownMenu>
+          <UDropdownMenu :items="overflowMenuItems" :ui="{ content: 'w-52' }" :content="{ align: 'start' }">
+            <UTooltip text="More options">
+              <UButton
+                color="primary"
+                variant="ghost"
+                size="sm"
+                square
+                icon="i-lucide-more-horizontal"
+                aria-label="More options"
+                class="rounded-md"
+              />
+            </UTooltip>
+          </UDropdownMenu>
+        </template>
       </div>
     </div>
   </div>

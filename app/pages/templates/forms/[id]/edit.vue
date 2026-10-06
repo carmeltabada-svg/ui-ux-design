@@ -16,6 +16,7 @@ import {
   type PageMargins,
   type MarginPresetName
 } from '~/data/retrievalForms'
+import type { DropdownMenuItem } from '@nuxt/ui'
 import { CURRENT_USER_NAME, ensureTemplateRuntime, CUSTOM_TEMPLATE_IDS } from '~/data/templateRuntime'
 import { TEMPLATE_GROUPS } from '~/data/templates'
 import { flushFormsToStorage, hydrateFormsFromStorage } from '~/utils/formStorage'
@@ -206,9 +207,16 @@ const pageSizeItems = (Object.keys(PAGE_SIZES) as PageSize[]).map(value => ({ la
 // Auto-name from the first section's title until the name field is typed
 // into directly - mirrors the email template's "name follows the subject
 // line" behavior, just sourced from the first section here since forms don't
-// have a single subject line.
+// have a single subject line. Only meaningful for a form still on the legacy
+// sections model (`sections.length` real) - a real Tiptap-document form (see
+// `content` above) has an empty `sections` array by design, since it never
+// used that model at all, so this must never fire for one: a corrupted/
+// incomplete saved snapshot that happens to be missing `nameManuallySet`
+// would otherwise immediately blank out the real name to "Untitled form" on
+// mount (and that gets autosaved right back, permanently) even though the
+// document itself is fully intact - reproduced exactly this way.
 watch(sections, (secs) => {
-  if (nameManuallySet.value) return
+  if (nameManuallySet.value || content.value.trim()) return
   const first = secs[0]?.title?.trim()
   name.value = first || 'Untitled form'
 }, { deep: true, immediate: true })
@@ -327,7 +335,7 @@ function preventCloseAutoFocus(e: Event) {
 const modeLabel = computed(() => (mode.value === 'onsite' ? 'Onsite' : 'Remote'))
 const statusLabel = computed(() => statusItems.find(i => i.value === status.value)?.label ?? 'Status')
 
-const overflowMenuItems = computed(() => [[
+const overflowMenuItems = computed<DropdownMenuItem[][]>(() => [[
   { label: 'Copy link', icon: 'i-lucide-link', onSelect: copyLink },
   { label: 'Duplicate form', icon: 'i-lucide-copy', onSelect: duplicateThisForm },
   { label: 'Version history', icon: 'i-lucide-history', onSelect: () => { historyOpen.value = true } },

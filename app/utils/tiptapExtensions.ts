@@ -21,7 +21,7 @@ function contrastingTextColor(hex: string): string {
   const r = Number.parseInt(full.slice(0, 2), 16) / 255
   const g = Number.parseInt(full.slice(2, 4), 16) / 255
   const b = Number.parseInt(full.slice(4, 6), 16) / 255
-  const [rl, gl, bl] = [r, g, b].map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+  const [rl = 0, gl = 0, bl = 0] = [r, g, b].map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
   const luminance = 0.2126 * rl + 0.7152 * gl + 0.0722 * bl
   return luminance > 0.5 ? '#111827' : '#ffffff'
 }
