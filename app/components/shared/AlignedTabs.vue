@@ -73,6 +73,7 @@ watch(() => model.value, () => nextTick(measureUnderlineOffset))
         list: 'border-none pb-0 w-auto',
         indicator: 'bottom-[calc(-1*var(--tab-underline-offset))]',
         trigger: 'in-[[data-slot=list]:not(:has([data-slot=indicator]))]:data-[state=active]:after:bottom-[calc(-1*var(--tab-underline-offset))]',
+        leadingIcon: 'size-3.5',
         content: 'hidden'
       }"
     />

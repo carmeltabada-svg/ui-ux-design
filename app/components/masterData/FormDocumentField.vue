@@ -213,7 +213,7 @@ const placeholder = computed(() => {
     >
       <UButton
         type="button"
-        :color="field.buttonColor || 'primary'"
+        :color="(field.buttonColor as 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' | undefined) || 'primary'"
         variant="solid"
         size="sm"
         :icon="field.buttonIcon || undefined"

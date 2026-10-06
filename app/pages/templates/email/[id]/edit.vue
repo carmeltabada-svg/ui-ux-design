@@ -2,6 +2,7 @@
 import { TEMPLATES, TOKEN_GROUPS, VERSION_HISTORY_T16, SAMPLE_VALUES, resolveTokensForPrint } from '~/data/templates'
 import { ensureTemplateRuntime, TEMPLATE_RUNTIME, CURRENT_USER_NAME, type Recipient } from '~/data/templateRuntime'
 import { RETRIEVAL_FORMS } from '~/data/retrievalForms'
+import type { DropdownMenuItem } from '@nuxt/ui'
 import { describeSnapshotChanges, type ChangeCategory } from '~/utils/versionDiff'
 import { buildEmailExportHtml, buildEmailExportPlainText } from '~/utils/emailExportHtml'
 
@@ -107,7 +108,7 @@ function preventCloseAutoFocus(e: Event) {
   e.preventDefault()
 }
 
-const overflowMenuItems = computed(() => [[
+const overflowMenuItems = computed<DropdownMenuItem[][]>(() => [[
   { label: 'Download EML', icon: 'i-lucide-download', onSelect: downloadEml },
   { label: 'Copy to clipboard', icon: 'i-lucide-copy', onSelect: copyToClipboard },
   {
@@ -297,7 +298,7 @@ function restoreHistoryEntry(entry: Snapshot) {
 
 function previewAttachment() {
   const formId = current.value.attachmentFormId ?? 'return-ack-onsite'
-  const url = `/form-preview?formId=${encodeURIComponent(formId)}&ref=${encodeURIComponent(SAMPLE_VALUES.APR_REF)}&mode=${mode.value}`
+  const url = `/form-preview?formId=${encodeURIComponent(formId)}&ref=${encodeURIComponent(SAMPLE_VALUES.APR_REF ?? '')}&mode=${mode.value}`
   // `noopener` (not just target=_blank) forces this into its own, unrelated
   // browsing-context/process group - without it, Chrome can keep this tab in
   // the same renderer process as the opener (since it still holds a live

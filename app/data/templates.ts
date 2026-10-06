@@ -115,6 +115,24 @@ export const TOKEN_GROUPS: { label: string; tokens: { code: string; name: string
 // Real version history recorded against t16 (Overdue Return Notice · Onsite) in the source.
 export const VERSION_HISTORY_T16 = [
   { id: 'v2', label: 'Wording corrected', actor: 'Geraldene de la Torre', date: 'Aug 18, 2026, 2:41 PM' },
+  ] },
+  /** A11 Post-Retrieval Charging (T22-T25/F1-F3) - sourced from Case Details Steps 2-4 (see ticketTrackers.ts's own Ticket.deductionCase* fields and DEDUCTION_AMOUNT_BASIS_LABELS) plus the ticket-wide atdReference/assetOwnerInfo. See retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md for the reference console this group is built from. */
+  { label: 'Post-Retrieval Charging', tokens: [
+    { code: 'CASE_OFFICER', name: 'Asset Team officer for this case' },
+    { code: 'ATD_REFERENCE', name: 'ATD reference number' },
+    { code: 'ASSET_OWNER', name: 'Asset owner - GoTeam or the client' },
+    { code: 'DATE_RETURN_REQUESTED', name: 'Date the return was requested' },
+    { code: 'DATE_RECEIVED', name: 'Date the equipment was received' },
+    { code: 'DATE_ASSESSED', name: 'Date the equipment was assessed' },
+    { code: 'DATE_BUYOUT_ELECTION', name: 'Date of buy-out election' },
+    { code: 'QUOTATION_EXPECTED_BY', name: 'Date the repair quotation is expected' },
+    { code: 'HEAR_BACK_BY', name: 'Date the team member will hear back by' },
+    { code: 'RESPONSE_DUE_TM', name: 'Date a response is due from the team member' },
+    { code: 'AMOUNT_BASIS', name: 'Basis of the charged/settlement amount' },
+    { code: 'SUPPORTING_DOC_REF', name: 'Supporting document reference' },
+    { code: 'AMOUNT_FIGURES', name: 'Amount in figures' },
+    { code: 'AMOUNT_WORDS', name: 'Amount in words' },
+    { code: 'ASSET_CONDITION', name: 'Condition, finding or settlement amount per item' }
   { id: 'v1', label: 'Created from spec', actor: 'System', date: 'Aug 7, 2026, 4:15 PM' }
 ]
 
@@ -184,7 +202,22 @@ export const SAMPLE_VALUES: Record<string, string> = {
   ASSET_TEAM_SCHEDULE: 'Mon to Fri, 9 AM to 6 PM',
   ASSET_TEAM_OFFICER: 'Geraldene de la Torre, Asset Management Lead',
   ACKNOWLEDGMENT_LINK: 'https://forms.go.team/acknowledgment/APR-2026-04821',
-  TRACKING_LINK: 'https://lbcexpress.com/track/LBC-88213904'
+  TRACKING_LINK: 'https://lbcexpress.com/track/LBC-88213904',
+  CASE_OFFICER: 'Geraldene de la Torre',
+  ATD_REFERENCE: 'ATD-2026-0142',
+  ASSET_OWNER: 'GoTeam',
+  DATE_RETURN_REQUESTED: 'Aug 13, 2026',
+  DATE_RECEIVED: 'Aug 22, 2026',
+  DATE_ASSESSED: 'Aug 25, 2026',
+  DATE_BUYOUT_ELECTION: 'Aug 26, 2026',
+  QUOTATION_EXPECTED_BY: 'Sep 1, 2026',
+  HEAR_BACK_BY: 'Sep 3, 2026',
+  RESPONSE_DUE_TM: 'Sep 8, 2026',
+  AMOUNT_BASIS: 'Documented repair quotation',
+  SUPPORTING_DOC_REF: 'QUO-2026-0819',
+  AMOUNT_FIGURES: 'PHP 5,400.00',
+  AMOUNT_WORDS: 'Five Thousand Four Hundred Pesos Only',
+  ASSET_CONDITION: 'Cracked display, lower left corner'
 }
 
 /**

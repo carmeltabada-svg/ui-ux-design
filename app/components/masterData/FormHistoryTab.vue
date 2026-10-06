@@ -1,17 +1,10 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends { id: string, label: string, actor: string, date: string }">
 // Same anatomy as the email template's HistoryTab.vue - a current-version-
 // first list of cards (icon chip, title + badges, a muted byline, hover-
 // reveal actions), applied to forms instead of email templates, so the two
 // read as the same kind of list rather than two different components.
-interface HistoryEntry {
-  id: string
-  label: string
-  actor: string
-  date: string
-}
-
 interface Props {
-  entries: HistoryEntry[]
+  entries: T[]
   retired?: boolean
 }
 
@@ -20,8 +13,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 defineEmits<{
-  view: [HistoryEntry]
-  restore: [HistoryEntry]
+  view: [T]
+  restore: [T]
 }>()
 
 const expanded = ref<string>()

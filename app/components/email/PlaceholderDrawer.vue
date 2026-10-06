@@ -83,7 +83,7 @@ function select(code: string) {
 </script>
 
 <template>
-  <USlideover v-model:open="open" :ui="{ content: 'max-w-[440px] m-3 h-[calc(100%-24px)] rounded-lg border border-default overflow-hidden', header: 'p-4 sm:px-6 min-h-16 bg-white', body: 'p-0 sm:p-0 flex flex-col overflow-hidden bg-white' }">
+  <USlideover v-model:open="open" inset :ui="{ content: 'max-w-[440px] w-[calc(100%-1.5rem)] inset-y-3 right-3 overflow-hidden', header: 'p-4 sm:px-6 min-h-16 bg-white', body: 'p-0 sm:p-0 flex flex-col overflow-hidden bg-white' }">
     <template #header="{ close }">
       <div class="flex-1 min-w-0">
         <h2 class="text-base font-semibold text-highlighted">Placeholder Library</h2>
@@ -155,7 +155,7 @@ function select(code: string) {
               @click="select(tok.code)"
             >
               <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
-              <span class="font-mono text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
+              <span class="text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
             </button>
           </template>
         </template>
@@ -177,7 +177,7 @@ function select(code: string) {
               @click="select(tok.code)"
             >
               <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
-              <span class="font-mono text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
+              <span class="text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
             </button>
           </template>
         </template>
