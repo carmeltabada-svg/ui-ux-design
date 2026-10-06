@@ -306,16 +306,248 @@ const remoteReturnCommitmentHtml = `
 </div>
 `.trim()
 
+// A11 Post-Retrieval Charging's three forms (F1-F3, see
+// the Post-Retrieval Charging alignment notes - the
+// reference console this whole group is built from). Unlike the two
+// return-ack forms above (team-member-completed, hence heavy on
+// data-form-field inputs), every field across all three of these is
+// Asset Team/officer-entered - the team member's only action anywhere is
+// signing at Section 8/7's acknowledgment (confirmed by re-checking every
+// "Completed by:" tag in the reference file - see the alignment notes'
+// "resolved this pass" #4). So these lean on {{TOKEN}}s for the Case
+// Details data already captured at A11 (read-only, filled from the ticket)
+// and use data-form-field only where the reference calls for a genuine
+// officer judgment call not already modeled as a ticket field (which basis/
+// finding letter was picked, the evidence checklist, the recovery schedule
+// numbers, the three signatures). The reference's own equipment tables are
+// pre-numbered blank rows (10 for F1/F2, 6 for F3) meant for a print-blank
+// template; this app's forms are already ticket-bound documents, so - same
+// as the two return-ack forms above - the table renders this ticket's own
+// real asset row via {{ASSET_NAME}}/{{ASSET_TAG}}/{{SERIAL_NUMBER}} instead
+// of literal blank rows.
+const atdLossDamageNonReturnHtml = `
+<h2>Section 1 - Case Information</h2>
+<p>Team Member: {{TM_FULL_NAME}} (Employee ID: {{EMPLOYEE_ID}})<br>Client or Account: {{CLIENT_NAME}}<br>Leadership Coach: {{LEADERSHIP_COACH}}<br>Asset Owner: {{ASSET_OWNER}}<br>Asset Team Officer: {{CASE_OFFICER}}<br>ATD Reference: {{ATD_REFERENCE}}</p>
+<p>Date the return was requested: {{DATE_RETURN_REQUESTED}}<br>Return date that was set: {{TARGET_RETURN_DATE}}<br>Date received: {{DATE_RECEIVED}}<br>Date assessed: {{DATE_ASSESSED}}</p>
+<h2>Section 2 - Basis</h2>
+<p>The equipment was not returned, or was returned in a condition requiring this authority, on one of the following bases:</p>
+<ol type="a">
+<li>Not returned</li>
+<li>Lost or damaged in custody</li>
+<li>Returned needing repair</li>
+<li>Not returned after international travel</li>
+<li>Component not returned</li>
+<li>Lost or damaged in transit outside the prescribed courier</li>
+</ol>
+<div data-form-field id="f1-basis-letter" field-type="short_text" label="Basis selected (letter)" hint="" required="true"></div>
+<p>Evidence of issuance and custody on file (at least one required):</p>
+<div data-form-field id="f1-evidence-custody" field-type="checkbox" label="Accountability and Custody Agreement" hint="" required="false"></div>
+<div data-form-field id="f1-evidence-receiving" field-type="checkbox" label="Receiving Acknowledgment" hint="" required="false"></div>
+<div data-form-field id="f1-evidence-amscheckout" field-type="checkbox" label="AMS check-out record" hint="" required="false"></div>
+<div data-form-field id="f1-evidence-gatepass" field-type="checkbox" label="Gate pass" hint="" required="false"></div>
+<div data-form-field id="f1-evidence-waybill" field-type="checkbox" label="Courier waybill" hint="" required="false"></div>
+<div data-form-field id="f1-evidence-written" field-type="checkbox" label="Other written acknowledgment" hint="" required="false"></div>
+<h2>Section 3 - Equipment</h2>
+<table><tr><th>Asset Name</th><th>Asset Tag</th><th>Serial No.</th><th>Finding</th></tr><tr><td>{{ASSET_NAME}}</td><td>{{ASSET_TAG}}</td><td>{{SERIAL_NUMBER}}</td><td>{{ASSET_CONDITION}}</td></tr></table>
+<h2>Section 4 - Finding</h2>
+<p>Select one:</p>
+<ol>
+<li>Negligence established</li>
+<li>Unauthorized modification</li>
+<li>Accidental, no negligence</li>
+<li>Fair wear and tear, no amount charged</li>
+</ol>
+<div data-form-field id="f1-finding" field-type="short_text" label="Finding selected" hint="If 'Fair wear and tear, no amount charged' is selected, Sections 5-6 below stay blank and the Team Member does not sign - use T22 instead of this form." required="true"></div>
+<h2>Section 5 - Amount</h2>
+<p>Basis of the amount: {{AMOUNT_BASIS}}<br>Supporting document reference: {{SUPPORTING_DOC_REF}}<br>Amount in figures: {{AMOUNT_FIGURES}}<br>Amount in words: {{AMOUNT_WORDS}}</p>
+<p>This amount is transcribed from the determination recorded at Case Details - it is not negotiated at signing.</p>
+<h2>Section 6 - Method of Recovery</h2>
+<p>Select one:</p>
+<ol>
+<li>Single deduction from final pay. No installment schedule applies.</li>
+<li>Installment schedule.</li>
+</ol>
+<div data-form-field id="f1-recovery-method" field-type="short_text" label="Method selected" hint="" required="true"></div>
+<div data-form-field id="f1-pay-periods" field-type="number" label="Number of pay periods" hint="Installment schedule only" required="false"></div>
+<div data-form-field id="f1-amount-per-period" field-type="short_text" label="Amount per pay period" hint="Installment schedule only" required="false"></div>
+<div data-form-field id="f1-first-deduction-date" field-type="short_text" label="First deduction date" hint="Installment schedule only" required="false"></div>
+<p>Capped at [CAP]% of net pay per period. Deductions never bring net pay below the statutory minimum wage.</p>
+<h2>Section 7 - Statutory Terms</h2>
+<div data-callout>
+<p>This deduction is made pursuant to Article 113 of the Labor Code of the Philippines and GoTeam's Asset Management Policy. The amount deducted is a fixed, documented amount determined under Section 5 above - it carries no penalty element, no uplift, and no handling charge, and reflects the actual documented cost only. This is not a penalty. The Team Member's right to dispute this determination is preserved and is not waived by signing this authority. Deductions stop once the amount in Section 5 is fully recovered, or earlier if the matter is otherwise resolved or reversed.</p>
+</div>
+<h2>Section 8 - Signatures</h2>
+<p><strong>Team Member</strong> - authorizes the deduction described above.</p>
+<div data-form-field id="f1-signature-tm" field-type="signature" label="Team Member Signature" hint="Draw or upload a signature image" required="true"></div>
+<div data-form-field id="f1-date-signed-tm" field-type="short_text" label="Date Signed" hint="" required="true"></div>
+<p><strong>Asset Management Team</strong> - issuing officer.</p>
+<div data-form-field id="f1-signature-amt" field-type="signature" label="Asset Management Team Signature" hint="Draw or upload a signature image" required="true"></div>
+<div data-form-field id="f1-date-signed-amt" field-type="short_text" label="Date Signed" hint="" required="true"></div>
+<p><strong>People and Culture / Payroll</strong> - received for processing.</p>
+<div data-form-field id="f1-signature-pc" field-type="signature" label="People and Culture / Payroll Signature" hint="Draw or upload a signature image" required="true"></div>
+<div data-form-field id="f1-date-signed-pc" field-type="short_text" label="Date Signed" hint="" required="true"></div>
+<h2>For Office Use Only (Payroll)</h2>
+<div data-form-field id="f1-office-received-date" field-type="short_text" label="Received Date" hint="" required="false"></div>
+<div data-form-field id="f1-office-payroll-ref" field-type="short_text" label="Payroll Instruction Reference" hint="" required="false"></div>
+<div data-form-field id="f1-office-first-deduction" field-type="short_text" label="First Deduction Date" hint="" required="false"></div>
+<div data-form-field id="f1-office-fully-recovered" field-type="short_text" label="Fully Recovered Date" hint="" required="false"></div>
+<div data-form-field id="f1-office-later-returned" field-type="checkbox" label="Later Returned / Refunded" hint="" required="false"></div>
+<div data-form-field id="f1-office-closed-date" field-type="short_text" label="Matter Closed Date" hint="" required="false"></div>
+`.trim()
+
+const atdSettlementTransferHtml = `
+<h2>Section 1 - Case Information</h2>
+<p>Team Member: {{TM_FULL_NAME}} (Employee ID: {{EMPLOYEE_ID}})<br>Client or Account: {{CLIENT_NAME}}<br>Leadership Coach: {{LEADERSHIP_COACH}}<br>Asset Owner: {{ASSET_OWNER}}<br>Asset Team Officer: {{CASE_OFFICER}}<br>ATD Reference: {{ATD_REFERENCE}}</p>
+<p>Date the return was requested: {{DATE_RETURN_REQUESTED}}<br>Return date that was set: {{TARGET_RETURN_DATE}}<br>Date of buy-out election: {{DATE_BUYOUT_ELECTION}}</p>
+<h2>Section 2 - Election</h2>
+<div data-callout>
+<p>This is the Team Member's own election, not something GoTeam requires. The Team Member has chosen to keep the equipment in use and settle its value instead of returning it.</p>
+</div>
+<p>Reason for election - select one:</p>
+<ol>
+<li>Lost / can't locate</li>
+<li>Damaged beyond useful return</li>
+<li>Held by a third party</li>
+<li>Wishes to retain the asset in use</li>
+<li>Other</li>
+</ol>
+<div data-form-field id="f2-election-reason" field-type="short_text" label="Reason selected" hint="" required="true"></div>
+<div data-form-field id="f2-election-channel" field-type="short_text" label="Election recorded via" hint="e.g. email, call with the Asset Team" required="true"></div>
+<h2>Section 3 - Equipment</h2>
+<table><tr><th>Asset Name</th><th>Asset Tag</th><th>Serial No.</th><th>Settlement Amount</th></tr><tr><td>{{ASSET_NAME}}</td><td>{{ASSET_TAG}}</td><td>{{SERIAL_NUMBER}}</td><td>{{ASSET_CONDITION}}</td></tr></table>
+<h2>Section 4 - Settlement Amount</h2>
+<p>Basis of the amount: {{AMOUNT_BASIS}}<br>Supporting document reference: {{SUPPORTING_DOC_REF}}<br>Amount in figures: {{AMOUNT_FIGURES}}<br>Amount in words: {{AMOUNT_WORDS}}</p>
+<p>Note: no "repair quotation" option applies to a settlement - the basis above is limited to net book value, replacement cost, or program price.</p>
+<h2>Section 5 - Method of Recovery</h2>
+<p>Select one:</p>
+<ol>
+<li>Single deduction from final pay. No installment schedule applies.</li>
+<li>Installment schedule.</li>
+</ol>
+<div data-form-field id="f2-recovery-method" field-type="short_text" label="Method selected" hint="" required="true"></div>
+<div data-form-field id="f2-pay-periods" field-type="number" label="Number of pay periods" hint="Installment schedule only" required="false"></div>
+<div data-form-field id="f2-amount-per-period" field-type="short_text" label="Amount per pay period" hint="Installment schedule only" required="false"></div>
+<div data-form-field id="f2-first-deduction-date" field-type="short_text" label="First deduction date" hint="Installment schedule only" required="false"></div>
+<p>Capped at [CAP]% of net pay per period. Deductions never bring net pay below the statutory minimum wage.</p>
+<h2>Section 6 - Transfer of Ownership</h2>
+<div data-callout>
+<p>Title to the equipment passes to the Team Member only on full payment. The equipment is taken as-is, with no warranty from GoTeam. Company and client system access is removed on settlement, and the return obligation is discharged on settlement. If the Team Member later locates the equipment and wishes to return it before the amount above is fully recovered, they may do so - the deduction stops and anything already deducted is refunded.</p>
+</div>
+<h2>Section 7 - Signatures</h2>
+<p><strong>Team Member</strong> - authorizes the deduction and elects settlement as described above.</p>
+<div data-form-field id="f2-signature-tm" field-type="signature" label="Team Member Signature" hint="Draw or upload a signature image" required="true"></div>
+<div data-form-field id="f2-date-signed-tm" field-type="short_text" label="Date Signed" hint="" required="true"></div>
+<p><strong>Asset Management Team</strong> - issuing officer.</p>
+<div data-form-field id="f2-signature-amt" field-type="signature" label="Asset Management Team Signature" hint="Draw or upload a signature image" required="true"></div>
+<div data-form-field id="f2-date-signed-amt" field-type="short_text" label="Date Signed" hint="" required="true"></div>
+<p><strong>People and Culture / Payroll</strong> - received for processing.</p>
+<div data-form-field id="f2-signature-pc" field-type="signature" label="People and Culture / Payroll Signature" hint="Draw or upload a signature image" required="true"></div>
+<div data-form-field id="f2-date-signed-pc" field-type="short_text" label="Date Signed" hint="" required="true"></div>
+<h2>For Office Use Only (Payroll)</h2>
+<div data-form-field id="f2-office-received-date" field-type="short_text" label="Received Date" hint="" required="false"></div>
+<div data-form-field id="f2-office-payroll-ref" field-type="short_text" label="Payroll Instruction Reference" hint="" required="false"></div>
+<div data-form-field id="f2-office-first-deduction" field-type="short_text" label="First Deduction Date" hint="" required="false"></div>
+<div data-form-field id="f2-office-fully-recovered" field-type="short_text" label="Fully Recovered Date" hint="" required="false"></div>
+<div data-form-field id="f2-office-closed-date" field-type="short_text" label="Matter Closed Date" hint="" required="false"></div>
+`.trim()
+
+const noticeAssessmentQuotationPendingHtml = `
+<h2>Section 1 - Case Information</h2>
+<p>Team Member: {{TM_FULL_NAME}} (Employee ID: {{EMPLOYEE_ID}})<br>Client or Account: {{CLIENT_NAME}}<br>Leadership Coach: {{LEADERSHIP_COACH}}<br>Asset Owner: {{ASSET_OWNER}}<br>Asset Team Officer: {{CASE_OFFICER}}</p>
+<p>Return date that was set: {{TARGET_RETURN_DATE}}<br>Date received: {{DATE_RECEIVED}}<br>Date assessed: {{DATE_ASSESSED}}</p>
+<div data-callout>
+<p><strong>This is not an authority to deduct.</strong> This notice is issued the moment damage is found but before a repair quotation exists, so no amount can be stated yet.</p>
+</div>
+<h2>Section 2 - Equipment</h2>
+<table><tr><th>Asset Name</th><th>Asset Tag</th><th>Serial No.</th><th>Condition Found</th></tr><tr><td>{{ASSET_NAME}}</td><td>{{ASSET_TAG}}</td><td>{{SERIAL_NUMBER}}</td><td>{{ASSET_CONDITION}}</td></tr></table>
+<h2>Section 3 - Amount</h2>
+<p>Basis of the amount: <em>to be completed on the Authority to Deduct that follows, and only if a charge is proposed.</em></p>
+<h2>Section 4 - Observation</h2>
+<p>This is a preliminary observation, not a finding. Select one:</p>
+<ol>
+<li>Impact / liquid / external force - cause to be determined</li>
+<li>Component failure in ordinary use - no cost expected</li>
+<li>Opening, alteration, or repair outside GoTeam</li>
+<li>Fair wear and tear - no cost expected</li>
+<li>Cause undetermined</li>
+</ol>
+<div data-form-field id="f3-observation" field-type="short_text" label="Observation selected" hint="" required="true"></div>
+<h2>Section 5 - What Happens Next</h2>
+<p>A repair quotation is being obtained. Quotation expected by: {{QUOTATION_EXPECTED_BY}}. You will hear from us by: {{HEAR_BACK_BY}}. Once the quotation is back and a determination is made, a separate Authority to Deduct will follow if a charge is proposed - this notice does not create a charge.</p>
+<h2>Section 6 - Acknowledgment of Receipt</h2>
+<p>Signing below acknowledges receipt of this notice only. It is not an admission of liability and not an agreement to any amount. If this notice is emailed rather than printed and signed, the sent email itself is the record of issue and no signature is required.</p>
+<div data-form-field id="f3-signature" field-type="signature" label="Team Member Signature (receipt acknowledgment only)" hint="Draw or upload a signature image - not required if this notice was sent by email" required="false"></div>
+<div data-form-field id="f3-date-signed" field-type="short_text" label="Date Signed" hint="" required="false"></div>
+<h2>For Office Use Only (Follow-up Tracking)</h2>
+<div data-form-field id="f3-office-quotation-requested-from" field-type="short_text" label="Quotation Requested From" hint="" required="false"></div>
+<div data-form-field id="f3-office-date-requested" field-type="short_text" label="Date Requested" hint="" required="false"></div>
+<div data-form-field id="f3-office-date-received" field-type="short_text" label="Quotation Received On" hint="" required="false"></div>
+<div data-form-field id="f3-office-quotation-ref" field-type="short_text" label="Quotation Reference" hint="" required="false"></div>
+<div data-form-field id="f3-office-outcome" field-type="short_text" label="Outcome - No Charge or Charge Proposed" hint="" required="false"></div>
+<div data-form-field id="f3-office-determination-date" field-type="short_text" label="Determination Issued On" hint="" required="false"></div>
+<div data-form-field id="f3-office-atd-ref" field-type="short_text" label="Authority to Deduct Reference" hint="" required="false"></div>
+<div data-form-field id="f3-office-closed-date" field-type="short_text" label="Matter Closed On" hint="" required="false"></div>
+`.trim()
+
+/**
+ * Brings a form copy saved in localStorage up to the current charging-form
+ * wording. Saved copies shadow the seed above, so the edits are applied as
+ * targeted, repeatable replacements (never an overwrite) and any other change
+ * made in the editor is kept. Safe to run on every load.
+ */
+export function migrateChargingFormContent(id: string, html: string): string {
+  if (!html || !(id in CHARGING_FORM_PATCHES)) return html
+  let out = html
+  const swap = (from: string | RegExp, to: string) => { out = out.replace(from, to) }
+  if (!out.includes('{{LEADERSHIP_COACH}}')) swap('Client or Account: {{CLIENT_NAME}}<br>', 'Client or Account: {{CLIENT_NAME}}<br>Leadership Coach: {{LEADERSHIP_COACH}}<br>')
+  if (!out.includes('{{TARGET_RETURN_DATE}}')) {
+    if (id === 'notice-assessment-quotation-pending') swap('<p>Date received: {{DATE_RECEIVED}}', '<p>Return date that was set: {{TARGET_RETURN_DATE}}<br>Date received: {{DATE_RECEIVED}}')
+    else swap('Date the return was requested: {{DATE_RETURN_REQUESTED}}<br>', 'Date the return was requested: {{DATE_RETURN_REQUESTED}}<br>Return date that was set: {{TARGET_RETURN_DATE}}<br>')
+  }
+  swap(/<td><div data-form-field id="f1-condition"[^>]*><\/div><\/td>/, '<td>{{ASSET_CONDITION}}</td>')
+  swap('<th>Condition on Receipt</th></tr><tr><td>{{ASSET_NAME}}', '<th>Finding</th></tr><tr><td>{{ASSET_NAME}}')
+  swap(/<td><div data-form-field id="f3-condition-found"[^>]*><\/div><\/td>/, '<td>{{ASSET_CONDITION}}</td>')
+  if (id === 'atd-settlement-transfer') {
+    swap('<td>{{SERIAL_NUMBER}}</td><td>{{AMOUNT_FIGURES}}</td>', '<td>{{SERIAL_NUMBER}}</td><td>{{ASSET_CONDITION}}</td>')
+    if (!out.includes('{{SUPPORTING_DOC_REF}}')) swap('Basis of the amount: {{AMOUNT_BASIS}}<br>Amount in figures', 'Basis of the amount: {{AMOUNT_BASIS}}<br>Supporting document reference: {{SUPPORTING_DOC_REF}}<br>Amount in figures')
+  }
+  swap('the moment damage or non-return is found but', 'the moment damage is found but')
+  return out
+}
+const CHARGING_FORM_PATCHES: Record<string, true> = {
+  'atd-loss-damage-non-return': true,
+  'atd-settlement-transfer': true,
+  'notice-assessment-quotation-pending': true
+}
+
 export const RETRIEVAL_FORM_CONTENT: Record<string, string> = reactive({
   'return-ack-onsite': onsiteReturnCommitmentHtml,
-  'return-ack-remote': remoteReturnCommitmentHtml
+  'return-ack-remote': remoteReturnCommitmentHtml,
+  'atd-loss-damage-non-return': atdLossDamageNonReturnHtml,
+  'atd-settlement-transfer': atdSettlementTransferHtml,
+  'notice-assessment-quotation-pending': noticeAssessmentQuotationPendingHtml
 })
 
-export const RETRIEVAL_FORMS: RetrievalForm[] = reactive([
+/** A plain (non-reactive) snapshot of the real seeded content above, kept so
+ * formStorage.ts can fall back to it if a saved localStorage snapshot ever
+ * holds an empty/blank string for one of these two ids - which is exactly
+ * what an editor session that got wiped out mid-edit (or a stale snapshot
+ * saved before this content existed) would persist, permanently shadowing
+ * the real content on every later load even though nothing is actually
+ * wrong with the source data. */
+export const DEFAULT_RETRIEVAL_FORM_CONTENT: Record<string, string> = {
+  'return-ack-onsite': onsiteReturnCommitmentHtml,
+  'return-ack-remote': remoteReturnCommitmentHtml,
+  'atd-loss-damage-non-return': atdLossDamageNonReturnHtml,
+  'atd-settlement-transfer': atdSettlementTransferHtml,
+  'notice-assessment-quotation-pending': noticeAssessmentQuotationPendingHtml
+}
+
+const SEED_FORMS: RetrievalForm[] = [
   {
     id: 'return-ack-onsite',
     name: 'Equipment Return Acknowledgment (Onsite)',
-    description: 'Signed by the team member returning equipment in person - team member and equipment details, an onsite turnover commitment, declaration, and signature.',
+    description: 'Signed by the team member returning equipment in person, team member and equipment details, an onsite turnover commitment, declaration, and signature.',
     mode: 'onsite',
     status: 'active',
     updatedAt: 'Aug 24, 2026',
@@ -327,7 +559,7 @@ export const RETRIEVAL_FORMS: RetrievalForm[] = reactive([
   {
     id: 'return-ack-remote',
     name: 'Equipment Return Acknowledgment (Remote / Courier)',
-    description: 'Signed by the team member shipping equipment back - team member and equipment details, a courier/branch return commitment, shipping cost authorization, declaration, and signature.',
+    description: 'Signed by the team member shipping equipment back, team member and equipment details, a courier/branch return commitment, shipping cost authorization, declaration, and signature.',
     mode: 'remote',
     status: 'active',
     updatedAt: 'Aug 24, 2026',
@@ -335,8 +567,51 @@ export const RETRIEVAL_FORMS: RetrievalForm[] = reactive([
     pageSize: 'letter',
     category: 'Equipment Return',
     nameManuallySet: true
+  },
+  // A11 Post-Retrieval Charging's three forms (F1-F3). `mode` has no real
+  // meaning for these (they're driven by the deduction outcome, not the
+  // ticket's return mode) - set to 'remote' only for the same list-filtering
+  // consistency reason noted on T22-T25 in templates.ts, not because they're
+  // remote-only.
+  {
+    id: 'atd-loss-damage-non-return',
+    name: 'Authority to Deduct, Asset Loss/Damage/Non-Return',
+    description: 'The charge path, basis, evidence, finding, amount, method of recovery, statutory terms, and a three-party signature block (Team Member, Asset Management Team, People & Culture/Payroll).',
+    mode: 'remote',
+    status: 'active',
+    updatedAt: 'Sep 30, 2026',
+    themeColor: '#386BE6',
+    pageSize: 'letter',
+    category: 'Post-Retrieval Charging',
+    nameManuallySet: true
+  },
+  {
+    id: 'atd-settlement-transfer',
+    name: 'Authority to Deduct, Asset Settlement and Transfer',
+    description: "The team member's own election to keep the equipment and pay for it instead of returning it, election, settlement amount, method of recovery, transfer of ownership, and the same three-party signature block.",
+    mode: 'remote',
+    status: 'active',
+    updatedAt: 'Sep 30, 2026',
+    themeColor: '#386BE6',
+    pageSize: 'letter',
+    category: 'Post-Retrieval Charging',
+    nameManuallySet: true
+  },
+  {
+    id: 'notice-assessment-quotation-pending',
+    name: 'Notice of Assessment, Repair Quotation Pending',
+    description: 'An interim notice issued the moment damage is found but before a repair quotation exists, explicitly not an authority to deduct. Receipt-acknowledgment signature only.',
+    mode: 'remote',
+    status: 'active',
+    updatedAt: 'Sep 30, 2026',
+    themeColor: '#386BE6',
+    pageSize: 'letter',
+    category: 'Post-Retrieval Charging',
+    nameManuallySet: true
   }
-])
+]
+
+export const RETRIEVAL_FORMS: RetrievalForm[] = reactive(SEED_FORMS.map(f => ({ ...f })))
 
 /** ids present at load - shipped-with-production forms, as opposed to ones
  * created or duplicated in the app. Captured before any create/duplicate
@@ -344,6 +619,16 @@ export const RETRIEVAL_FORMS: RetrievalForm[] = reactive([
  * the seed data - used to attribute a form's first version to "System"
  * (seeded) vs. the signed-in user (created in-app), same as email templates. */
 export const SEEDED_FORM_IDS = RETRIEVAL_FORMS.map(f => f.id)
+
+/** A plain (non-reactive) snapshot of the real seed records above, by id -
+ * lets formStorage.ts restore a seeded form's full record (not just its
+ * content, see DEFAULT_RETRIEVAL_FORM_CONTENT below) if a saved localStorage
+ * snapshot's `forms` array is ever missing one entirely. This is what a
+ * form "disappearing" on reload actually looks like: nothing deletes a form
+ * outright in this app, but a saved snapshot captured mid-corruption (e.g.
+ * while a broken editor session held stale/partial state) can simply never
+ * have included it, and every reload after that replays the same gap. */
+export const DEFAULT_RETRIEVAL_FORMS: Record<string, RetrievalForm> = Object.fromEntries(SEED_FORMS.map(f => [f.id, f]))
 
 export function createDraftForm(): RetrievalForm {
   return {

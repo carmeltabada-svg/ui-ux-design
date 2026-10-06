@@ -46,10 +46,8 @@ const open = defineModel<boolean>({ default: false })
     </template>
 
     <template #body>
-      <div class="rounded-lg border border-default bg-elevated/50 flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div class="shrink-0 font-semibold text-sm px-4 pt-4 pb-3 border-b border-dashed border-default text-default">
-          {{ subject }}
-        </div>
+      <div class="ticket-email-preview rounded-lg border border-default bg-elevated/50 flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div class="shrink-0 font-semibold text-sm px-4 pt-4 pb-3 border-b border-dashed border-default text-default" v-html="subject" />
         <div class="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-4 text-xs leading-relaxed fade-scroll-y">
           <div class="text-sm leading-relaxed text-default prose-tiptap" v-html="body" />
         </div>

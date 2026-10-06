@@ -1,4 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
@@ -15,13 +16,24 @@ export default defineNuxtConfig({
     enabled: false
   },
 
+  // Without an explicit host, the dev server's "localhost" binding landed on
+  // this machine's IPv6 loopback only (`::1`, confirmed via `netstat` - no
+  // `127.0.0.1` listener existed at all) - real Chrome (not this session's
+  // own browser pane, which happened to still reach it) resolves
+  // "localhost" to `127.0.0.1` first and got a flat connection refused
+  // ("This site can't be reached") with nothing wrong on Chrome's end.
+  // `0.0.0.0` binds every interface, IPv4 and IPv6 alike, so `localhost`
+  // resolves to a real listener either way.
+  devServer: {
+    host: '0.0.0.0'
+  },
+
   css: ['~/assets/css/main.css'],
 
   // the original AMS design has no dark mode — force light to match
   colorMode: {
     preference: 'light',
-    fallback: 'light',
-    forced: true
+    fallback: 'light'
   },
 
   routeRules: {
@@ -37,7 +49,21 @@ export default defineNuxtConfig({
     // colspan) on the DOM node instead of fully replacing it. This
     // `routeRules` entry is what actually disables SSR for the very first
     // request too.
-    '/form-preview': { ssr: false }
+    '/form-preview': { ssr: false },
+    // Same exact hydration-mismatch reasoning as /form-preview above, just
+    // for the ticket module: TICKETS only ever really lives in localStorage
+    // (no backend), so a server render always shows fresh seed data first,
+    // and the client then swaps it out a moment after hydrating - visible
+    // live as a real flash of the wrong ticket count/content on every
+    // refresh, reproduced and reported against this exact section.
+    // Disabling SSR here means the very first paint already waits for the
+    // client to read localStorage, so there's nothing wrong to flash.
+    '/ticket-tracker': { ssr: false },
+    '/ticket-tracker/**': { ssr: false },
+    // Same reasoning as /form-preview above - reads a ticket's gate pass
+    // straight from the TICKETS store, which only really exists in
+    // localStorage.
+    '/gate-pass-preview': { ssr: false }
   },
 
   compatibilityDate: '2026-06-30',

@@ -57,7 +57,7 @@ body {
 }
 
 @theme static {
-  --font-sans: 'Public Sans', sans-serif;
+  --font-sans: 'Inter', sans-serif;
 
   --color-green-50: #EFFDF5;
   --color-green-100: #D9FBE8;
@@ -83,7 +83,11 @@ body {
      html2canvas/print-style capture works app-wide, not just one page. */
   --ui-text: #334155;
   --ui-text-muted: #64748b;
-  --ui-text-dimmed: #94a3b8;
+  /* Was #94a3b8 (slate-400, 3.17:1 on white) which failed WCAG 2.2 AA across
+     every uppercase label app-wide. Darkened to slate-500 so the 10-12px
+     labels pass AA at the cost of a touch less contrast from text-muted;
+     resolves open item #35. */
+  --ui-text-dimmed: #64748b;
   --ui-text-highlighted: #0f172a;
   --ui-text-toned: #475569;
   --ui-bg-muted: #f8fafc;
@@ -94,7 +98,10 @@ body {
   --ui-border-muted: #e2e8f0;
   --ui-border-accented: #cbd5e1;
   --ui-border-inverted: #0f172a;
-  --ui-warning: #f59e0b;
+  /* Status colors use the 600 shade, never 500 (design rule): green-600 and
+     orange-600, which also hold contrast as text/icons on white. */
+  --ui-success: #00A155;
+  --ui-warning: #ea580c;
   --ui-error: #ef4444;
   --ui-info: #3b82f6;
 }
@@ -128,6 +135,197 @@ body {
   100% { background-color: rgba(56, 107, 230, 0.35); }
 }
 
+/* Ticket-aware status coloring (retrieval workspace's Placeholder Check
+   feature only - see wrapTokens' optional statusFor param). Layered on top
+   of the same .tok-hl base above, not a separate style system, so a token
+   still gets the identical hover/click-to-sync/tooltip behavior regardless
+   of status - only the resting color differs, so a problem is visible while
+   reading the email body itself, not only inside the check drawer.
+   tok-hl--resolved is intentionally left at the plain default blue. */
+/* Subtle entrance when moving between ticket stages / Case Details steps:
+   the re-keyed block fades in and rises 4px. Off for reduced-motion users. */
+@keyframes stage-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.stage-enter { animation: stage-enter 0.22s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .stage-enter { animation: none; }
+}
+
+/* Banners (sent confirmations, alerts, notes) ease in subtly: a short
+   drop, a tiny settle, and a gentle icon pop. Kept intentionally
+   small - the earlier "springy over-shoot plus glint" read as overdone
+   (user feedback 5 Oct 2026). */
+@keyframes banner-enter {
+  0%   { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes banner-icon-pop {
+  0%   { opacity: 0; transform: scale(0.75); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.banner-enter { animation: banner-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.banner-icon-pop { animation: banner-icon-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s both; }
+
+/* "Ticket closed" variant - slightly more considered than the regular
+   banner (a touch slower, a longer settle) but still subtle: no outer
+   stroke animation, no stamp blur. The user's finality cue is carried
+   by the icon pop + the sentence copy, not CSS pyrotechnics. */
+@keyframes banner-closed-enter {
+  0%   { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  60%  { opacity: 1; transform: translateY(0) scale(1.004); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes banner-closed-icon {
+  0%   { opacity: 0; transform: scale(0.7); }
+  55%  { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.banner-closed-enter { animation: banner-closed-enter 0.46s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.banner-closed-enter .banner-icon-pop,
+.banner-closed-icon { animation: banner-closed-icon 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-enter, .banner-icon-pop,
+  .banner-closed-enter, .banner-closed-icon {
+    animation: none;
+  }
+}
+
+/* "Copied" success flash for any inline Copy button that swaps its label to
+   "Copied" with a check mark. The swap is driven in Vue (useCopyFlash composable);
+   this class is a short, soft fade-in of the new label and check, nothing more. */
+@keyframes copy-flash {
+  from { opacity: 0.45; }
+  to   { opacity: 1; }
+}
+.copy-flash { animation: copy-flash 0.2s ease-out both; }
+
+/* One-shot "ready to proceed" pulse on a stage's primary button. An
+   expanding ring radiates outward from the button edge and fades to
+   transparent, matching the nxui pulsating-button pattern the user
+   referenced. Fires only the first time the stage is satisfied
+   (useReadyPulse composable scopes it per ticket + stage), so revisiting
+   the stage does not re-pulse. 1s per loop, 3 loops = ~3s total. */
+@keyframes btn-ready-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(56, 107, 230, 0.55); opacity: 1; }
+  70%  { box-shadow: 0 0 0 10px rgba(56, 107, 230, 0); opacity: 0.9; }
+  100% { box-shadow: 0 0 0 14px rgba(56, 107, 230, 0); opacity: 0; }
+}
+.btn-ready-pulse {
+  position: relative;
+}
+.btn-ready-pulse::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(56, 107, 230, 0.55);
+  animation: btn-ready-pulse-ring 1s ease-out 3 both;
+  pointer-events: none;
+  z-index: 0;
+}
+.btn-ready-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(56, 107, 230, 0.35);
+  animation: btn-ready-pulse-ring 1s ease-out 0.3s 3 both;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Page transition between routes (used by definePageMeta pageTransition).
+   Short fade + 6px drop. Reduced-motion disables. */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-active, .page-leave-active { transition: none; }
+}
+
+/* Skeleton shimmer keyframes used by SharedSkeleton. */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* vue-draggable-plus (SortableJS) ghost and drag classes for the checklist. */
+.checklist-ghost {
+  opacity: 0.4;
+  background: rgba(56, 107, 230, 0.08);
+  border-radius: 6px;
+}
+.checklist-drag {
+  box-shadow: 0 8px 20px -8px rgba(15, 23, 42, 0.18);
+  background: #fff;
+  border-radius: 6px;
+}
+
+/* Smooth slide when drag-reordering (or adding/removing) checklist items. */
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition: transform 0.26s ease, opacity 0.18s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.list-leave-active {
+  position: absolute;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-flash,
+  .btn-ready-pulse,
+  .btn-ready-pulse::before, .btn-ready-pulse::after,
+  .list-move, .list-enter-active, .list-leave-active { animation: none; transition: none; }
+}
+
+/* orange-600 (#ea580c), matching the "No data on this ticket" banner. The
+   clicked/active state stays orange too, so a token with no value keeps
+   reading as urgent when it is located from the Placeholder Check drawer
+   instead of switching to the resolved-token blue. */
+.tok-hl--missing {
+  background-color: rgba(234, 88, 12, 0.14);
+}
+.tok-hl--missing:hover { background-color: rgba(234, 88, 12, 0.24); }
+.tok-hl--missing.tok-active {
+  background-color: rgba(234, 88, 12, 0.3);
+  color: #9a3412;
+  box-shadow: 0 0 0 1px rgba(234, 88, 12, 0.7);
+  animation: tok-pulse-missing 0.6s ease;
+}
+@keyframes tok-pulse-missing {
+  0% { background-color: rgba(234, 88, 12, 0.55); }
+  100% { background-color: rgba(234, 88, 12, 0.3); }
+}
+.tok-hl--unrecognized {
+  background-color: rgba(220, 38, 38, 0.14);
+  text-decoration: line-through;
+  text-decoration-color: rgba(220, 38, 38, 0.5);
+}
+.tok-hl--unrecognized:hover { background-color: rgba(220, 38, 38, 0.24); }
+.tok-hl--org-constant {
+  background-color: rgba(107, 114, 128, 0.12);
+}
+.tok-hl--org-constant:hover { background-color: rgba(107, 114, 128, 0.2); }
+
 /* custom two-line tooltip for placeholder tokens (name above, {{CODE}} below),
    replacing the browser's native title tooltip - always light, regardless of
    system color scheme */
@@ -156,6 +354,40 @@ body {
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
+
+/* The ticket workspace's own email preview modal scrolls its body
+   (overflow-y-auto) - an absolutely-positioned tooltip like the one above
+   gets clipped by that ancestor the moment a hovered value sits near the
+   scroll edge (reproduced live). Real fix, not just a bigger z-index: a
+   single shared tooltip element appended straight to <body> (see
+   setupPreviewTooltip() in [id].vue), positioned with getBoundingClientRect
+   math instead of CSS position:absolute, so it can never be clipped by any
+   ancestor's overflow regardless of scroll position. The plain CSS tooltip
+   above is suppressed here so the two don't both show at once. */
+.ticket-email-preview [data-tip-name]:hover::after,
+.ticket-email-preview [data-tip-name]:hover::before {
+  content: none;
+}
+.ticket-preview-tip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 6px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: pre-line;
+  text-align: center;
+  width: max-content;
+  max-width: 220px;
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
 /* Tiptap body editor content - Tailwind resets remove default list/quote styling */
 /* A long unbroken run of characters (no spaces - a URL, a pasted ID, or
    someone just holding down a key) otherwise overflowed straight past its
@@ -334,6 +566,25 @@ body {
   padding: 0.6em 0.8em;
   margin: 0.5em 0;
 }
+
+/* Subtle entrance for message banners / callouts when they appear in a
+   rendered preview (user feedback 5 Oct 2026: "add subtle animations to
+   message banners"). Kept intentionally understated - a short fade and tiny
+   lift - so re-rendering doesn't become noisy. */
+@keyframes msg-banner-enter {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.prose-tiptap [data-message-banner],
+.prose-tiptap [data-callout],
+.prose-tiptap blockquote {
+  animation: msg-banner-enter 0.28s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prose-tiptap [data-message-banner],
+  .prose-tiptap [data-callout],
+  .prose-tiptap blockquote { animation: none; }
+}
 .prose-tiptap [data-btn-link] {
   display: inline-block;
   background: var(--ui-primary);
@@ -384,4 +635,15 @@ body {
   filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.12));
   z-index: 50;
   pointer-events: none;
+}
+
+/* Bell badge: one short pop whenever the unread count changes. */
+.notif-badge { animation: notif-badge-pop 0.28s ease-out; }
+@keyframes notif-badge-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notif-badge { animation: none; }
 }
