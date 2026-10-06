@@ -7,7 +7,7 @@
 // form via EmailAttachSection, in place of the prototype's mocked arrays.
 import {
   TICKETS, seedDemoTickets, GATE_STEPS, PHASE_LABELS, STAGE_PHASE, STAGE_NAMES, STAGE_META,
-  STAGES_ONSITE, STAGES_REMOTE, SKIP_STAGES, addChecklistItem, removeChecklistItem, reorderChecklistItem, applyChecklistTemplate, toggleChecklistRequired, checklistProgress, checklistDueISO, finalizeChecklist, setChecklistDone, checklistReviewCheck, checklistDoneByCounts,
+  STAGES_ONSITE, STAGES_REMOTE, SKIP_STAGES, addChecklistItem, removeChecklistItem, reorderChecklistItem, applyChecklistTemplate, toggleChecklistRequired, checklistProgress, checklistDueISO, finalizeChecklist, setChecklistDone, checklistDoneByCounts,
   REASON_LABELS, REMINDER_TEMPLATES, COURIER_ENDORSEMENT_TEMPLATE_KEY,
   COURIER_PROVIDERS, courierProviderById, confirmCourierBranch, confirmItLockScheduling, confirmItLockExecution,
   branchCaptureUrgent, confirmInTransit as confirmInTransitStage, saveShipmentDetails, shipmentStatus, isValidTrackingLink, GATE_PASS_KIND_LABEL,
@@ -18,15 +18,13 @@ import {
   safekeepingAvailable, resolvedPathFor, templateForKey, attachedFormFor, phasesFor,
   isOverdueReturn, isTransitDelayed, hasReachedStage, rebaselineTargetDate, syncTicketAssetsFromRegister, acknowledgeHrisUpdate, daysLeftLabel,
   ticketStatusLabel, ticketStatusTone, INSPECTION_ROUTE_STATUS, assetCatalogEntry, assetTypeIcon,
-  shiftFor, shiftLabel, lockRunsAt, formatClock,
+  shiftFor, shiftLabel, lockRunsAt,
   pathChangeLockReasons, changeReasonAndMode, takeOverTicket, cancelRetrieval, openChargeCaseForItems, computeTargetDateForPath,
-  confirmReferredToPayroll, saveQuotationDetails, undoStageConfirmation,
+  confirmReferredToPayroll, saveQuotationDetails,
   currentUserName, confirmSmsSentFor, ACKNOWLEDGMENT_HOST, CANCELLATION_REASON_LABELS, type CancellationReason, type TicketReason, type TicketMode,
   type StageKey, type PhaseKey, type InspectionRoute, type HistoryCategory, type TicketHistoryEntry, type Ticket, type TicketAsset, type GatePassKind, type DeductionAmountBasis, type DeductionOutcome, type DeductionDateKey
 } from '~/data/ticketTrackers'
 
-// A ticket link opened directly (a fresh browser, a shared link) must find its ticket: seed the demo tickets here too, exactly as the list page does. Safe to repeat.
-seedDemoTickets()
 import { RETRIEVAL_FORMS, RETRIEVAL_FORM_CONTENT, DEFAULT_PAGE_MARGINS } from '~/data/retrievalForms'
 import { useChecklistTemplates, saveChecklistTemplate, checklistMatchesATemplate, type ChecklistTemplate, type ChecklistTask } from '~/data/checklistTemplates'
 import { VueDraggable } from 'vue-draggable-plus'
@@ -35,6 +33,11 @@ import { TEMPLATES, TEMPLATE_GROUPS, SAMPLE_VALUES, ORG_CONSTANT_TOKENS, expandC
 import { buildPrintCss } from '~/utils/formPrintStyles'
 import { buildFormLetterhead } from '~/utils/formLetterhead'
 import { ensureTemplateRuntime, CUSTOM_TEMPLATE_IDS, DELETED_TEMPLATE_KEYS } from '~/data/templateRuntime'
+
+// A ticket link opened directly (a fresh browser, a shared link) must find its ticket: seed the demo tickets here too, exactly as the list page does. Safe to repeat.
+seedDemoTickets()
+
+definePageMeta({ layout: 'retrieval' })
 
 const route = useRoute()
 // Communications "All steps" list stays collapsed until asked for, to keep the rail short.
@@ -90,7 +93,7 @@ watchEffect(() => {
 
 function fmtDate(iso: string | null) {
   if (!iso) return 'Not set'
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // Calendar-day arithmetic on YYYY-MM-DD strings. Local getters, not
@@ -352,25 +355,6 @@ function removeChecklistItemAt(i: number) {
   if (!ticket.value) return
   removeChecklistItem(ticket.value, i)
 }
-// Drag-to-reorder for the checklist - same grip-handle pattern as the
-// Master Data form builder's own field rows (see FieldRowControls.vue):
-// native HTML5 drag-and-drop for a mouse/trackpad, plus a Move up/down
-// fallback for touch input, which never fires HTML5 drag events at all.
-const draggedChecklistIndex = ref<number | null>(null)
-const checklistDragOverIndex = ref<number | null>(null)
-function onChecklistDragStart(i: number) {
-  draggedChecklistIndex.value = i
-}
-function onChecklistDrop(i: number) {
-  if (!ticket.value || draggedChecklistIndex.value === null) return
-  reorderChecklistItem(ticket.value, draggedChecklistIndex.value, i)
-  draggedChecklistIndex.value = null
-  checklistDragOverIndex.value = null
-}
-function onChecklistDragEnd() {
-  draggedChecklistIndex.value = null
-  checklistDragOverIndex.value = null
-}
 function moveChecklistItem(i: number, direction: -1 | 1) {
   if (!ticket.value) return
   reorderChecklistItem(ticket.value, i, i + direction)
@@ -381,13 +365,6 @@ function moveChecklistItem(i: number, direction: -1 | 1) {
 function reorderChecklistItemBetween(oldIndex: number, newIndex: number) {
   if (!ticket.value || typeof oldIndex !== 'number' || typeof newIndex !== 'number' || oldIndex === newIndex) return
   reorderChecklistItem(ticket.value, oldIndex, newIndex)
-}
-
-// --- B11/A12 - simple advance actions ----------------------------------
-function simpleAdvance(action: string, category: HistoryCategory) {
-  if (!ticket.value) return
-  pushHistory(ticket.value, action, category)
-  advanceStage(ticket.value)
 }
 
 // --- A4 IT lock scheduling - two distinct confirmations (FR-003.6): the
@@ -698,7 +675,7 @@ const ticketRealValues = computed<Partial<Record<string, string>>>(() => {
     TRACKING_NUMBER: t.trackingNumber || undefined,
     TRACKING_LINK: t.trackingLink || undefined,
     DAYS_OVERDUE: isOverdueReturn(t) && t.targetDateISO
-      ? String(Math.max(1, Math.round((Date.now() - new Date(t.targetDateISO).getTime()) / 86400000)))
+      ? String(Math.max(1, Math.round((Date.now() - new Date(`${t.targetDateISO}T00:00:00`).getTime()) / 86400000)))
       : undefined,
     RETRIEVAL_REASON: REASON_LABELS[t.reason],
     RETURN_MODE: t.mode === 'onsite' ? 'Onsite' : 'Remote',
@@ -787,7 +764,7 @@ function openFormPreview(formId: string, withCaseAssets = false) {
     const values: Record<string, string> = { ...ticketSampleValues.value, __TICKET_ASSET_ROWS: JSON.stringify(ticketAssetLines.value) }
     if (withCaseAssets) { values.__CASE_ASSET_ROWS = JSON.stringify(caseAssetRows.value); if (ticket.value.equipmentNotReturned) values.__CASE_NOT_RETURNED = '1' }
     localStorage.setItem(`ams:formPreviewValues:${ticket.value.id}`, JSON.stringify(values))
-  } catch {}
+  } catch { /* storage unavailable: lasts for this session only */ }
   navigateTo(`/form-preview?formId=${encodeURIComponent(formId)}&ref=${encodeURIComponent(ticket.value.reference ?? '')}&mode=${ticket.value.mode}&ticket=${encodeURIComponent(ticket.value.id)}`, { open: { target: '_blank' } })
 }
 /** Every confirmed asset on the ticket, for the retrieval emails' and forms' asset tables (before confirmation, all listed assets). */
@@ -1030,7 +1007,7 @@ const branchUrgent = computed(() => !!ticket.value && branchCaptureUrgent(ticket
 // not just imprecise, and was reported as such against a real ticket.
 const branchLwdPassed = computed(() => {
   if (!ticket.value?.lwd) return false
-  return new Date(ticket.value.lwd).getTime() < new Date().setHours(0, 0, 0, 0)
+  return new Date(`${ticket.value.lwd}T00:00:00`).getTime() < new Date().setHours(0, 0, 0, 0)
 })
 // FR-003.9(f): on non-response, the operator may substitute the branch
 // nearest the address on file and proceed, with the substitution recorded -
@@ -1208,16 +1185,6 @@ function continueFromCall() {
 // gateway - so this is a message preview to copy out and send from the
 // operator's own phone, confirmed the same manual way an email send is.
 const smsMessage = computed(() => ticket.value ? resolveTokensForPrint(CALL_ESCALATION_SMS_TEMPLATE, ticketSampleValues.value, true) : '')
-// Segment count the way every real SMS console (Twilio, etc.) surfaces it:
-// GSM-7 encoding fits 160 chars in a single segment, 153 per segment once a
-// message needs to concatenate across more than one - purely informational
-// here (nothing is actually transmitted), but the same signal an operator
-// would see before sending this from their own phone.
-const smsSegmentCount = computed(() => {
-  const len = smsMessage.value.length
-  if (len <= 160) return 1
-  return Math.ceil(len / 153)
-})
 function confirmSmsSent() {
   if (!ticket.value) return
   ticket.value.smsSentAt = new Date().toISOString()
@@ -1258,8 +1225,9 @@ function smsEntry(code: string): CommSms | null {
   if (code === 'SMS-8' && !t.transitConfirmedAt) blockedReason = 'Send it once the tracking number has been logged (Confirm In Transit).'
   if (code === 'SMS-11' && !latestHistory(/^Courier endorsement sent$/)) blockedReason = 'Send it once the courier booking is confirmed (the endorsement is sent).'
   // Nothing to confirm if there is no number to text. Wins over the timing rules above so the operator fixes the contact first.
-  if (t.status === 'closed') blockedReason = 'This ticket is closed.'
   if (!contactNumberOf(t)) blockedReason = 'No contact number on file. It comes from the employee record, so update it there first.'
+  // A closed ticket takes everything off the table, so its reason wins over every rule above.
+  if (t.status === 'closed') blockedReason = 'This ticket is closed.'
   return { code, label: tpl.label, text, note: tpl.note, sent: t.smsSent?.[code] ?? null, blockedReason, unresolved: /\{[A-Z_]+\}/.test(text) }
 }
 const stageSms = computed<CommSms[]>(() => {
@@ -1471,7 +1439,6 @@ const shipmentCourier = computed(() => courierProviderById(ticket.value?.courier
 const shipmentLink = computed(() => ticket.value?.trackingLink || ticket.value?.transitTrackingRef || '')
 /** The shipment is with the courier once the ticket has reached the Transit step. Before that there is nothing to track. */
 const shipmentHandedOver = computed(() => !!ticket.value && hasReachedStage(ticket.value, 'B11'))
-const hasShipmentDetails = computed(() => !!(ticket.value?.trackingNumber || shipmentLink.value))
 // Revisiting a stage that was already completed (via Back) should show what
 // was recorded, not the original "still waiting" prompt. Both are read off
 // the Activity Log record the original action wrote (newest first).
@@ -1575,19 +1542,6 @@ function formatChecklistTemplatePath(defaultFor: string[]): string {
   return `${unique.slice(0, 2).join(', ')} +${unique.length - 2} more`
 }
 
-// --- Undo per confirmed step (5 Oct 2026, 5th + 6th pass) ---------------
-// Scoped to steps that DON'T send anything to the team member - sent
-// emails and forms are already in Outlook, so an in-app undo would mislead
-// the operator (user feedback 6th pass). Today that means only the
-// Post-Retrieval Charging "Not Applicable" classification uses undo. The
-// helper below is kept generic (`undoStageConfirmation`) for future
-// non-sending steps that need it.
-function doUndoStage(stageKey: StageKey) {
-  if (!ticket.value) return
-  const ok = undoStageConfirmation(ticket.value, stageKey)
-  if (ok) toast.add({ title: `${STAGE_NAMES[stageKey]} undone`, description: 'The step is editable again.', icon: 'i-lucide-undo-2', color: 'warning' })
-  else toast.add({ title: 'Nothing to undo', icon: 'i-lucide-info', color: 'neutral' })
-}
 // A11 "Not Applicable" is a classification, not a send: resetting
 // deductionApplicable to null re-shows the Not Applicable / Item Damaged
 // picker so the operator can switch to Item Damaged if they picked wrong.
@@ -1727,7 +1681,7 @@ function confirmEvidence() {
 }
 
 // --- A11 Case Details (Steps 1-2 of 4; see
-// retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md for the
+// the Post-Retrieval Charging alignment notes for the
 // full reference-file breakdown this is built from). Not persisted (which
 // step is showing) - this is a structured *read* of fields already on the
 // ticket, not a multi-visit workflow of its own, so re-entering the stage
@@ -1763,7 +1717,6 @@ function toggleDeductionCaseAsset(serial: string) {
   if (i === -1) list.push(serial)
   else list.splice(i, 1)
 }
-const deductionCaseSelectedAssets = computed(() => ticket.value ? ticket.value.assets.filter(a => ticket.value!.deductionCaseAssetSerials.includes(a.serial)) : [])
 
 /** Step 1 - computed default (this app's own convenience derivation, not R24 hard-truth like `employee.name` itself - see firstNameOf's own comment), overridable per case. */
 const deductionCaseFirstName = computed(() => ticket.value?.deductionCaseFirstNameOverride ?? firstNameOf(ticket.value?.employee.name ?? ''))
@@ -1986,7 +1939,6 @@ const caseSummaryRows = computed(() => {
     { step: 4, label: 'Equipment', value: `${items.length} item${items.length === 1 ? '' : 's'}: ${items.map(a => a.model).join(', ')}` }
   ]
 })
-const showCaseRecipients = ref(false)
 /** The send button says what it will send, for example "Send No Charge notice". */
 const deductionSendLabel = computed(() => {
   const label = deductionSelectedMeta.value?.label
@@ -2002,7 +1954,7 @@ function scrollToDeductionOutcome() {
  * pattern, e.g. sendSafekeeping/confirmInspection, for "recorded to history
  * counts as sent" in this prototype), and advances the stage - except for
  * 'quotation-pending', which is a real, revisitable waiting state (see
- * retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md's
+ * the Post-Retrieval Charging alignment notes's
  * "resolved this pass" #2: the case sits open pending the quotation, then
  * resolves later to either 'charge' or 'no-charge' - it never advances past
  * a decision that hasn't actually been made yet).
@@ -2236,7 +2188,10 @@ watch(() => ticket.value?.id, (id) => {
 watch(railCollapsed, (v) => {
   const id = ticket.value?.id
   if (!id) return
-  try { v ? localStorage.setItem(railStorageKey(id), '1') : localStorage.removeItem(railStorageKey(id)) } catch {}
+  try {
+    if (v) localStorage.setItem(railStorageKey(id), '1')
+    else localStorage.removeItem(railStorageKey(id))
+  } catch { /* storage unavailable: lasts for this session only */ }
 })
 function toggleRail() {
   railCollapsed.value = !railCollapsed.value
@@ -2722,7 +2677,6 @@ const lockRun = computed(() => ticket.value ? lockRunsAt(ticket.value) : null)
 // per ticket (Jira, Zendesk and Linear all remember it the same way), and
 // Expand all / Collapse all sit above the cards.
 type RailKey = 'custodian' | 'assets' | 'target' | 'comms' | 'shipping' | 'itlock'
-const RAIL_KEYS: RailKey[] = ['custodian', 'assets', 'target', 'comms', 'shipping', 'itlock']
 const RAIL_DEFAULTS: Record<RailKey, boolean> = { custodian: true, assets: true, target: true, comms: true, shipping: false, itlock: false }
 const railOpen = reactive<Record<RailKey, boolean>>({ ...RAIL_DEFAULTS })
 const railOpenKey = (id: string) => `ams:ticketRailOpen:${id}`
@@ -2751,8 +2705,6 @@ function onRailHeader(key: RailKey, e: MouseEvent) {
   if ((e.target as HTMLElement).closest('button, a, input')) return
   toggleRailCard(key)
 }
-const railAllOpen = computed(() => RAIL_KEYS.every(k => railIsOpen(k)))
-function setAllRail(open: boolean) { RAIL_KEYS.forEach((k) => { railOpen[k] = open }); persistRailOpen() }
 
 const railSummary = computed<Record<RailKey, string>>(() => {
   const t = ticket.value
@@ -3283,7 +3235,7 @@ function requestGatePassCreate(kind: GatePassKind) {
   gatePassMenuOpen.value = false
   toast.add({
     title: 'Opens in a new tab',
-    description: `${GATE_PASS_KIND_LABEL[kind]} is created in Forms › Gate Pass, not here - this would open that form in a new tab.`,
+    description: `${GATE_PASS_KIND_LABEL[kind]} is created in Forms › Gate Pass, not here. This opens that form in a new tab.`,
     icon: 'i-lucide-external-link',
     color: 'info'
   })
@@ -5803,7 +5755,7 @@ function reopenTicket() {
                      directly to an arbitrary step. All four steps are real
                      now (Dates/Amount were shown disabled with a "(soon)"
                      suffix and a flat gray track until this pass - see
-                     retrieval-ticket-module/SESSION_HANDOFF.md, item 3). -->
+                     the retrieval session handoff notes, item 3). -->
                 <div class="px-5 pt-4">
                   <div class="flex items-center gap-1">
                     <div
@@ -5865,11 +5817,11 @@ function reopenTicket() {
                     </div>
                     <div>
                       <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Client or account</span>
-                      <p class="text-sm font-medium text-default">{{ ticket.employee.client || '—' }}</p>
+                      <p class="text-sm font-medium text-default">{{ ticket.employee.client || 'Not set' }}</p>
                     </div>
                     <div class="col-span-2">
                       <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Leadership Coach or HRBP</span>
-                      <p class="text-sm font-medium text-default">{{ ticket.employee.leadershipCoach || '—' }}</p>
+                      <p class="text-sm font-medium text-default">{{ ticket.employee.leadershipCoach || 'Not set' }}</p>
                     </div>
                   </div>
 
@@ -5929,7 +5881,7 @@ function reopenTicket() {
                     </div>
                     <div>
                       <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Return date that was set</span>
-                      <p class="text-sm font-medium text-default">{{ ticket.targetDateISO ? fmtDate(ticket.targetDateISO) : '—' }}</p>
+                      <p class="text-sm font-medium text-default">{{ ticket.targetDateISO ? fmtDate(ticket.targetDateISO) : 'Not set' }}</p>
                     </div>
                   </div>
 

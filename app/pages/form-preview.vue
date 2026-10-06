@@ -67,8 +67,8 @@ const ticketAssetLines = computed(() => {
   try { return JSON.parse(ticketValues.value?.__TICKET_ASSET_ROWS ?? '[]') } catch { return [] }
 })
 const content = computed(() => ticketValues.value
-  ? resolveTokensForPrint(expandTicketAssets(expandCaseAssetRows(ticketValues.value?.__CASE_NOT_RETURNED ? omitReceivedDate(RETRIEVAL_FORM_CONTENT[formId.value] ?? '') : (RETRIEVAL_FORM_CONTENT[formId.value] ?? ''), caseAssetRows.value), ticketAssetLines.value), ticketValues.value, true)
-  : resolveTokensForPrint(RETRIEVAL_FORM_CONTENT[formId.value] ?? '', SAMPLE_VALUES))
+  ? resolveTokensForPrint(expandTicketAssets(expandCaseAssetRows(ticketValues.value?.__CASE_NOT_RETURNED ? omitReceivedDate(RETRIEVAL_FORM_CONTENT[formId.value] ?? '') : (RETRIEVAL_FORM_CONTENT[formId.value] ?? ''), caseAssetRows.value), ticketAssetLines.value), ticketValues.value, true, true)
+  : resolveTokensForPrint(RETRIEVAL_FORM_CONTENT[formId.value] ?? '', SAMPLE_VALUES, false, true))
 const mode = computed(() => (route.query.mode as 'onsite' | 'remote') || form.value?.mode || 'onsite')
 const pageSize = computed<PageSize>(() => form.value?.pageSize || 'letter')
 

@@ -6,10 +6,10 @@
 // loses the ticket the operator was just looking at. No AMS app chrome
 // (sidebar/navbar), same reasoning as /form-preview - this is a printable
 // document, not another app screen.
-definePageMeta({ layout: 'blank', ssr: false })
-
 import { TICKETS, type GatePassKind, GATE_PASS_KIND_LABEL } from '~/data/ticketTrackers'
 import { hydrateTicketsFromStorage } from '~/utils/ticketStorage'
+
+definePageMeta({ layout: 'blank', ssr: false })
 
 hydrateTicketsFromStorage()
 

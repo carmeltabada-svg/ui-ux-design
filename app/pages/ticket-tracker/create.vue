@@ -8,10 +8,10 @@
 // is selected, with a compact "fetched" summary appearing inline rather than
 // replacing the search step.
 import type { HrisRecord, TicketMode, TicketReason } from '~/data/ticketTrackers'
-import { HRIS_DIRECTORY, ticketStatusLabel, templateForKey, MATRIX, computeTargetDateForPath, REASON_LABELS, resolvedPathFor, isP12, createTicket, findOpenDuplicate, ASSET_TEAM_MEMBERS, assetTeamMemberByName, currentUserName } from '~/data/ticketTrackers'
+import { localISO, HRIS_DIRECTORY, ticketStatusLabel, templateForKey, MATRIX, computeTargetDateForPath, REASON_LABELS, resolvedPathFor, createTicket, findOpenDuplicate, ASSET_TEAM_MEMBERS, assetTeamMemberByName, currentUserName } from '~/data/ticketTrackers'
 import { flushTicketsToStorage } from '~/utils/ticketStorage'
 
-definePageMeta({ pageTransition: { name: 'page', mode: 'out-in' } })
+definePageMeta({ layout: 'retrieval', pageTransition: { name: 'page', mode: 'out-in' } })
 useSeoMeta({ title: 'AMS · Create Retrieval Ticket' })
 
 const toast = useToast()
@@ -29,6 +29,7 @@ function guardedClick(ready: boolean, reason: string, action: () => void) {
 
 const selectedEmployee = ref<HrisRecord | null>(null)
 // UInputMenu types its model as the picked item, but this form also keeps the typed text in it until a person is picked.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const employeeQuery = ref<any>('')
 
 const employeeOptions = computed(() => HRIS_DIRECTORY.map(e => ({ ...e, label: e.name })))
@@ -104,7 +105,7 @@ const computedDeadline = computed(() => {
   if (!reason.value || !mode.value) return ''
   const iso = computeTargetDateForPath({
     reason: reason.value, mode: mode.value, lwd: lwd.value,
-    createdAt: new Date().toISOString().slice(0, 10),
+    createdAt: localISO(new Date()),
     recallEffectiveDate: reason.value === 'recalled' ? recallEffectiveDate.value : undefined
   })
   if (!iso) return ''

@@ -9,10 +9,10 @@
 import type { Ticket } from '~/data/ticketTrackers'
 import {
   TICKETS, seedDemoTickets, ticketStatusLabel, ticketStatusTone, REASON_LABELS,
-  formsColumnsFor, daysLeftLabel, currentUserName
+  formsColumnsFor, daysLeftLabel, currentUserName, localISO
 } from '~/data/ticketTrackers'
 
-definePageMeta({ pageTransition: { name: 'page', mode: 'out-in' } })
+definePageMeta({ layout: 'retrieval', pageTransition: { name: 'page', mode: 'out-in' } })
 
 useSeoMeta({
   title: 'AMS · Ticket Tracker',
@@ -66,7 +66,7 @@ const modeFilterItems = [
   { label: 'Remote', value: 'remote' as const }
 ]
 
-// Status dot colors, keyed the same as STATUS_TONE_CLASS below - a small
+// Status dot colors, keyed by ticket status - a small
 // filled dot + plain-text label (no pill background) reads calmer in a
 // dense, many-column table than a solid tinted chip on every row.
 const STATUS_DOT_CLASS: Record<string, string> = {
@@ -129,13 +129,6 @@ const page = ref(1)
 
 // Real product's status/type pill palette: semantic color pairs (see AMS
 // Design Conventions / the extracted reference).
-const STATUS_TONE_CLASS: Record<string, string> = {
-  open: 'bg-success/10 text-[rgb(0,127,69)]',
-  transit: 'bg-info/10 text-info',
-  holdoff: 'bg-warning/10 text-warning',
-  overdue: 'bg-error/10 text-error ring ring-inset ring-error/25',
-  closed: 'text-default bg-elevated'
-}
 const badgeBase = 'font-medium inline-flex items-center text-xs px-1.5 py-0.5 gap-1 rounded-sm'
 
 // Ticket types read apart at a glance: each has its own hue and the same icon
@@ -164,7 +157,7 @@ function initials(name: string) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // A little avatar-color variety (deterministic per name, not random - the
@@ -234,7 +227,7 @@ function exportSelected() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `ticket-trackers-${new Date().toISOString().slice(0, 10)}.csv`
+  a.download = `tickets-${localISO(new Date())}.csv`
   a.click()
   URL.revokeObjectURL(url)
   toast.add({ title: `${selected.length} ticket${selected.length === 1 ? '' : 's'} exported`, icon: 'i-lucide-download', color: 'success' })

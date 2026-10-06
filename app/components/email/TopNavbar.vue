@@ -4,7 +4,7 @@
 // button, a breadcrumb nav (Home > current page), and a right-side dark-mode
 // toggle + "Open Internal Dashboard" external link, verbatim from source
 // (https://r24.go.team/).
-import { NOTIFICATIONS, TICKETS, simulateHrisLwdUpdate, simulateBranchReply, scanTicketAlerts, NOTIFICATION_KINDS, type NotificationKind, pushDemoNotification, pushDemoNotificationSet, pendingDigestItems, sendMorningDigest, DIGESTS, type MorningDigest, clearAllTickets, ASSET_TEAM_MEMBERS, currentUserName, setCurrentUser } from '~/data/ticketTrackers'
+import { localISO, NOTIFICATIONS, TICKETS, simulateHrisLwdUpdate, simulateBranchReply, scanTicketAlerts, NOTIFICATION_KINDS, type NotificationKind, pushDemoNotification, pushDemoNotificationSet, pendingDigestItems, sendMorningDigest, DIGESTS, type MorningDigest, clearAllTickets, ASSET_TEAM_MEMBERS, currentUserName, setCurrentUser } from '~/data/ticketTrackers'
 import { flushTicketsToStorage } from '~/utils/ticketStorage'
 
 interface Props {
@@ -174,7 +174,7 @@ function runSimulation() {
   }
   let newLwd = simNewLwd.value
   if (!newLwd) {
-    const d = new Date(`${ticket.lwd || new Date().toISOString().slice(0, 10)}T00:00:00`)
+    const d = new Date(`${ticket.lwd || localISO(new Date())}T00:00:00`)
     d.setDate(d.getDate() + 7)
     newLwd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   }

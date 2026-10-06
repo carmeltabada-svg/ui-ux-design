@@ -9,6 +9,8 @@ import {
 } from '~/data/checklistTemplates'
 import { MATRIX, REASON_LABELS, type TicketReason } from '~/data/ticketTrackers'
 
+definePageMeta({ layout: 'retrieval' })
+
 useSeoMeta({ title: 'AMS · Offboarding Checklists' })
 
 const toast = useToast()

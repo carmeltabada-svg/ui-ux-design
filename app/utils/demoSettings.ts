@@ -13,25 +13,12 @@ export const allowUnresolvedSends = ref(read(KEY_ALLOW_UNRESOLVED))
 
 if (typeof window !== 'undefined') {
   watch(allowUnresolvedSends, (v) => {
-    try { v ? localStorage.setItem(KEY_ALLOW_UNRESOLVED, '1') : localStorage.removeItem(KEY_ALLOW_UNRESOLVED) } catch {}
+    try {
+      if (v) localStorage.setItem(KEY_ALLOW_UNRESOLVED, '1')
+      else localStorage.removeItem(KEY_ALLOW_UNRESOLVED)
+    } catch { /* storage unavailable: lasts for this session only */ }
   })
 }
-
-// --- Checklist final-review rule ---------------------------------------
-//
-// Finalised 5 Oct 2026 (open items #11, #34). FR-003.11 applies no
-// segregation of duties, so the policy is "anyone on the Asset Team can sign
-// off". For real accountability without changing the policy, every task's
-// "Done by" is recorded as it is ticked and shown next to the task, and the
-// final sign-off records who signed. The reviewer may also leave a short
-// note that is kept with the sign-off record.
-//
-// The Simulation Control switch that offered four rules while this was being
-// decided is gone, and so are the designated-reviewer list and the "a
-// different person must sign" path. `reviewerRule` is kept as a frozen const
-// so any older call-site reading it keeps compiling until it is cleaned up.
-export type ReviewerRule = 'anyone'
-export const reviewerRule = { value: 'anyone' as const } as const
 
 // --- Prototype simulator bar -------------------------------------------
 //
@@ -56,6 +43,9 @@ const KEY_SIM_BAR = 'ams:demo:simulatorBar'
 export const simulatorBarVisible = ref(typeof window === 'undefined' ? true : (() => { try { return localStorage.getItem(KEY_SIM_BAR) !== '0' } catch { return true } })())
 if (typeof window !== 'undefined') {
   watch(simulatorBarVisible, (v) => {
-    try { v ? localStorage.removeItem(KEY_SIM_BAR) : localStorage.setItem(KEY_SIM_BAR, '0') } catch {}
+    try {
+      if (v) localStorage.removeItem(KEY_SIM_BAR)
+      else localStorage.setItem(KEY_SIM_BAR, '0')
+    } catch { /* storage unavailable: lasts for this session only */ }
   })
 }

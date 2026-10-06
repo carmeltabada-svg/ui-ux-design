@@ -307,7 +307,7 @@ const remoteReturnCommitmentHtml = `
 `.trim()
 
 // A11 Post-Retrieval Charging's three forms (F1-F3, see
-// retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md - the
+// the Post-Retrieval Charging alignment notes - the
 // reference console this whole group is built from). Unlike the two
 // return-ack forms above (team-member-completed, hence heavy on
 // data-form-field inputs), every field across all three of these is

@@ -37,7 +37,10 @@ export const DEFAULT_CHECKLIST_TASKS: string[] = [
   'Return instructions explained to the team member'
 ]
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function seed(): ChecklistTemplate[] {
   return [{
@@ -53,17 +56,29 @@ function seed(): ChecklistTemplate[] {
 const templates = reactive<ChecklistTemplate[]>(seed())
 let loaded = false
 
-function normalize(raw: any): ChecklistTemplate | null {
+/** A saved template as read back from storage: any version, so every field is unchecked. */
+interface StoredChecklistTemplate {
+  id?: unknown
+  name?: unknown
+  tasks?: unknown
+  items?: unknown
+  defaultFor?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+const isTaskLike = (t: unknown): t is { text: string, required?: unknown } => !!t && typeof (t as { text?: unknown }).text === 'string'
+
+function normalize(raw: StoredChecklistTemplate | null | undefined): ChecklistTemplate | null {
   if (!raw || typeof raw.name !== 'string') return null
   // The first version stored plain strings. They become required tasks.
   const tasks: ChecklistTask[] = Array.isArray(raw.tasks)
-    ? raw.tasks.filter((t: any) => t && typeof t.text === 'string').map((t: any) => ({ text: t.text, required: t.required !== false }))
-    : Array.isArray(raw.items) ? raw.items.filter((t: any) => typeof t === 'string').map((text: string) => ({ text, required: true })) : []
+    ? raw.tasks.filter(isTaskLike).map(t => ({ text: t.text, required: t.required !== false }))
+    : Array.isArray(raw.items) ? raw.items.filter((t): t is string => typeof t === 'string').map(text => ({ text, required: true })) : []
   return {
     id: String(raw.id ?? `tpl-${Date.now().toString(36)}`),
     name: raw.name,
     tasks,
-    defaultFor: Array.isArray(raw.defaultFor) ? raw.defaultFor.filter((k: any) => typeof k === 'string') : [],
+    defaultFor: Array.isArray(raw.defaultFor) ? raw.defaultFor.filter((k): k is string => typeof k === 'string') : [],
     createdAt: String(raw.createdAt ?? today()),
     updatedAt: String(raw.updatedAt ?? raw.createdAt ?? today())
   }
@@ -151,13 +166,6 @@ export function updateChecklistTemplate(id: string, patch: { name: string, tasks
   claimPaths(t.defaultFor, id)
   persist()
   return { ok: true }
-}
-
-export function renameChecklistTemplate(id: string, name: string): Result {
-  load()
-  const t = templates.find(x => x.id === id)
-  if (!t) return { ok: false, error: 'That template no longer exists.' }
-  return updateChecklistTemplate(id, { name, tasks: t.tasks, defaultFor: t.defaultFor })
 }
 
 export function duplicateChecklistTemplate(id: string): string | null {

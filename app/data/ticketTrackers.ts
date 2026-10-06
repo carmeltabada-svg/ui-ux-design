@@ -19,7 +19,7 @@ import { RETRIEVAL_FORMS } from './retrievalForms'
 
 export type TicketReason = 'resignation' | 'immediate-resignation' | 'end-of-contract' | 'recalled' | 'unexplained-absence'
 
-/** Post-Retrieval Charging Console v1.0's 4-way branch (see retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md) - what A11 resolves to once "Item Damaged or Not Returned" is picked. Each maps to exactly one email (T22-T25) and, except 'no-charge', one form (F1-F3) - see DEDUCTION_OUTCOME_META in [id].vue for the actual copy/mapping. The templates themselves aren't authored in Templates yet (flagged as an open item), so this only drives the outcome-selector UI for now, not a real attachment. */
+/** Post-Retrieval Charging Console v1.0's 4-way branch (see the Post-Retrieval Charging alignment notes) - what A11 resolves to once "Item Damaged or Not Returned" is picked. Each maps to exactly one email (T22-T25) and, except 'no-charge', one form (F1-F3) - see DEDUCTION_OUTCOME_META in [id].vue for the actual copy/mapping. The templates themselves aren't authored in Templates yet (flagged as an open item), so this only drives the outcome-selector UI for now, not a real attachment. */
 export type DeductionOutcome = 'no-charge' | 'quotation-pending' | 'charge' | 'settlement'
 /**
  * The real mapping T22-T25/F1-F3 now that both exist (see templates.ts and
@@ -37,7 +37,7 @@ export const DEDUCTION_OUTCOME_META: Record<DeductionOutcome, { label: string, d
   charge: { label: 'Determination & Charge', description: 'Quotation back, amount determined, a charge is proposed.', templateKey: 't24', formId: 'atd-loss-damage-non-return' },
   settlement: { label: 'Settlement Election', description: "The team member elects to keep the equipment and pay for it instead of returning it.", templateKey: 't25', formId: 'atd-settlement-transfer' }
 }
-/** Case Details Step 4's own "Basis of the amount" dropdown, verbatim from the reference console (see retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md, Case Details > Amount). */
+/** Case Details Step 4's own "Basis of the amount" dropdown, verbatim from the reference console (see the Post-Retrieval Charging alignment notes, Case Details > Amount). */
 export type DeductionAmountBasis = 'quotation' | 'replacement-cost' | 'net-book-value' | 'component-cost' | 'program-price'
 export const DEDUCTION_AMOUNT_BASIS_LABELS: Record<DeductionAmountBasis, string> = {
   quotation: 'Documented repair quotation',
@@ -340,7 +340,7 @@ export function stageListFor(mode: TicketMode): StageKey[] {
  * applicable" trimmed away leaves bare "Deduction," too vague on its own.
  * Renamed to "Post-Retrieval Charging" - the reference console this stage's
  * real fields/forms/emails are being built from (Post-Retrieval Charging
- * Console v1.0, see retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md)
+ * Console v1.0, see the Post-Retrieval Charging alignment notes)
  * carries that exact name, so this isn't an invented label - it's this
  * stage's own real, externally-sourced name, just not the FR-003 PDF's.
  */
@@ -727,7 +727,7 @@ export interface Ticket {
   deductionItem: string
   deductionAmount: string
   deductionAuthorizedBy: string
-  /** Post-Retrieval Charging Console v1.0 alignment (see retrieval-ticket-module/POST_RETRIEVAL_CHARGING_ALIGNMENT_NOTES.md) - A11's own Case Details, Step 1 (Team Member) and Step 2 (Case). Steps 3 (Dates) and 4 (Amount) aren't built yet - this file's own "Nothing below is typed twice" rule means Case Details is the single source of truth every form/email reads from, never the reverse. Full name/Employee ID/Client/Leadership Coach aren't repeated here - they're R24 hard-truth already on `employee` (see the top-of-file note on that), read directly, never duplicated onto a second field that could drift from it. */
+  /** Post-Retrieval Charging Console v1.0 alignment (see the Post-Retrieval Charging alignment notes) - A11's own Case Details, Step 1 (Team Member) and Step 2 (Case). Steps 3 (Dates) and 4 (Amount) aren't built yet - this file's own "Nothing below is typed twice" rule means Case Details is the single source of truth every form/email reads from, never the reverse. Full name/Employee ID/Client/Leadership Coach aren't repeated here - they're R24 hard-truth already on `employee` (see the top-of-file note on that), read directly, never duplicated onto a second field that could drift from it. */
   /** Step 1 - First Name is a real, separate field on the reference form (not just "first word of the full name" shown inline), but it's this app's own convenience derivation, not R24 hard-truth like the fields above - so unlike those, a per-case override is legitimate. Null until the officer types over the computed default (see firstNameOf()). */
   deductionCaseFirstNameOverride: string | null
   /** Step 2 - "the name that signs the email" for this specific case. Defaults to the ticket's own `assignee`, but the reference form treats this as its own per-case field (a different Asset Team member can process one specific case than the one generally assigned to the ticket) - null until the officer types over the default. */
@@ -937,11 +937,9 @@ export function checklistDueISO(ticket: Pick<Ticket, 'lwd'>): string | null {
   return ticket.lwd ? subtractBusinessDays(ticket.lwd, 3) : null
 }
 
-// Finalised 5 Oct 2026 (open items #11, #34): the policy is "anyone on the
-// Asset Team can sign off" (FR-003.11 applies no segregation of duties).
-// Accountability is carried by always recording "Done by" per task plus the
-// signer. Older call-sites still pass a rule arg; it is accepted and ignored.
-export type ChecklistReviewerRule = 'anyone'
+// Anyone on the Asset Team can sign off the final review (FR-003.11 applies no
+// segregation of duties). Accountability: every task records who ticked it, and
+// the sign-off records the signer.
 
 /** Who ticked the tasks, as counts, for the sign-off to show. */
 export function checklistDoneByCounts(ticket: Ticket): { name: string, count: number }[] {
@@ -951,30 +949,15 @@ export function checklistDoneByCounts(ticket: Ticket): { name: string, count: nu
 }
 
 /**
- * Whether this person may sign off the final review. FR-003.11 applies no
- * segregation of duties, so the answer is always yes. Kept as a function so
- * the old call-shape still works; the `rule` and `reviewers` args are ignored.
- */
-export function checklistReviewCheck(_ticket: Ticket, _actor: string, _rule?: ChecklistReviewerRule, _reviewers?: string[]): { allowed: boolean, reason: string } {
-  return { allowed: true, reason: '' }
-}
-
-/**
  * Signs off the final review (who, when, optional note) and moves the ticket
  * on. Only once every required task is done. A note is captured when the
  * reviewer wants to record context ("waiver on item 3 agreed with ops lead"),
  * kept with the sign-off record and shown with the signed-off banner.
  */
-export function finalizeChecklist(ticket: Ticket, actor = currentUserName(), noteOrRule?: string | ChecklistReviewerRule, _reviewers: string[] = []): { ok: true } | { ok: false, error: string } {
+export function finalizeChecklist(ticket: Ticket, actor = currentUserName(), noteText?: string): { ok: true } | { ok: false, error: string } {
   if (ticket.checklistReview) return { ok: false, error: 'The final review is already signed off.' }
   if (!checklistProgress(ticket).ready) return { ok: false, error: 'Do every required task first.' }
-  // Backward-compat: older callers passed a rule string ('anyone', etc.) as
-  // the third arg. Anything that isn't a free-form note (longer than the
-  // longest known rule name) is treated as a rule and ignored; a real note
-  // is captured.
-  const note = typeof noteOrRule === 'string' && !['anyone', 'inform', 'different-person', 'designated'].includes(noteOrRule)
-    ? noteOrRule.trim() || undefined
-    : undefined
+  const note = noteText?.trim() || undefined
   ticket.checklistReview = { by: actor, at: new Date().toISOString(), note }
   pushHistory(
     ticket,
@@ -1063,8 +1046,13 @@ function addNotification(
   return true
 }
 
-function localISO(d: Date): string {
+/** Local calendar date as YYYY-MM-DD. toISOString() gives the UTC date, which is yesterday for anyone before 8:00 AM in Manila. */
+export function localISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+/** A date-only ISO string (YYYY-MM-DD) as local midnight. new Date('2026-10-04') is UTC midnight, which is the evening of the day before in timezones west of UTC, so overdue checks, day counts and weekday maths would be a day out there. */
+function parseLocalDate(iso: string): Date {
+  return new Date(`${iso}T00:00:00`)
 }
 function shortDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -1256,34 +1244,6 @@ export function pushDemoNotificationSet(): number {
     if (pushDemo(k.value, subjects[(demoCursor++) % subjects.length]!, { at, read: i % 4 === 3 })) n++
   })
   return n
-}
-
-/** Things the team member (or the courier) does outside AMS that the assignee must hear about. */
-export type TeamMemberEvent = 'form-signed' | 'acknowledgment' | 'courier-reply'
-export const TEAM_MEMBER_EVENTS: { value: TeamMemberEvent, label: string }[] = [
-  { value: 'form-signed', label: 'Signed form returned' },
-  { value: 'acknowledgment', label: 'Acknowledgment form submitted' },
-  { value: 'courier-reply', label: 'Courier replied to the endorsement' }
-]
-
-/**
- * Demo stand-in for the real triggers: a form coming back through the public
- * link, or a reply landing in Outlook. Each writes the Activity Log entry and
- * notifies the assignee (bell and email), exactly as the real connector would.
- */
-export function simulateTeamMemberEvent(ticket: Ticket, ev: TeamMemberEvent): boolean {
-  const who = ticket.employee.name
-  if (ev === 'form-signed') {
-    pushHistory(ticket, `Signed form returned by ${who}`, 'return', 'System')
-    return raiseNotification(ticket, { kind: 'form-signed', action: true, title: `Signed form returned · ${who}`, description: `${who} · Check it and record the outcome` })
-  }
-  if (ev === 'acknowledgment') {
-    pushHistory(ticket, `Acknowledgment form submitted by ${who}`, 'gate', 'System')
-    return raiseNotification(ticket, { kind: 'acknowledgment', title: `Acknowledgment submitted · ${who}`, description: `${who} · Saved to the ticket` })
-  }
-  const am = courierProviderById(ticket.courierProviderId)
-  pushHistory(ticket, `Courier reply received${am ? ` from ${am.accountManager}` : ''} (pickup endorsement)`, 'send', 'System')
-  return raiseNotification(ticket, { kind: 'courier-reply', action: true, title: `Courier replied · ${who}`, description: `${who} · ${am?.name ?? 'Courier'} answered the pickup endorsement` })
 }
 
 /** Tickets with an unacknowledged HRIS-driven change - drives the sidebar count and the Overview row badge. */
@@ -1548,7 +1508,7 @@ export function createTicket(
     referredToPayrollBy: '',
     inspectionRoute: null,
     status: 'open',
-    createdAt: new Date().toISOString().slice(0, 10),
+    createdAt: localISO(new Date()),
     createdBy: currentUserName(),
     // A Recalled seed has no operator to type it, so it takes its Separation Date.
     recallEffectiveDate: reason === 'recalled' ? (recallEffectiveDate || (idOverride ? sep : '')) : undefined,
@@ -1605,79 +1565,22 @@ export function advanceStage(ticket: Ticket) {
   ticket.furthestStageIdx = Math.max(ticket.furthestStageIdx ?? 0, ticket.stageIdx)
 }
 
-/** Undo the most recent confirmation on a given stage (5 Oct 2026, 5th pass
- * feedback). Clears the per-stage state the confirmation wrote, pops the
- * most recent matching history entry, and if the ticket had advanced past
- * this stage, steps it back so the editable form shows again. Each case is
- * narrowly tied to the state the matching confirm function wrote, so
- * nothing else gets reset by accident. */
-export function undoStageConfirmation(ticket: Ticket, stageKey: StageKey, actor = currentUserName()): boolean {
-  if (ticket.status !== 'open') return false
-  const list = stageListFor(ticket.mode)
-  const idx = list.indexOf(stageKey)
-  let historyMatcher: RegExp | null = null
-  switch (stageKey) {
-    case 'A5':
-      if (!ticket.assetsLocked) return false
-      ticket.assetsLocked = false
-      historyMatcher = /^Assets confirmed/
-      break
-    case 'A6':
-      historyMatcher = /^Retrieval notice sent/
-      break
-    case 'A10':
-      ticket.evidenceProof = null
-      ticket.evidenceCondition = null
-      historyMatcher = /^Proof-of-Receipt \+ condition photos uploaded/
-      break
-    case 'A11':
-      ticket.deductionOutcome = null
-      historyMatcher = /^Post-Retrieval Charging (resolved|outcome changed)/
-      break
-    case 'A12':
-      ticket.inspectionRoute = null
-      historyMatcher = /^Inspection routed/
-      break
-    case 'B9':
-      historyMatcher = /^Courier endorsement sent$/
-      break
-    case 'B11':
-      ticket.transitConfirmedAt = ''
-      ticket.trackingNumber = ''
-      ticket.trackingLink = ''
-      historyMatcher = /^In transit confirmed/
-      break
-    default:
-      return false
-  }
-  if (historyMatcher) {
-    const i = ticket.history.findIndex(h => historyMatcher!.test(h.action))
-    if (i >= 0) ticket.history.splice(i, 1)
-  }
-  if (idx >= 0 && ticket.stageIdx > idx) {
-    ticket.stageIdx = idx
-    ticket.furthestStageIdx = Math.max(idx, ticket.furthestStageIdx ?? 0)
-  }
-  pushHistory(ticket, `${STAGE_NAMES[stageKey] ?? stageKey} undone`, 'return', actor)
-  return true
-}
-
 function addCalendarDays(iso: string, days: number): string {
-  const d = new Date(iso)
+  const d = parseLocalDate(iso)
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return localISO(d)
 }
 
 /** No public-holiday calendar is available to this app today, so business-day arithmetic only skips weekends - a known, intentional scope limit, not an oversight. */
 function addBusinessDays(iso: string, days: number): string {
-  const d = new Date(iso)
+  const d = parseLocalDate(iso)
   let remaining = days
   while (remaining > 0) {
     d.setDate(d.getDate() + 1)
     const day = d.getDay()
     if (day !== 0 && day !== 6) remaining--
   }
-  return d.toISOString().slice(0, 10)
+  return localISO(d)
 }
 
 /**
@@ -1779,7 +1682,7 @@ export function rebaselineTargetDate(ticket: Ticket, newDateISO: string, reason:
   ticket.targetDateISO = newDateISO
   ticket.overdueForced = false
 
-  const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'not set'
+  const fmt = (iso: string | null) => iso ? parseLocalDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'not set'
   pushHistory(
     ticket,
     `Target Date re-baselined: ${fmt(previousDateISO)} -> ${fmt(newDateISO)} (reason: ${trimmedReason})${wasOverdue ? ' - ticket was in Overdue Return at the time of this change; that lapse remains on record' : ''}`,
@@ -1805,7 +1708,7 @@ export function simulateHrisLwdUpdate(ticket: Ticket, newLwd: string) {
   const oldLwd = ticket.lwd
   if (!newLwd || newLwd === oldLwd) return
 
-  const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const fmt = (iso: string) => parseLocalDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const changedAt = new Date().toISOString()
   // FR-003.8a ref d - "the ticket records the amending artifact so the new
   // clock is traceable to its authority." This app has no real R24 backend
@@ -1890,7 +1793,7 @@ export function acknowledgeHrisUpdate(ticket: Ticket) {
 export function releaseGate(ticket: Ticket, gateN: number, note?: string) {
   ticket.gatesReleased = gateN
   ticket.gateNotes[gateN] = note?.trim() || 'Recorded'
-  ticket.gateReleaseDates[gateN] = new Date().toISOString().slice(0, 10)
+  ticket.gateReleaseDates[gateN] = localISO(new Date())
   const step = GATE_STEPS.find(g => g.n === gateN)
   pushHistory(ticket, `Gate ${gateN} recorded${note?.trim() ? ` (${note.trim()})` : ''} - ${step?.unlocks ?? ''}`, 'gate')
   // Unexplained Absence's Target Date anchors on Gate 3 release
@@ -1900,10 +1803,6 @@ export function releaseGate(ticket: Ticket, gateN: number, note?: string) {
     const resolved = computeTargetDateForPath(ticket)
     if (resolved) ticket.targetDateISO = resolved
   }
-}
-
-export function isP12(reason: TicketReason, mode: TicketMode): boolean {
-  return reason === 'unexplained-absence' && mode === 'onsite'
 }
 
 /**
@@ -2109,7 +2008,7 @@ export function simulateBranchReply(ticket: Ticket): boolean {
  */
 export function branchCaptureUrgent(ticket: Pick<Ticket, 'mode' | 'lwd' | 'courierBranchName'>): boolean {
   if (ticket.mode !== 'remote' || ticket.courierBranchName || !ticket.lwd) return false
-  const days = Math.round((new Date(ticket.lwd).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
+  const days = Math.round((parseLocalDate(ticket.lwd).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
   return days <= 2
 }
 
@@ -2147,7 +2046,7 @@ export function confirmInTransit(ticket: Ticket, trackingNumber: string, trackin
   ticket.trackingNumber = trackingNumber
   ticket.trackingLink = trackingLink
   ticket.transitTrackingRef = trackingLink || trackingNumber
-  ticket.transitConfirmedAt = new Date().toISOString().slice(0, 10)
+  ticket.transitConfirmedAt = localISO(new Date())
   pushHistory(ticket, `Marked In Transit - tracking number: ${trackingNumber || 'not provided'}${trackingLink ? ', tracking link added' : ''}`, 'transit')
   advanceStage(ticket)
 }
@@ -2174,7 +2073,7 @@ export function shiftFor(ticket: Pick<Ticket, 'employee'>): HrisShift | null {
   return ticket.employee.shift ?? HRIS_DIRECTORY.find(e => e.id === ticket.employee.id)?.shift ?? null
 }
 /** '22:00' to '10:00 PM'. */
-export function formatClock(hhmm: string): string {
+function formatClock(hhmm: string): string {
   const [h = 0, m = 0] = hhmm.split(':').map(Number)
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`
 }
@@ -2407,7 +2306,7 @@ export function isOverdueReturn(ticket: Ticket): boolean {
   if (hasReachedStage(ticket, 'A10') || hasReachedStage(ticket, 'B11')) return false
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const target = new Date(ticket.targetDateISO)
+  const target = parseLocalDate(ticket.targetDateISO)
   target.setHours(0, 0, 0, 0)
   return target.getTime() < today.getTime()
 }
@@ -2690,7 +2589,7 @@ export function formsColumnsFor(ticket: Ticket): FormBadge[] {
 /** "Nd left" / "Overdue by Nd" countdown text for the Return Deadline column. */
 export function daysLeftLabel(ticket: Ticket): string | null {
   if (!ticket.targetDateISO) return null
-  const target = new Date(ticket.targetDateISO)
+  const target = parseLocalDate(ticket.targetDateISO)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   target.setHours(0, 0, 0, 0)
