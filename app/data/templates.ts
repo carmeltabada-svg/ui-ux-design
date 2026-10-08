@@ -1,3 +1,4 @@
+import { escapeText, escapeAttr } from '~/utils/escapeHtml'
 // Real content sourced from the original prototype's TEMPLATES / TEMPLATE_GROUPS /
 // TOKEN_GROUPS / VERSION_HISTORY JS objects (template_decoded.html, ~line 13871-14039).
 
@@ -255,7 +256,7 @@ export function wrapTokens(html: string, samples?: Record<string, string>, statu
     const name = TOKEN_INFO[code] || code
     // A substituted value is plain text, so it is escaped here: this string is rendered with v-html, and a team member name or a typed reference must never be able to inject markup.
     const display = samples && samples[code] !== undefined ? escapeText(samples[code]) : match
-    const tip = samples ? ` data-tip-name="${name}" data-tip-code="${match}"` : ''
+    const tip = samples ? ` data-tip-name="${escapeAttr(name)}" data-tip-code="${match}"` : ''
     // Optional per-ticket status modifier (retrieval workspace only - the
     // Templates/Master Data editors that also call wrapTokens() have no
     // ticket to check a code's real data against, so they never pass this
@@ -265,8 +266,6 @@ export function wrapTokens(html: string, samples?: Record<string, string>, statu
   })
 }
 
-const escapeAttr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-const escapeText = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /**
  * The tag-level half of wrapTokens: fills any {{TOKEN}} found in this tag's
@@ -414,8 +413,7 @@ export function expandTicketAssets(
   wrap?: (code: string, value: string) => string
 ): string {
   if (!assets.length || !html || html.includes('{{ASSET_CONDITION}}')) return html
-  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const put = (code: string, value: string) => wrap ? wrap(code, value) : esc(value)
+  const put = (code: string, value: string) => wrap ? wrap(code, value) : escapeText(value)
   const grouped: { name: string, qty: number }[] = []
   for (const a of assets) {
     const g = grouped.find(x => x.name === a.name)
@@ -451,7 +449,6 @@ export function expandTicketAssets(
  */
 export function expandCaseAssetRows(html: string, rows: Record<string, string>[]): string {
   if (!rows.length || !html) return html
-  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return html.replace(/<tr>(?:(?!<\/tr>)[\s\S])*?\{\{(?:ASSET_TAG|SERIAL_NUMBER|ASSET_NAME|ASSET_CONDITION)\}\}(?:(?!<\/tr>)[\s\S])*<\/tr>/g, rowHtml =>
-    rows.map(r => rowHtml.replace(/\{\{(ASSET_TAG|SERIAL_NUMBER|ASSET_NAME|ASSET_CONDITION)\}\}/g, (tok, code) => r[code] ? esc(r[code]) : tok)).join(''))
+    rows.map(r => rowHtml.replace(/\{\{(ASSET_TAG|SERIAL_NUMBER|ASSET_NAME|ASSET_CONDITION)\}\}/g, (tok, code) => r[code] ? escapeText(r[code]) : tok)).join(''))
 }

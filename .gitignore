@@ -31,3 +31,23 @@ playwright/.cache
 .env
 .env.*
 !.env.example
+
+# Internal docs and pipeline assets (not part of the app)
+AMS_DESIGN_SYSTEM.md
+AMS_PRODUCT.md
+PRODUCT.md
+DESIGN.md
+DESIGN_SYSTEM.md
+PR_DESCRIPTIONS.md
+SESSION_HANDOFF.md
+pipeline-skills-updated/
+retrieval-shots/
+retrieval-walkthrough/
+
+# Demo build artifacts
+ams-retrieval-demo.html
+ams-retrieval-demo.zip
+ams-retrieval-demo/
+
+# Claude Code skills (not part of the app)
+.claude/skills/

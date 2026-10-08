@@ -13,7 +13,7 @@ defineProps<Props>()
   <div class="flex items-center justify-between mb-1.5">
     <label class="text-xs font-semibold uppercase tracking-wide text-dimmed">
       {{ label }}
-      <span v-if="optional" class="ml-1 normal-case font-normal text-dimmed/70">(optional)</span>
+      <span v-if="optional" class="ml-1 normal-case font-normal text-dimmed">(optional)</span>
     </label>
   </div>
 </template>

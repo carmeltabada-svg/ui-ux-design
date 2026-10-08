@@ -5,6 +5,7 @@
 // switching templates (and creating new ones) actually persists.
 import { reactive } from 'vue'
 import { TEMPLATES } from './templates'
+import { deepClone } from '~/utils/deepClone'
 
 /** The signed-in user, used to attribute version-history entries created in
  * this session - a seeded template's first version is attributed to
@@ -54,12 +55,27 @@ export const CUSTOM_TEMPLATE_IDS = reactive<string[]>([])
  * themselves at runtime (those are the static source data, shared by every
  * session), so a deletion is tracked here instead and every reader of "the
  * list of templates" (see templates/index.vue's `allEmailKeys`) filters
- * against it. Session-only, same as the rest of `TEMPLATE_RUNTIME` - email
- * templates have no localStorage mirror the way forms do (see
- * formStorage.client.ts), so this doesn't need to persist either. */
+ * against it. Mirrored to localStorage by templateStorage.ts, like forms. */
 export const DELETED_TEMPLATE_KEYS = reactive<Set<string>>(new Set())
 
 export const TEMPLATE_RUNTIME: Record<string, TemplateRuntime> = reactive({})
+
+/** One saved version of an email template (recorded on Save). */
+export interface TemplateSnapshot {
+  id: string
+  label: string
+  actor: string
+  date: string
+  subject: string
+  body: string
+  cc: Recipient[]
+  bcc: Recipient[]
+  attachment: string
+  attachmentFormId?: string
+}
+
+/** Version history per template id. Lives here (not in the editor page) so it survives leaving the page and, via templateStorage.ts, a refresh. */
+export const TEMPLATE_HISTORY: Record<string, TemplateSnapshot[]> = reactive({})
 
 /** Permanently removes a template from the list for this session - unlike
  * Retire (a status, still in the list, still reachable), this drops it
@@ -73,6 +89,7 @@ export function deleteTemplate(key: string) {
   const customIndex = CUSTOM_TEMPLATE_IDS.indexOf(key)
   if (customIndex !== -1) CUSTOM_TEMPLATE_IDS.splice(customIndex, 1)
   delete TEMPLATE_RUNTIME[key]
+  delete TEMPLATE_HISTORY[key]
 }
 
 export function ensureTemplateRuntime(key: string): TemplateRuntime {
@@ -100,19 +117,8 @@ export function ensureTemplateRuntime(key: string): TemplateRuntime {
 export function createTemplate(): string {
   const id = crypto.randomUUID()
   CUSTOM_TEMPLATE_IDS.push(id)
-  TEMPLATE_RUNTIME[id] = {
-    name: 'Untitled',
-    mode: 'onsite',
-    description: '',
-    subject: '',
-    body: '',
-    cc: [{ email: 'itasset@go.team', locked: true }],
-    bcc: [],
-    status: 'draft',
-    attachment: 'none',
-    lastSavedAt: undefined,
-    nameManuallySet: false
-  }
+  // An id with no seed entry gets the blank draft defaults.
+  ensureTemplateRuntime(id)
   return id
 }
 
@@ -128,7 +134,7 @@ export function duplicateTemplate(sourceKey: string): string {
   const id = crypto.randomUUID()
   CUSTOM_TEMPLATE_IDS.push(id)
   TEMPLATE_RUNTIME[id] = {
-    ...JSON.parse(JSON.stringify(source)),
+    ...deepClone(source),
     name: `${source.name} (copy)`,
     status: 'draft',
     lastSavedAt: undefined,

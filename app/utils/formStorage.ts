@@ -1,5 +1,5 @@
 import { watch } from 'vue'
-import { RETRIEVAL_FORMS, RETRIEVAL_FORM_SECTIONS, RETRIEVAL_FORM_CONTENT, DEFAULT_RETRIEVAL_FORM_CONTENT, migrateChargingFormContent, DEFAULT_RETRIEVAL_FORMS, type RetrievalForm, type FormSection } from '~/data/retrievalForms'
+import { RETRIEVAL_FORMS, RETRIEVAL_FORM_SECTIONS, RETRIEVAL_FORM_CONTENT, FORM_VERSIONS, DEFAULT_RETRIEVAL_FORM_CONTENT, migrateChargingFormContent, DEFAULT_RETRIEVAL_FORMS, type RetrievalForm, type FormSection } from '~/data/retrievalForms'
 
 // Without this, RETRIEVAL_FORMS/RETRIEVAL_FORM_SECTIONS only ever exist in
 // one tab's JS memory - there's no backend, so a builder edit (background,
@@ -22,6 +22,7 @@ interface StoredShape {
   /** optional only for backward compat with a snapshot saved before the Umo
    * migration added this store - absent there, never absent going forward. */
   content?: Record<string, string>
+  versions?: Record<string, unknown[]>
 }
 
 function readStorage(raw: string): StoredShape | null {
@@ -49,6 +50,8 @@ function applyStored(saved: StoredShape) {
   Object.assign(RETRIEVAL_FORM_SECTIONS, saved.sections)
   for (const key of Object.keys(RETRIEVAL_FORM_CONTENT)) delete RETRIEVAL_FORM_CONTENT[key]
   Object.assign(RETRIEVAL_FORM_CONTENT, saved.content || {})
+  // Merge, so a version list a page already started is only overridden by a saved one.
+  Object.assign(FORM_VERSIONS, saved.versions || {})
   // Self-heal: a stored snapshot that holds an empty/blank string for one of
   // the real seeded forms means an editor session lost its content at some
   // point, not that the form is genuinely meant to be blank - restore the
@@ -86,7 +89,7 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined
 function writeStorage() {
   clearTimeout(saveTimer)
   saveTimer = undefined
-  const serialized = JSON.stringify({ forms: RETRIEVAL_FORMS, sections: RETRIEVAL_FORM_SECTIONS, content: RETRIEVAL_FORM_CONTENT })
+  const serialized = JSON.stringify({ forms: RETRIEVAL_FORMS, sections: RETRIEVAL_FORM_SECTIONS, content: RETRIEVAL_FORM_CONTENT, versions: FORM_VERSIONS })
   if (serialized === lastKnown) return
   lastKnown = serialized
   localStorage.setItem(STORAGE_KEY, serialized)
@@ -107,7 +110,7 @@ export function flushFormsToStorage() {
 export function watchFormsToStorage() {
   lastKnown = localStorage.getItem(STORAGE_KEY)
 
-  watch([RETRIEVAL_FORMS, RETRIEVAL_FORM_SECTIONS, RETRIEVAL_FORM_CONTENT], () => {
+  watch([RETRIEVAL_FORMS, RETRIEVAL_FORM_SECTIONS, RETRIEVAL_FORM_CONTENT, FORM_VERSIONS], () => {
     clearTimeout(saveTimer)
     saveTimer = setTimeout(writeStorage, 80)
   }, { deep: true })

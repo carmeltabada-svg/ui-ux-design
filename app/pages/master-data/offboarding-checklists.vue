@@ -99,10 +99,14 @@ function confirmDelete() {
 
 <template>
   <div class="bg-gray-50 min-h-screen">
-    <div class="sticky top-16 z-10 bg-white px-6 py-6 border-b border-default">
-      <NuxtLink to="/master-data" class="inline-flex items-center gap-1 text-xs font-semibold text-primary mb-2"><UIcon name="i-lucide-arrow-left" class="size-3.5" aria-hidden="true" /> Master Data</NuxtLink>
-      <h1 class="text-2xl font-semibold text-highlighted">Offboarding Checklists</h1>
-      <p class="text-sm text-muted max-w-[680px] pt-1">
+    <div class="sticky top-16 z-10 bg-white px-6 pt-4 pb-3 border-b border-default">
+      <div class="flex items-center gap-1.5">
+        <UTooltip text="Back to Master Data">
+          <UButton color="neutral" variant="ghost" size="sm" square icon="i-lucide-arrow-left" class="text-muted shrink-0" aria-label="Back to Master Data" to="/master-data" />
+        </UTooltip>
+        <h1 class="text-lg font-semibold text-highlighted">Offboarding Checklists</h1>
+      </div>
+      <p class="text-sm text-muted max-w-[680px] pt-1 pl-[34px]">
         The checklist every retrieval ticket is issued at notice. Set the tasks, mark each as required or optional, and choose which reasons and modes start from it.
       </p>
     </div>
@@ -112,7 +116,7 @@ function confirmDelete() {
       <section class="rounded-lg border border-default bg-white">
         <div class="flex items-center justify-between px-4 py-3 border-b border-default">
           <h2 class="text-sm font-semibold text-default">Templates</h2>
-          <UButton size="xs" color="primary" variant="soft" icon="i-lucide-plus" @click="createNew">New</UButton>
+          <UButton size="xs" color="primary" variant="soft" icon="i-lucide-plus" class="text-blue-700" @click="createNew">New</UButton>
         </div>
         <ul class="divide-y divide-default">
           <li v-for="t in templates" :key="t.id">
@@ -124,7 +128,7 @@ function confirmDelete() {
               @click="selectedId = t.id"
             >
               <div class="text-sm font-medium text-default">{{ t.name }}</div>
-              <div class="text-xs text-muted mt-0.5">{{ t.tasks.length }} task{{ t.tasks.length === 1 ? '' : 's' }}<template v-if="t.tasks.some(x => !x.required)"> &middot; {{ t.tasks.filter(x => !x.required).length }} optional</template></div>
+              <div class="text-xs text-slate-600 mt-0.5">{{ t.tasks.length }} task{{ t.tasks.length === 1 ? '' : 's' }}<template v-if="t.tasks.some(x => !x.required)"> &middot; {{ t.tasks.filter(x => !x.required).length }} optional</template></div>
               <div v-if="t.defaultFor.length" class="mt-1.5 flex flex-wrap gap-1">
                 <span v-for="k in t.defaultFor.slice(0, 2)" :key="k" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-default">{{ pathLabel(k) }}</span>
                 <span v-if="t.defaultFor.length > 2" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-default">+{{ t.defaultFor.length - 2 }} more</span>
@@ -140,7 +144,7 @@ function confirmDelete() {
           <h2 class="text-sm font-semibold text-default">Edit template</h2>
           <div class="flex items-center gap-2">
             <UButton size="xs" color="neutral" variant="outline" icon="i-lucide-copy" @click="duplicate">Duplicate</UButton>
-            <UButton size="xs" color="neutral" variant="outline" icon="i-lucide-trash-2" @click="deleteOpen = true">Delete</UButton>
+            <UButton size="xs" color="error" variant="outline" icon="i-lucide-trash-2" class="text-red-700" @click="deleteOpen = true">Delete</UButton>
           </div>
         </div>
 
@@ -169,12 +173,12 @@ function confirmDelete() {
                   <UIcon name="i-lucide-repeat" class="size-3" aria-hidden="true" />
                   {{ task.required ? 'Required' : 'Optional' }}
                 </button>
-                <UButton size="xs" color="neutral" variant="ghost" square icon="i-lucide-trash-2" aria-label="Remove task" @click="draft.tasks.splice(i, 1)" />
+                <UButton size="xs" color="error" variant="ghost" square icon="i-lucide-trash-2" aria-label="Remove task" @click="draft.tasks.splice(i, 1)" />
               </li>
               <li v-if="!draft.tasks.length" class="px-3 py-3 text-xs text-muted">No tasks yet. Add one below.</li>
             </ul>
             <div class="flex items-center gap-2 mt-2">
-              <UInput v-model="newTaskText" size="sm" placeholder="Add a task..." class="flex-1" @keyup.enter="addTask" />
+              <UInput v-model="newTaskText" size="sm" aria-label="New task" placeholder="Add a task..." class="flex-1" @keyup.enter="addTask" />
               <UButton size="sm" color="neutral" variant="outline" icon="i-lucide-plus" :disabled="!newTaskText.trim()" @click="addTask">Add</UButton>
             </div>
             <p class="text-xs text-muted mt-1.5">Required tasks must be done before the final review. Optional tasks never block it.</p>

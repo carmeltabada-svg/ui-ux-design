@@ -2291,8 +2291,13 @@ let railResizeObserver: ResizeObserver | undefined
 watch(railScrollRef, (el) => {
   railResizeObserver?.disconnect()
   if (!el) return
-  nextTick(() => { updateRailTop(); updateRailScroll() })
-  if (typeof ResizeObserver === 'undefined') return
+  // No mount-time measure here: the observer below reports every observed
+  // element once, right after its first layout, and measuring earlier forces
+  // a layout in the middle of mounting. Without ResizeObserver, measure once.
+  if (typeof ResizeObserver === 'undefined') {
+    nextTick(() => { updateRailTop(); updateRailScroll() })
+    return
+  }
   railResizeObserver = new ResizeObserver(() => { updateRailTop(); updateRailScroll() })
   railResizeObserver.observe(el)
   if (stickyPageHeaderRef.value) railResizeObserver.observe(stickyPageHeaderRef.value)
@@ -2372,9 +2377,18 @@ function resetAddressToFile() {
 // UTooltip explaining what's missing, and route through here: ready actions
 // still fire normally, not-ready ones surface the same explanation as a
 // toast instead of a silent no-op.
+// The toast title names why the action is blocked: "Not ready yet" is only
+// true when a step is still missing, so a closed ticket, an already sent
+// message or a reached limit each get their own title.
+function guardToast(reason: string) {
+  if (ticket.value?.status === 'closed') return { title: 'Ticket is closed', icon: 'i-lucide-lock', color: 'neutral' as const }
+  if (/^Already /.test(reason)) return { title: 'Already done', icon: 'i-lucide-check', color: 'neutral' as const }
+  if (/^Maximum /.test(reason)) return { title: 'Limit reached', icon: 'i-lucide-info', color: 'neutral' as const }
+  return { title: 'Not ready yet', icon: 'i-lucide-info', color: 'warning' as const }
+}
 function guardedClick(ready: boolean, reason: string, action: () => void) {
   if (!ready) {
-    toast.add({ title: 'Not ready yet', description: reason, icon: 'i-lucide-info', color: 'warning' })
+    toast.add({ ...guardToast(reason), description: reason })
     return
   }
   action()
@@ -3325,7 +3339,7 @@ function reopenTicket() {
     <UButton to="/ticket-tracker" color="primary" variant="outline">Back to Ticket Tracker</UButton>
   </div>
 
-  <div v-else class="bg-gray-50 min-h-[calc(100vh-4rem)]">
+  <div v-else class="bg-gray-50 min-h-[calc(100vh-4rem)] stage-enter">
     <!-- Header - sticky at top-16 (right below the app's own sticky top nav,
          see TopNavbar.vue), same technique as the Templates editor and the
          reference Asset Detail Page: the page scrolls normally, but the
@@ -5595,8 +5609,8 @@ function reopenTicket() {
               </template>
               <template #footer>
                 <div class="flex justify-end gap-2 w-full">
-                  <UButton color="neutral" variant="outline" @click="notReturnedConfirmOpen = false">Cancel</UButton>
-                  <UButton color="primary" @click="markEquipmentNotReturned">Move to Post-Retrieval Charging</UButton>
+                  <UButton color="neutral" variant="outline" @click="notReturnedConfirmOpen = false">Not yet</UButton>
+                  <UButton color="primary" @click="markEquipmentNotReturned">Open charging case</UButton>
                 </div>
               </template>
             </UModal>
@@ -6369,7 +6383,7 @@ function reopenTicket() {
                 {{ HISTORY_CATEGORY_META[cat].label }}
               </UButton>
             </div>
-            <USelect v-else v-model="activityFilter" :items="activityFilterSelectItems" size="sm" class="w-48" />
+            <SharedSelect v-else v-model="activityFilter" :items="activityFilterSelectItems" size="sm" class="w-48" />
           </div>
         </div>
         <div class="flex-1 overflow-y-auto px-4 pt-4 pb-4 sm:px-6 sm:pb-6 fade-scroll-y">
@@ -6746,7 +6760,7 @@ function reopenTicket() {
         <UButton color="neutral" variant="ghost" size="sm" square icon="i-lucide-x" aria-label="Close" @click="close" />
       </template>
       <template #body>
-        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1 fade-scroll-y">
           <div v-for="(a, i) in ticket.assets" :key="a.serial" class="rounded-md border border-default p-2.5 flex items-center justify-between gap-3 text-sm">
             <span class="font-medium">{{ a.name }}</span>
             <USelect
@@ -6778,8 +6792,8 @@ function reopenTicket() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="closureOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="confirmClosure">{{ closureOpensCharge ? 'Open charging case' : 'Confirm & Close' }}</UButton>
+          <UButton color="neutral" variant="outline" @click="closureOpen = false">Not yet</UButton>
+          <UButton color="primary" @click="confirmClosure">{{ closureOpensCharge ? 'Open charging case' : 'Close ticket' }}</UButton>
         </div>
       </template>
     </UModal>
@@ -6823,8 +6837,8 @@ function reopenTicket() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="pathChangeOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="doChangePath">Save change</UButton>
+          <UButton color="neutral" variant="outline" @click="pathChangeOpen = false">Keep current</UButton>
+          <UButton color="primary" @click="doChangePath">Apply change</UButton>
         </div>
       </template>
     </UModal>
@@ -6843,8 +6857,8 @@ function reopenTicket() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="takeoverOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="doTakeover">Take over</UButton>
+          <UButton color="neutral" variant="outline" @click="takeoverOpen = false">Not now</UButton>
+          <UButton color="primary" @click="doTakeover">Take over ticket</UButton>
         </div>
       </template>
     </UModal>
@@ -6887,8 +6901,8 @@ function reopenTicket() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="saveTemplateOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="doSaveTemplate">Save template</UButton>
+          <UButton color="neutral" variant="outline" @click="saveTemplateOpen = false">Not now</UButton>
+          <UButton color="primary" @click="doSaveTemplate">Save checklist</UButton>
         </div>
       </template>
     </UModal>
@@ -6907,7 +6921,7 @@ function reopenTicket() {
             <UButton size="xs" color="neutral" variant="outline" @click="templateToReplaceWith = null">Keep current</UButton>
           </template>
         </SharedBanner>
-        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1 fade-scroll-y">
           <div v-for="t in checklistTemplates" :key="t.id" class="rounded-lg border border-default px-3.5 py-2.5 flex items-center gap-3">
             <div class="min-w-0 flex-1">
               <div class="text-sm font-medium text-default truncate">{{ t.name }}</div>

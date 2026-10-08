@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { SAMPLE_VALUES } from '~/data/templates'
+
 interface Token {
   code: string
   name: string
@@ -15,6 +17,8 @@ interface Props {
   usedCodes: string[]
   contextLabel: string
   contextMode: 'onsite' | 'remote'
+  /** Browse-only: rows copy the token and show its sample value instead of inserting it. */
+  readOnly?: boolean
 }
 
 const props = defineProps<Props>()
@@ -76,7 +80,13 @@ function tokenLabel(code: string) {
   return ['{', '{', code, '}', '}'].join('')
 }
 
+const { copy, isCopied } = useCopyFlash()
+
 function select(code: string) {
+  if (props.readOnly) {
+    copy(code, tokenLabel(code))
+    return
+  }
   emit('insert', code)
   open.value = false
 }
@@ -151,11 +161,18 @@ function select(code: string) {
               v-for="tok in group.tokens"
               :key="tok.code"
               type="button"
-              class="w-full flex flex-col items-start rounded-lg px-2.5 py-2 mb-0.5 text-left hover:bg-elevated"
+              class="group w-full flex items-start gap-2 rounded-lg px-2.5 py-2 mb-0.5 text-left hover:bg-elevated"
+              :aria-label="readOnly ? `Copy ${tok.name} placeholder` : undefined"
               @click="select(tok.code)"
             >
-              <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
-              <span class="text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
+              <span class="flex flex-col items-start min-w-0 flex-1">
+                <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
+                <span class="text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
+                <span v-if="readOnly && SAMPLE_VALUES[tok.code]" class="text-xs text-muted mt-0.5 break-words">Sample: {{ SAMPLE_VALUES[tok.code] }}</span>
+              </span>
+              <span v-if="readOnly" class="shrink-0 mt-0.5 transition-opacity" :class="isCopied(tok.code) ? 'opacity-100 text-success copy-flash' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-primary'" aria-hidden="true">
+                <UIcon :name="isCopied(tok.code) ? 'i-lucide-check' : 'i-lucide-copy'" class="size-4" />
+              </span>
             </button>
           </template>
         </template>
@@ -173,11 +190,18 @@ function select(code: string) {
               v-for="tok in group.tokens"
               :key="tok.code"
               type="button"
-              class="w-full flex flex-col items-start rounded-lg px-2.5 py-2 mb-0.5 text-left hover:bg-elevated"
+              class="group w-full flex items-start gap-2 rounded-lg px-2.5 py-2 mb-0.5 text-left hover:bg-elevated"
+              :aria-label="readOnly ? `Copy ${tok.name} placeholder` : undefined"
               @click="select(tok.code)"
             >
-              <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
-              <span class="text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
+              <span class="flex flex-col items-start min-w-0 flex-1">
+                <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
+                <span class="text-xs text-dimmed mt-0.5">{{ tokenLabel(tok.code) }}</span>
+                <span v-if="readOnly && SAMPLE_VALUES[tok.code]" class="text-xs text-muted mt-0.5 break-words">Sample: {{ SAMPLE_VALUES[tok.code] }}</span>
+              </span>
+              <span v-if="readOnly" class="shrink-0 mt-0.5 transition-opacity" :class="isCopied(tok.code) ? 'opacity-100 text-success copy-flash' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-primary'" aria-hidden="true">
+                <UIcon :name="isCopied(tok.code) ? 'i-lucide-check' : 'i-lucide-copy'" class="size-4" />
+              </span>
             </button>
           </template>
         </template>
@@ -187,6 +211,7 @@ function select(code: string) {
           <div class="text-sm font-medium text-default">No placeholders found</div>
         </div>
       </div>
+
     </template>
   </USlideover>
 </template>

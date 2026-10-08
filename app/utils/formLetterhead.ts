@@ -1,9 +1,6 @@
 import { GOTEAM_ENTITY_ADDRESS } from '~/data/templates'
 import type { RetrievalForm } from '~/data/retrievalForms'
-
-function esc(s: string) {
-  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
+import { escapeText as esc } from '~/utils/escapeHtml'
 
 /**
  * The repeating per-page letterhead (logo + address left, ref+mode stamp
@@ -31,7 +28,7 @@ export function buildFormLetterhead(form: Pick<RetrievalForm, 'name' | 'themeCol
   // label at the top of every page was redundant.
   const headerRight = ''
 
-  const footerLeft = `<span style="font-size:9.5px;color:#9CA3AF">${esc(form.name)} &middot; Internal Use Only</span>`
+  const footerLeft = `<span style="font-size:9.5px;color:#6B7280">${esc(form.name)} &middot; Internal Use Only</span>`
 
   return { headerLeft, headerRight, footerLeft }
 }

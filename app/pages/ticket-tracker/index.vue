@@ -12,7 +12,7 @@ import {
   formsColumnsFor, daysLeftLabel, currentUserName, localISO
 } from '~/data/ticketTrackers'
 
-definePageMeta({ layout: 'retrieval', pageTransition: { name: 'page', mode: 'out-in' } })
+definePageMeta({ layout: 'retrieval', pageTransition: { name: 'ams-page', mode: 'out-in' } })
 
 useSeoMeta({
   title: 'AMS · Ticket Tracker',
@@ -303,11 +303,11 @@ const createMenuItems = computed(() => [[
          cells carry a small radius so the header reads as its own distinct
          strip inside the container. Overflow-hidden on the outer container
          keeps the panel's bottom corners square against the table body. -->
-    <div class="flex-1 min-h-0 flex flex-col px-6 pt-3 pb-4">
+    <div class="flex-1 min-h-0 flex flex-col px-6 pt-3 pb-4 stage-enter">
       <div class="flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden bg-white border border-default shadow-sm">
       <div class="shrink-0 px-6 py-4">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-          <UInput v-model="search" icon="i-lucide-search" placeholder="Search ticket trackers..." size="md" class="w-full sm:max-w-xs" />
+          <UInput v-model="search" icon="i-lucide-search" aria-label="Search tickets" placeholder="Search ticket trackers..." size="md" class="w-full sm:max-w-xs" />
 
           <div class="flex flex-wrap items-center gap-2">
             <UButton
@@ -340,7 +340,13 @@ const createMenuItems = computed(() => [[
            content edge", so they stay in alignment while scrolling. Removed
            `pl-6` from the first sticky th/td and the `last:pr-6` on the
            tail column since the container now owns that spacing. -->
-      <div ref="bodyWrapRef" class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-6">
+      <!-- The 24px inset lives on this wrapper, NOT on the scroller: padding
+           inside an overflow scroller scrolls with the content, so scrolled
+           columns slid through the left gutter and the right gutter only
+           appeared at the far end. Outside the scroller, both gutters stay
+           clean and the table is clipped at the same edge as the strips above. -->
+      <div class="flex-1 min-h-0 flex flex-col px-6">
+      <div ref="bodyWrapRef" class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
         <!-- Loading: row-shaped placeholders in place of the table. -->
         <div v-if="simState === 'loading'" class="flex flex-col gap-3 py-4" role="status" aria-live="polite" aria-label="Loading tickets">
           <div v-for="n in 6" :key="n" class="flex items-center gap-4">
@@ -507,6 +513,7 @@ const createMenuItems = computed(() => [[
             <UButton color="neutral" variant="outline" size="sm" class="mt-2" @click="search = ''; statusFilter = 'all'; scopeTab = 'all'; typeFilter = 'all'; modeFilter = 'all'">Clear search and filters</UButton>
           </template>
         </div>
+      </div>
       </div>
 
       <div class="shrink-0 border-t border-default p-4 sm:px-6">

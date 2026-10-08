@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { TEMPLATES, TOKEN_GROUPS, VERSION_HISTORY_T16, SAMPLE_VALUES, resolveTokensForPrint } from '~/data/templates'
-import { ensureTemplateRuntime, TEMPLATE_RUNTIME, CURRENT_USER_NAME, type Recipient } from '~/data/templateRuntime'
+import { TEMPLATES, TOKEN_GROUPS, VERSION_HISTORY_T16, SAMPLE_VALUES, resolveTokensForPrint, extractTokenCodes } from '~/data/templates'
+import { ensureTemplateRuntime, TEMPLATE_HISTORY, CURRENT_USER_NAME, type Recipient, type TemplateSnapshot } from '~/data/templateRuntime'
 import { RETRIEVAL_FORMS } from '~/data/retrievalForms'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { describeSnapshotChanges, type ChangeCategory } from '~/utils/versionDiff'
@@ -142,11 +142,10 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => [[
 ]])
 
 const placeholderOpen = ref(false)
+// Read-only browsing of the library from the header, outside edit mode.
+const placeholderBrowseOpen = ref(false)
 const tokenGroups = TOKEN_GROUPS
-const usedCodes = computed(() => {
-  const matches = (subject.value + body.value).match(/\{\{(\w+)\}\}/g) || []
-  return [...new Set(matches.map(m => m.slice(2, -2)))]
-})
+const usedCodes = computed(() => extractTokenCodes(subject.value + body.value))
 
 const insertTarget = ref<'subject' | 'body'>('body')
 
@@ -180,35 +179,17 @@ function insertPlaceholder(code: string) {
 // authored it: a seeded (shipped-with-production) template's v1 is "System"
 // - nobody in the app wrote it - while a template someone creates from here
 // on gets their own name on v1, same as every version after it.
-interface Snapshot {
-  id: string
-  label: string
-  actor: string
-  date: string
-  subject: string
-  body: string
-  cc: Recipient[]
-  bcc: Recipient[]
-  attachment: string
-  attachmentFormId?: string
-}
+type Snapshot = TemplateSnapshot
 
-function timestampNow() {
-  return new Date().toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-}
-
-function cloneRecipients(list: Recipient[]): Recipient[] {
-  return JSON.parse(JSON.stringify(list))
-}
-
-const history = ref<Snapshot[]>(
+const MAX_HISTORY_ENTRIES = 50
+const initialHistory = (): Snapshot[] => (
   templateKey.value === 't16'
     ? VERSION_HISTORY_T16.map(entry => ({
         ...entry,
         subject: TEMPLATES.t16!.subject,
         body: TEMPLATES.t16!.body.replace(/\n/g, '<br>'),
-        cc: cloneRecipients(cc.value),
-        bcc: cloneRecipients(bcc.value),
+        cc: deepClone(cc.value),
+        bcc: deepClone(bcc.value),
         attachment: current.value.attachment,
         attachmentFormId: current.value.attachmentFormId
       }))
@@ -223,12 +204,17 @@ const history = ref<Snapshot[]>(
         date: current.value.lastSavedAt || timestampNow(),
         subject: subject.value,
         body: body.value,
-        cc: cloneRecipients(cc.value),
-        bcc: cloneRecipients(bcc.value),
+        cc: deepClone(cc.value),
+        bcc: deepClone(bcc.value),
         attachment: current.value.attachment,
         attachmentFormId: current.value.attachmentFormId
       }]
 )
+if (!TEMPLATE_HISTORY[templateKey.value]) TEMPLATE_HISTORY[templateKey.value] = initialHistory()
+const history = computed<Snapshot[]>({
+  get: () => TEMPLATE_HISTORY[templateKey.value] ?? [],
+  set: (v) => { TEMPLATE_HISTORY[templateKey.value] = v }
+})
 
 // Keep the history entries themselves in the read model - the version
 // number badge (v1, v2, ...) and the "Current" tag are both already handled
@@ -267,17 +253,19 @@ function recordVersion() {
   const next = {
     subject: subject.value,
     body: body.value,
-    cc: cloneRecipients(cc.value),
-    bcc: cloneRecipients(bcc.value),
+    cc: deepClone(cc.value),
+    bcc: deepClone(bcc.value),
     attachment: current.value.attachment,
     attachmentFormId: current.value.attachmentFormId
   }
   const label = describeSnapshotChanges(top, next, emailChangeCategories)
   if (!label) return
+  // Newest first, capped so the stored history cannot grow without bound; ids stay unique after the cap by counting up from the highest one.
+  const nextNumber = Math.max(0, ...history.value.map(h => Number.parseInt(h.id.slice(1)) || 0)) + 1
   history.value = [
-    { id: `v${history.value.length + 1}`, label, actor: CURRENT_USER_NAME, date: timestampNow(), ...next },
+    { id: `v${nextNumber}`, label, actor: CURRENT_USER_NAME, date: timestampNow(), ...next },
     ...history.value
-  ]
+  ].slice(0, MAX_HISTORY_ENTRIES)
 }
 
 const fullPreviewOpen = ref(false)
@@ -291,8 +279,8 @@ function viewHistoryEntry(entry: Snapshot) {
 function restoreHistoryEntry(entry: Snapshot) {
   subject.value = entry.subject
   body.value = entry.body
-  cc.value = cloneRecipients(entry.cc)
-  bcc.value = cloneRecipients(entry.bcc)
+  cc.value = deepClone(entry.cc)
+  bcc.value = deepClone(entry.bcc)
   toast.add({ title: `Restored "${entry.label}"`, description: 'Save to keep it.', icon: 'i-lucide-rotate-ccw', color: 'warning' })
 }
 
@@ -364,11 +352,15 @@ function removeBcc(email: string) {
 
 // Edit unlocks the subject/body fields; Cancel reverts to the snapshot taken
 // on entering edit mode; Save flushes the autosave and stays in read mode.
-const isEditing = ref(route.query.created === '1')
+const isEditing = ref(route.query.created === '1' || route.query.mode === 'edit')
 let subjectBeforeEdit = subject.value
 let bodyBeforeEdit = body.value
 let backgroundBeforeEdit = background.value
 let footerNoteBeforeEdit = footerNote.value
+
+// One-shot pulse on Save the first time this template has a change to save.
+const hasEdits = computed(() => isEditing.value && (subject.value !== subjectBeforeEdit || body.value !== bodyBeforeEdit || background.value !== backgroundBeforeEdit || footerNote.value !== footerNoteBeforeEdit))
+const savePulse = useReadyPulse(computed(() => `email-save:${templateKey.value}`), hasEdits)
 
 function enterEditMode() {
   subjectBeforeEdit = subject.value
@@ -566,6 +558,11 @@ async function copyToClipboard() {
           </div>
 
           <div class="flex items-center gap-2">
+            <UTooltip v-if="!isEditing" text="Browse the placeholder library">
+              <UButton color="neutral" variant="outline" size="md" icon="i-lucide-braces" @click="placeholderBrowseOpen = true">
+                Placeholders
+              </UButton>
+            </UTooltip>
             <UButton v-if="isEditing" color="neutral" variant="outline" size="md" icon="i-lucide-x" @click="cancelEdit">
               Cancel
             </UButton>
@@ -574,6 +571,7 @@ async function copyToClipboard() {
               variant="solid"
               size="md"
               :icon="isEditing ? 'i-lucide-check' : 'i-lucide-pen'"
+              :class="{ 'btn-ready-pulse': savePulse.active.value }"
               @click="isEditing ? saveEdit() : enterEditMode()"
             >
               {{ isEditing ? 'Save' : 'Edit' }}
@@ -599,6 +597,14 @@ async function copyToClipboard() {
 
     <div class="px-6 py-6 space-y-4">
       <EmailPlaceholderDrawer
+        v-model="placeholderBrowseOpen"
+        read-only
+        :groups="tokenGroups"
+        :used-codes="usedCodes"
+        :context-label="name"
+        :context-mode="mode"
+      />
+      <EmailPlaceholderDrawer
         v-model="placeholderOpen"
         :groups="tokenGroups"
         :used-codes="usedCodes"
@@ -615,7 +621,7 @@ async function copyToClipboard() {
            list), so it sits directly on the page background instead of
            inside another bordered box wrapping a plain list of bordered
            boxes. -->
-      <div v-if="activeTab === 'editor'" class="flex lg:flex-row flex-col gap-[10px]">
+      <div v-if="activeTab === 'editor'" class="flex lg:flex-row flex-col gap-[10px] stage-enter">
         <div class="flex flex-col flex-1 min-w-0 rounded-lg border border-default bg-white overflow-hidden">
           <div class="px-6 pt-4 pb-6 space-y-4 flex-1 overflow-y-auto fade-scroll-y">
             <EmailRetiredBanner v-if="status === 'retired'" />
@@ -677,6 +683,7 @@ async function copyToClipboard() {
               <UInput
                 v-model="footerNote"
                 :disabled="!isEditing"
+                aria-label="Footer note"
                 placeholder="e.g. You are receiving this because you are an active GoTeam Team Member."
                 size="sm"
                 class="w-full"
@@ -733,6 +740,7 @@ async function copyToClipboard() {
 
       <EmailHistoryTab
         v-else
+        class="stage-enter"
         :entries="historyEntries"
         :retired="status === 'retired'"
         @view="viewHistoryEntry"

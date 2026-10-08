@@ -6,6 +6,8 @@
 // (https://r24.go.team/).
 import { localISO, NOTIFICATIONS, TICKETS, simulateHrisLwdUpdate, simulateBranchReply, scanTicketAlerts, NOTIFICATION_KINDS, type NotificationKind, pushDemoNotification, pushDemoNotificationSet, pendingDigestItems, sendMorningDigest, DIGESTS, type MorningDigest, clearAllTickets, ASSET_TEAM_MEMBERS, currentUserName, setCurrentUser } from '~/data/ticketTrackers'
 import { flushTicketsToStorage } from '~/utils/ticketStorage'
+import { ensureTemplateRuntime } from '~/data/templateRuntime'
+import { RETRIEVAL_FORMS } from '~/data/retrievalForms'
 
 interface Props {
   sidebarOpen?: boolean
@@ -21,25 +23,38 @@ defineEmits<{
 }>()
 
 const route = useRoute()
-const breadcrumbItems = computed(() => [
-  { label: 'Home', icon: 'i-lucide-home', to: '/' },
-  route.path.startsWith('/master-data')
-    ? { label: 'Master Data', icon: 'i-lucide-database' }
-    : route.path.startsWith('/ticket-tracker')
-      ? { label: 'Ticket Tracker', icon: 'i-lucide-ticket-check' }
-      : { label: 'Templates', icon: 'i-lucide-mail' }
-])
+const NuxtLink = resolveComponent('NuxtLink')
+interface Crumb { label: string, icon?: string, to?: string }
+
+// Home > section > the page you are on. Everything but the last crumb links
+// back, so the trail always matches the current view.
+const breadcrumbItems = computed<Crumb[]>(() => {
+  const home: Crumb = { label: 'Home', icon: 'i-lucide-home', to: '/' }
+  const path = route.path
+  const id = String(route.params.id ?? '')
+
+  if (path.startsWith('/master-data')) {
+    const section: Crumb = { label: 'Master Data', icon: 'i-lucide-database', to: '/master-data' }
+    if (path.startsWith('/master-data/offboarding-checklists')) return [home, section, { label: 'Offboarding Checklists' }]
+    return [home, { label: 'Master Data', icon: 'i-lucide-database' }]
+  }
+  if (path.startsWith('/ticket-tracker')) {
+    const section: Crumb = { label: 'Ticket Tracker', icon: 'i-lucide-ticket-check', to: '/ticket-tracker' }
+    if (path === '/ticket-tracker/create') return [home, section, { label: 'Create Retrieval Ticket' }]
+    if (id) return [home, section, { label: `Ticket #${id}` }]
+    return [home, { label: 'Ticket Tracker', icon: 'i-lucide-ticket-check' }]
+  }
+  if (path.startsWith('/templates/email/') && id) {
+    return [home, { label: 'Templates', icon: 'i-lucide-mail', to: '/templates' }, { label: ensureTemplateRuntime(id).name || 'Untitled' }]
+  }
+  if (path.startsWith('/templates/forms/') && id) {
+    const form = RETRIEVAL_FORMS.find(f => f.id === id)
+    return [home, { label: 'Templates', icon: 'i-lucide-mail', to: '/templates?tab=forms' }, { label: form?.name || 'Untitled' }]
+  }
+  return [home, { label: 'Templates', icon: 'i-lucide-mail' }]
+})
 
 const toast = useToast()
-
-function notifyDarkModeUnavailable() {
-  toast.add({
-    title: 'Dark mode isn\'t available',
-    description: 'This app is light-mode only.',
-    icon: 'i-lucide-moon',
-    color: 'neutral'
-  })
-}
 
 // --- Notification bell/panel - markup and copy match the real product's
 // existing panel (source: "Dashboard - GoTeam Assets.html") verbatim: bell +
@@ -270,7 +285,7 @@ function onClearAllTickets() {
 </script>
 
 <template>
-  <div class="sticky top-0 z-20 h-16 flex items-center justify-between px-4 border-b border-default bg-white shrink-0">
+  <header class="sticky top-0 z-20 h-16 flex items-center justify-between px-4 border-b border-default bg-white shrink-0">
     <div class="flex items-center gap-3 overflow-hidden flex-1">
       <UButton
         icon="i-lucide-menu"
@@ -299,13 +314,15 @@ function onClearAllTickets() {
         }"
       >
         <template #item="{ item, index }">
-          <span
+          <component
+            :is="item.to ? NuxtLink : 'span'"
+            :to="item.to"
             class="flex items-center gap-1.5 text-sm min-w-0"
             :class="index === breadcrumbItems.length - 1 ? 'text-blue-700 font-semibold' : 'text-muted font-medium hover:text-default transition-colors'"
           >
-            <UIcon :name="item.icon" class="size-4 shrink-0" />
+            <UIcon v-if="item.icon" :name="item.icon" class="size-4 shrink-0" />
             <span class="truncate">{{ item.label }}</span>
-          </span>
+          </component>
         </template>
       </UBreadcrumb>
     </div>
@@ -325,14 +342,14 @@ function onClearAllTickets() {
           aria-label="Simulate an employee record update"
         />
         <template #content>
-          <div class="p-4 flex flex-col gap-3 overflow-y-auto overscroll-contain" style="width: 20rem; max-height: calc(100vh - 6rem);">
+          <div class="p-4 flex flex-col gap-3 overflow-y-auto overscroll-contain fade-scroll-y" style="width: 20rem; max-height: calc(100vh - 6rem);">
             <div>
               <p class="text-sm font-semibold text-highlighted">Simulate Employee Record Update</p>
               <p class="text-xs text-muted mt-0.5">There is no live connection to employee records here. This pushes a fake Last Working Day change. Pick a ticket and date if you want a specific one, otherwise it uses your latest open ticket and a week later, or just shows the notification if you have none.</p>
             </div>
             <div>
               <label class="text-xs font-semibold text-gray-700 block mb-1">Ticket <span class="font-normal text-muted">(optional)</span></label>
-              <USelect v-model="simTicketId" :items="openTicketOptions" placeholder="Latest open ticket" size="sm" class="w-full" />
+              <SharedSelect v-model="simTicketId" :items="openTicketOptions" placeholder="Latest open ticket" size="sm" class="w-full" />
             </div>
             <div>
               <label class="text-xs font-semibold text-gray-700 block mb-1">New Last Working Day <span class="font-normal text-muted">(optional)</span></label>
@@ -419,15 +436,15 @@ function onClearAllTickets() {
               >{{ unreadItems.length ? 'Mark all as read' : 'No unread' }}</UButton>
             </div>
             <UTabs v-model="notifTab" :items="notifTabs" :content="false" size="sm" variant="link" class="px-2 border-b border-default" />
-            <div class="max-h-96 overflow-y-auto">
+            <div class="max-h-96 overflow-y-auto fade-scroll-y">
               <!-- Unread first, labelled; read below a separator, unlabelled. -->
               <template v-if="tabNotifications.length">
                 <template v-for="(sec, si) in notifSections" :key="sec.key">
                   <div v-if="si > 0" class="h-2 bg-gray-50 border-y border-default" />
                   <h3 v-if="sec.label" class="px-4 pt-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted">{{ sec.label }}</h3>
-                  <ul class="divide-y divide-default" :class="sec.label ? 'border-t border-default' : ''">
+                  <ul>
                     <li v-for="n in sec.items" :key="n.id">
-                      <NuxtLink :to="n.ticketId ? `/ticket-tracker/${TICKETS[n.ticketId]?.ticketNumber ?? n.ticketId}` : '/ticket-tracker'" class="flex gap-3 items-center px-4 py-4 cursor-pointer transition-colors hover:bg-elevated" @click="openNotification(n.id)">
+                      <NuxtLink :to="n.ticketId ? `/ticket-tracker/${TICKETS[n.ticketId]?.ticketNumber ?? n.ticketId}` : '/ticket-tracker'" class="flex gap-3 items-center px-4 pt-3 pb-4 cursor-pointer transition-colors hover:bg-elevated" @click="openNotification(n.id)">
                         <span class="relative inline-flex items-center justify-center shrink-0 size-8 rounded-full" :class="notificationTone(n)">
                           <UIcon :name="notificationIcon(n.kind)" class="size-4" aria-hidden="true" />
                           <span v-if="!n.read" class="absolute -top-px -right-px size-2 rounded-full bg-primary ring-2 ring-white" aria-label="Unread" />
@@ -483,14 +500,6 @@ function onClearAllTickets() {
       </UModal>
 
       <UButton
-        icon="i-lucide-sun"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        aria-label="Switch to Dark Mode"
-        @click="notifyDarkModeUnavailable"
-      />
-      <UButton
         icon="i-lucide-external-link"
         color="neutral"
         variant="ghost"
@@ -500,5 +509,5 @@ function onClearAllTickets() {
         aria-label="Open Internal Dashboard"
       />
     </div>
-  </div>
+  </header>
 </template>

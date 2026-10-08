@@ -125,6 +125,7 @@ const createMenuItems = computed(() => [[
     label: 'Start from an existing template',
     icon: 'i-lucide-copy',
     ui: { content: 'ml-1 max-h-72 overflow-y-auto fade-scroll-y' },
+    filter: allEmailKeys.value.length > 5,
     children: allEmailKeys.value.map(key => ({
       label: ensureTemplateRuntime(key).name,
       onSelect: () => createFromExisting(key)
@@ -318,6 +319,7 @@ const createFormMenuItems = computed(() => [[
     label: 'Start from an existing form',
     icon: 'i-lucide-copy',
     ui: { content: 'ml-1 max-h-72 overflow-y-auto fade-scroll-y' },
+    filter: RETRIEVAL_FORMS.length > 5,
     children: RETRIEVAL_FORMS.map(f => ({
       label: f.name,
       onSelect: () => createFormFromExisting(f)
@@ -469,6 +471,7 @@ function reactivateFormsSelected() {
           <UInput
             v-model="emailSearch"
             icon="i-lucide-search"
+            aria-label="Search email templates"
             placeholder="Search templates..."
             size="md"
             class="w-full sm:max-w-xs"
@@ -515,6 +518,7 @@ function reactivateFormsSelected() {
           <UInput
             v-model="formSearch"
             icon="i-lucide-search"
+            aria-label="Search forms"
             placeholder="Search forms..."
             size="md"
             class="w-full sm:max-w-xs"
@@ -573,7 +577,7 @@ function reactivateFormsSelected() {
          over blank space, exactly like every other `fade-scroll-y` region
          in the app (they all have their own leading padding for the same
          reason - see PlaceholderDrawer.vue's `pt-[10px]`, for one). -->
-    <div class="flex-1 min-h-0 overflow-y-auto fade-scroll-y">
+    <div :key="activeTab" class="flex-1 min-h-0 overflow-y-auto fade-scroll-y stage-enter">
     <div class="px-6 pt-3 pb-4">
       <!-- Email tab -->
       <template v-if="activeTab === 'email'">
@@ -627,7 +631,7 @@ function reactivateFormsSelected() {
                   icon="i-lucide-pencil"
                   class="text-muted"
                   aria-label="Edit"
-                  @click.stop.prevent="navigateTo(`/templates/email/${row.key}/edit`)"
+                  @click.stop.prevent="navigateTo(`/templates/email/${row.key}/edit?mode=edit`)"
                 />
               </UTooltip>
               <UTooltip text="Duplicate">
@@ -817,10 +821,10 @@ function reactivateFormsSelected() {
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
           <UButton color="neutral" variant="outline" @click="deleteTarget = null">
-            Cancel
+            Keep it
           </UButton>
           <UButton color="error" variant="solid" icon="i-lucide-trash-2" @click="confirmDelete">
-            Delete
+            Delete {{ deleteTarget?.type === 'form' ? 'form' : 'template' }}
           </UButton>
         </div>
       </template>

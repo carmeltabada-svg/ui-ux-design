@@ -47,13 +47,14 @@ body {
    when that element's content is actually taller/wider than its own box -
    that's the actual mask trigger below. A short list that fits with room to
    spare gets no fade at all, since there's nothing to scroll to. */
+:root { --fade-scroll-size: 20px; }
 .fade-scroll-y.is-overflowing {
-  mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
+  mask-image: linear-gradient(to bottom, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
 }
 .fade-scroll-x.is-overflowing {
-  mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+  mask-image: linear-gradient(to right, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
 }
 
 @theme static {
@@ -148,7 +149,11 @@ body {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
 }
-.stage-enter { animation: stage-enter 0.22s ease-out both; }
+/* `backwards`, not `both`: the end state equals the natural style, and holding
+   it would leave a permanent identity transform (a containing block and
+   stacking context) on whatever is animated, which matters now that whole
+   page roots use this. */
+.stage-enter { animation: stage-enter 0.22s ease-out backwards; }
 @media (prefers-reduced-motion: reduce) {
   .stage-enter { animation: none; }
 }
@@ -240,20 +245,20 @@ body {
 
 /* Page transition between routes (used by definePageMeta pageTransition).
    Short fade + 6px drop. Reduced-motion disables. */
-.page-enter-active,
-.page-leave-active {
+.ams-page-enter-active,
+.ams-page-leave-active {
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
-.page-enter-from {
+.ams-page-enter-from {
   opacity: 0;
   transform: translateY(6px);
 }
-.page-leave-to {
+.ams-page-leave-to {
   opacity: 0;
   transform: translateY(-6px);
 }
 @media (prefers-reduced-motion: reduce) {
-  .page-enter-active, .page-leave-active { transition: none; }
+  .ams-page-enter-active, .ams-page-leave-active { transition: none; }
 }
 
 /* Skeleton shimmer keyframes used by SharedSkeleton. */
@@ -274,27 +279,10 @@ body {
   border-radius: 6px;
 }
 
-/* Smooth slide when drag-reordering (or adding/removing) checklist items. */
-.list-move,
-.list-enter-active,
-.list-leave-active {
-  transition: transform 0.26s ease, opacity 0.18s ease;
-}
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-.list-leave-active {
-  position: absolute;
-  width: 100%;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .copy-flash,
   .btn-ready-pulse,
-  .btn-ready-pulse::before, .btn-ready-pulse::after,
-  .list-move, .list-enter-active, .list-leave-active { animation: none; transition: none; }
+  .btn-ready-pulse::before, .btn-ready-pulse::after { animation: none; transition: none; }
 }
 
 /* orange-600 (#ea580c), matching the "No data on this ticket" banner. The

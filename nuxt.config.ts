@@ -5,10 +5,11 @@
 // any static folder or sub-path with no server. Off by default; normal dev and
 // production builds are unaffected.
 const STATIC_DEMO = process.env.AMS_STATIC_DEMO === '1'
+const PAGES_BASE = process.env.AMS_PAGES_BASE || '/'
 
 export default defineNuxtConfig({
   ...(STATIC_DEMO
-    ? { ssr: false, app: { baseURL: './' }, router: { options: { hashMode: true } } }
+    ? { ssr: false, app: { baseURL: PAGES_BASE }, router: { options: { hashMode: true } } }
     : {}),
 
   modules: [

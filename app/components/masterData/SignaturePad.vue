@@ -207,7 +207,7 @@ watch([hasDrawn, uploadedSrc, mode], () => {
         @pointerup="endDraw"
         @pointerleave="endDraw"
       />
-      <span v-if="!hasDrawn" class="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] italic text-[#9CA3AF]">
+      <span v-if="!hasDrawn" class="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] italic text-[#6B7280]">
         Place your signature here
       </span>
     </div>

@@ -152,7 +152,7 @@ function contentMarginsFor(margins: PageMargins) {
 // counter span.
 function footerRightHtml(total: number) {
   return props.showPageNumbers
-    ? `<span style="font-size:9.5px;color:#9CA3AF">Page {page} of ${total}</span>`
+    ? `<span style="font-size:9.5px;color:#6B7280">Page {page} of ${total}</span>`
     : ''
 }
 

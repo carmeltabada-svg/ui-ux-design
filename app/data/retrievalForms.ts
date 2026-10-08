@@ -1,3 +1,4 @@
+import { deepClone } from '~/utils/deepClone'
 // Real form content ported verbatim from the source ticket page
 // (assets-test.go.team/public/tickets/v2/aof-commitment/...). This is the single
 // source of truth for the Retrieval Forms directory - the list page, the
@@ -192,6 +193,9 @@ export const THEME_COLOR_SWATCHES = [
 // forms below, which are real Tiptap-document forms from the start (see
 // RETRIEVAL_FORM_CONTENT).
 export const RETRIEVAL_FORM_SECTIONS: Record<string, FormSection[]> = reactive({})
+
+/** Saved versions per form id (the editor's version history). Kept here, not in the page, so it survives leaving the editor and, via formStorage.ts, a refresh. */
+export const FORM_VERSIONS: Record<string, unknown[]> = reactive({})
 
 /** Document canvas HTML per form (see FormDocumentEditor.vue), keyed by form
  * id - the replacement for `RETRIEVAL_FORM_SECTIONS` (the old typed
@@ -691,14 +695,14 @@ export function duplicateForm(
   sourceContent: string
 ): { form: RetrievalForm, sections: FormSection[], content: string } {
   const form: RetrievalForm = {
-    ...JSON.parse(JSON.stringify(source)),
+    ...deepClone(source),
     id: crypto.randomUUID(),
     name: `${source.name} (copy)`,
     status: 'draft',
     updatedAt: 'Just now',
     nameManuallySet: true
   }
-  const sections: FormSection[] = JSON.parse(JSON.stringify(sourceSections)).map((section: FormSection) => ({
+  const sections: FormSection[] = deepClone(sourceSections).map((section: FormSection) => ({
     ...section,
     id: crypto.randomUUID(),
     fields: section.fields.map(field => ({ ...field, id: crypto.randomUUID() }))

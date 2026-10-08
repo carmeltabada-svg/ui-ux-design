@@ -330,7 +330,7 @@ function tableizeButtons(doc: Document) {
     // so clicking it in the editor can't trigger actual browser navigation;
     // this export step is what turns the stored destination into a real,
     // functional link for the final pasted/exported email.
-    const href = el.getAttribute('data-href') || '#'
+    const href = safeUrl(el.getAttribute('data-href')) || '#'
     const label = el.textContent || 'Click here'
     // The button node's own `renderHTML` (tiptapExtensions.ts) wraps the
     // anchor in a `<div style="text-align:...">` purely so alignment has

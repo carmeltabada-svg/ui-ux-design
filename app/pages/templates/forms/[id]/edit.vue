@@ -3,6 +3,7 @@ import {
   RETRIEVAL_FORMS,
   RETRIEVAL_FORM_SECTIONS,
   RETRIEVAL_FORM_CONTENT,
+  FORM_VERSIONS,
   SEEDED_FORM_IDS,
   PAGE_SIZES,
   DEFAULT_PAGE_MARGINS,
@@ -18,7 +19,7 @@ import {
 } from '~/data/retrievalForms'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { CURRENT_USER_NAME, ensureTemplateRuntime, CUSTOM_TEMPLATE_IDS } from '~/data/templateRuntime'
-import { TEMPLATE_GROUPS } from '~/data/templates'
+import { TEMPLATE_GROUPS, TOKEN_GROUPS, extractTokenCodes } from '~/data/templates'
 import { flushFormsToStorage, hydrateFormsFromStorage } from '~/utils/formStorage'
 import { describeSnapshotChanges, countDistinctAt, type ChangeCategory } from '~/utils/versionDiff'
 import { provideFormFieldRegistry } from '~/utils/formFieldRegistry'
@@ -111,7 +112,7 @@ const DESCRIPTION_MAX = 140
 // only as the source for the one-time migration into `content` just below,
 // and because undo/redo and version history still snapshot it (seed data for
 // the next real cleanup pass, not touched further this round).
-const sections = ref<FormSection[]>(JSON.parse(JSON.stringify(RETRIEVAL_FORM_SECTIONS[formId.value] ?? [])))
+const sections = ref<FormSection[]>(deepClone(RETRIEVAL_FORM_SECTIONS[formId.value] ?? []))
 
 // The Tiptap document itself - the actual canvas content now, replacing
 // sections/fields as the thing a team member edits. Migrated once, lazily,
@@ -135,6 +136,10 @@ const content = computed({
   get: () => RETRIEVAL_FORM_CONTENT[formId.value] ?? '',
   set: (value: string) => { RETRIEVAL_FORM_CONTENT[formId.value] = value }
 })
+
+// Read-only browsing of the placeholder library, outside edit mode.
+const placeholderBrowseOpen = ref(false)
+const browseUsedCodes = computed(() => extractTokenCodes(content.value))
 
 // Every FormFieldNodeView registers its own filled/required state here (see
 // ~/utils/formFieldRegistry.ts) - the document-canvas replacement for the old
@@ -274,7 +279,7 @@ function persist() {
   rec.nameManuallySet = nameManuallySet.value
   rec.showSubmitButton = showSubmitButton.value
   rec.updatedAt = 'Just now'
-  RETRIEVAL_FORM_SECTIONS[formId.value] = JSON.parse(JSON.stringify(sections.value))
+  RETRIEVAL_FORM_SECTIONS[formId.value] = deepClone(sections.value)
   RETRIEVAL_FORM_CONTENT[formId.value] = content.value
 }
 
@@ -309,7 +314,6 @@ onBeforeUnmount(() => {
   flushEverything()
 })
 
-// The boxed section header's move/color/duplicate/remove icons were always
 function setStatus(next: 'active' | 'draft' | 'retired') {
   status.value = next
   toast.add({
@@ -498,14 +502,15 @@ function viewInNewTab() {
   window.open(`/form-preview?formId=${encodeURIComponent(formId.value)}&mode=${mode.value}`, '_blank', 'noopener')
 }
 
+const { copy } = useCopyFlash()
+
 async function copyLink() {
   flushAutosave()
   flushFormsToStorage()
   const url = `${window.location.origin}/form-preview?formId=${encodeURIComponent(formId.value)}&mode=${mode.value}`
-  try {
-    await navigator.clipboard.writeText(url)
+  if (await copy('form-link', url)) {
     toast.add({ title: 'Link copied', description: url, icon: 'i-lucide-check', color: 'success' })
-  } catch {
+  } else {
     toast.add({ title: 'Could not copy link', icon: 'i-lucide-triangle-alert', color: 'error' })
   }
 }
@@ -527,6 +532,9 @@ function submitForm() {
   if (hasUnfilledRequired.value) return
   toast.add({ title: 'Form submitted', icon: 'i-lucide-check', color: 'success' })
 }
+
+// One-shot pulse on Done the first time this form picks up a change to save.
+const donePulse = useReadyPulse(computed(() => `form-done:${formId.value}`), computed(() => viewMode.value === 'edit' && saveState.value === 'saving'))
 
 function doneEditing() {
   flushAutosave()
@@ -563,12 +571,12 @@ function takeSnapshot(): Snapshot {
     background: background.value,
     pageSize: pageSize.value,
     sections: sections.value,
-    savedAt: new Date().toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    savedAt: timestampNow()
   }))
 }
 
 function applySnapshot(snap: Snapshot) {
-  const clone = JSON.parse(JSON.stringify(snap))
+  const clone = deepClone(snap)
   name.value = clone.name
   description.value = clone.description
   mode.value = clone.mode
@@ -676,7 +684,11 @@ function takeSavedSnapshot(): SavedSnapshot {
 // instead of one entry per actual save. It's a separate list now, only
 // appended to at an explicit save point (Done, or leaving the page mid-edit)
 // - see `recordSavedVersion`.
-const savedVersions = ref<SavedSnapshot[]>([takeSavedSnapshot()])
+if (!FORM_VERSIONS[formId.value]) FORM_VERSIONS[formId.value] = [takeSavedSnapshot()]
+const savedVersions = computed<SavedSnapshot[]>({
+  get: () => (FORM_VERSIONS[formId.value] ?? []) as SavedSnapshot[],
+  set: (v) => { FORM_VERSIONS[formId.value] = v }
+})
 
 function recordSavedVersion() {
   const top = savedVersions.value[savedVersions.value.length - 1]
@@ -919,6 +931,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           </div>
 
           <div class="flex items-center gap-2">
+            <UTooltip v-if="viewMode === 'read'" text="Browse the placeholder library">
+              <UButton color="neutral" variant="outline" size="md" icon="i-lucide-braces" @click="placeholderBrowseOpen = true">
+                Placeholders
+              </UButton>
+            </UTooltip>
             <UTooltip text="Preview form in new tab">
               <UButton
                 color="neutral"
@@ -935,6 +952,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               variant="solid"
               size="md"
               :icon="viewMode === 'edit' ? 'i-lucide-check' : 'i-lucide-pencil'"
+              :class="{ 'btn-ready-pulse': donePulse.active.value }"
               @click="viewMode === 'edit' ? doneEditing() : goToEdit()"
             >
               {{ viewMode === 'edit' ? 'Done' : 'Edit' }}
@@ -1048,6 +1066,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       :form-mode="mode"
     />
 
+    <EmailPlaceholderDrawer v-model="placeholderBrowseOpen" read-only :groups="TOKEN_GROUPS" :used-codes="browseUsedCodes" context-label="Document" :context-mode="mode" />
+
     <USlideover v-model:open="historyOpen" :ui="{ content: 'max-w-md', body: 'fade-scroll-y' }">
       <template #header>
         <div class="flex-1 min-w-0">
@@ -1073,7 +1093,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       </template>
     </USlideover>
 
-    <div class="flex flex-1 min-h-0 bg-gray-50">
+    <div class="flex flex-1 min-h-0 bg-gray-50 stage-enter">
       <div class="flex flex-col flex-1 min-w-0 px-6 py-3 gap-3">
         <div class="flex-1 min-h-0 rounded-lg border border-default overflow-hidden">
           <MasterDataFormDocumentEditor

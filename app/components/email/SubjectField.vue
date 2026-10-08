@@ -25,6 +25,7 @@ const html = computed(() => wrapTokens(props.modelValue))
       :model-value="modelValue"
       size="lg"
       placeholder="Write a subject line..."
+      aria-label="Subject line"
       class="w-full font-semibold mb-1"
       @update:model-value="$emit('update:modelValue', String($event))"
       @focus="$emit('focus')"

@@ -11,7 +11,7 @@ import type { HrisRecord, TicketMode, TicketReason } from '~/data/ticketTrackers
 import { localISO, HRIS_DIRECTORY, ticketStatusLabel, templateForKey, MATRIX, computeTargetDateForPath, REASON_LABELS, resolvedPathFor, createTicket, findOpenDuplicate, ASSET_TEAM_MEMBERS, assetTeamMemberByName, currentUserName } from '~/data/ticketTrackers'
 import { flushTicketsToStorage } from '~/utils/ticketStorage'
 
-definePageMeta({ layout: 'retrieval', pageTransition: { name: 'page', mode: 'out-in' } })
+definePageMeta({ layout: 'retrieval', pageTransition: { name: 'ams-page', mode: 'out-in' } })
 useSeoMeta({ title: 'AMS · Create Retrieval Ticket' })
 
 const toast = useToast()
@@ -223,6 +223,7 @@ function initials(name: string) {
           :items="employeeOptions"
           option-attribute="label"
           placeholder="Type a name or employee ID..."
+          aria-label="Find team member"
           icon="i-lucide-search"
           size="lg"
           class="w-full"
@@ -329,7 +330,7 @@ function initials(name: string) {
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="text-xs text-muted mb-1.5 block">Authorizing Endorsement <span v-if="endorsementRequired" class="text-red-600">*</span></label>
-            <UInput v-model="authorizingEndorsement" placeholder="e.g. P&C-END-2026-0417" size="lg" class="w-full" />
+            <UInput v-model="authorizingEndorsement" aria-label="Authorizing endorsement" placeholder="e.g. P&C-END-2026-0417" size="lg" class="w-full" />
           </div>
           <div>
             <label class="text-xs text-muted mb-1.5 block">Endorsement Recorded Date <span v-if="endorsementRequired" class="text-red-600">*</span></label>

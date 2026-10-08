@@ -7,10 +7,7 @@
 // old `sections`/`fields` records stay untouched (recoverable) but are no
 // longer read from.
 import { RETRIEVAL_FORM_CONTENT, RETRIEVAL_FORM_SECTIONS, type FormSection } from '~/data/retrievalForms'
-
-function esc(s: string) {
-  return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
+import { escapeAttr as esc } from '~/utils/escapeHtml'
 
 function fieldToHtml(field: FormSection['fields'][number]): string {
   if (field.type === 'static_text') {

@@ -217,7 +217,7 @@ const placeholder = computed(() => {
         variant="solid"
         size="sm"
         :icon="field.buttonIcon || undefined"
-        :to="interactive ? (field.buttonUrl || undefined) : undefined"
+        :to="interactive ? (safeUrl(field.buttonUrl) || undefined) : undefined"
         :disabled="!interactive"
         target="_blank"
         @click.stop
