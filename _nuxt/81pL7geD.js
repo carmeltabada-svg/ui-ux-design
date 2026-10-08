@@ -1,0 +1,1 @@
+import{u as e}from"./CJyRakH0.js";import{Kt as t,b as n,k as r,mt as i}from"./Car86Ubo.js";var a=r({__name:`index`,async setup(r){let a,o;return[a,o]=t(()=>e(`/templates`,{replace:!0})),await a,o(),(e,t)=>(i(),n(`div`))}});export{a as default};

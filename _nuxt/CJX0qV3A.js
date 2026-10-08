@@ -1,0 +1,1 @@
+import{Ht as e,it as t,vn as n}from"./Car86Ubo.js";var r=new Set,i=3200;function a(a,o,s=i){let c=n(!1),l=null;function u(){let e=a.value;e&&!r.has(e)&&(r.add(e),c.value=!0,l&&clearTimeout(l),l=setTimeout(()=>{c.value=!1},s))}let d=o.value;return e(o,e=>{e&&!d&&u(),d=e}),e(a,()=>{d=o.value}),t(()=>{l&&clearTimeout(l)}),{active:c}}export{a as t};
