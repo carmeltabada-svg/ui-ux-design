@@ -37,7 +37,7 @@ import { ensureTemplateRuntime, CUSTOM_TEMPLATE_IDS, DELETED_TEMPLATE_KEYS } fro
 // A ticket link opened directly (a fresh browser, a shared link) must find its ticket: seed the demo tickets here too, exactly as the list page does. Safe to repeat.
 seedDemoTickets()
 
-definePageMeta({ layout: 'retrieval' })
+definePageMeta({})
 
 const route = useRoute()
 // Communications "All steps" list stays collapsed until asked for, to keep the rail short.

@@ -3,7 +3,7 @@
 // (assets-test.go.team/app/master-data). Email templates and retrieval forms
 // live under the "Templates" nav entry now (they're functionally twins), so
 // this page only holds the other master-data reference tables.
-definePageMeta({ layout: 'retrieval' })
+definePageMeta({})
 
 useSeoMeta({
   title: 'AMS · Master Data',

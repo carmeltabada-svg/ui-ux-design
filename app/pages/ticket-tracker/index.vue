@@ -12,7 +12,7 @@ import {
   formsColumnsFor, daysLeftLabel, currentUserName, localISO
 } from '~/data/ticketTrackers'
 
-definePageMeta({ layout: 'retrieval' })
+definePageMeta({})
 
 useSeoMeta({
   title: 'AMS · Ticket Tracker',

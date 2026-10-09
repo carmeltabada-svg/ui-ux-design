@@ -9,7 +9,7 @@ import {
 } from '~/data/checklistTemplates'
 import { MATRIX, REASON_LABELS, type TicketReason } from '~/data/ticketTrackers'
 
-definePageMeta({ layout: 'retrieval' })
+definePageMeta({})
 
 useSeoMeta({ title: 'AMS · Offboarding Checklists' })
 

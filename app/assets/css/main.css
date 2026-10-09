@@ -247,10 +247,10 @@ body {
    Short fade only — no mode, so both pages overlap briefly. The leaving page
    is pulled out of flow so the entering page takes its natural position. */
 .ams-page-enter-active {
-  transition: opacity 0.15s ease;
+  transition: opacity 0.06s ease-out;
 }
 .ams-page-leave-active {
-  transition: opacity 0.08s ease;
+  transition: opacity 0.04s ease-out;
   position: absolute;
   inset: 0;
   z-index: -1;
