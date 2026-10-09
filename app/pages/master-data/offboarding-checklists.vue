@@ -47,10 +47,15 @@ const pathOptions = (Object.keys(REASON_LABELS) as TicketReason[]).map(reason =>
   modes: (['onsite', 'remote'] as const).filter(m => !!MATRIX[reason]?.[m])
 }))
 const pathLabel = (key: string) => {
-  if (key === '*') return 'Every other path'
+  if (!key.includes(':')) return key
   const [reason, mode] = key.split(':') as [TicketReason, string]
   return `${REASON_LABELS[reason] ?? reason}, ${mode === 'onsite' ? 'Onsite' : 'Remote'}`
 }
+const allPathKeys = computed(() => pathOptions.flatMap(o => o.modes.map(m => `${o.reason}:${m}`)))
+const allChecked = computed(() => allPathKeys.value.every(k => draft.defaultFor.includes(k)))
+const noneChecked = computed(() => !allPathKeys.value.some(k => draft.defaultFor.includes(k)))
+function checkAll() { draft.defaultFor = [...new Set([...draft.defaultFor, ...allPathKeys.value])] }
+function uncheckAll() { draft.defaultFor = draft.defaultFor.filter(k => !allPathKeys.value.includes(k)) }
 function togglePath(key: string, on: boolean) {
   draft.defaultFor = on ? [...new Set([...draft.defaultFor, key])] : draft.defaultFor.filter(k => k !== key)
 }
@@ -104,6 +109,7 @@ function confirmDelete() {
         <UTooltip text="Back to Master Data">
           <UButton color="neutral" variant="ghost" size="sm" square icon="i-lucide-arrow-left" class="text-muted shrink-0" aria-label="Back to Master Data" to="/master-data" />
         </UTooltip>
+        <UIcon name="i-lucide-list-checks" class="size-5 text-primary shrink-0" />
         <h1 class="text-lg font-semibold text-highlighted">Offboarding Checklists</h1>
       </div>
       <p class="text-sm text-muted max-w-[680px] pt-1 pl-[34px]">
@@ -129,10 +135,11 @@ function confirmDelete() {
             >
               <div class="text-sm font-medium text-default">{{ t.name }}</div>
               <div class="text-xs text-slate-600 mt-0.5">{{ t.tasks.length }} task{{ t.tasks.length === 1 ? '' : 's' }}<template v-if="t.tasks.some(x => !x.required)"> &middot; {{ t.tasks.filter(x => !x.required).length }} optional</template></div>
-              <div v-if="t.defaultFor.length" class="mt-1.5 flex flex-wrap gap-1">
-                <span v-for="k in t.defaultFor.slice(0, 2)" :key="k" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-default">{{ pathLabel(k) }}</span>
-                <span v-if="t.defaultFor.length > 2" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-default">+{{ t.defaultFor.length - 2 }} more</span>
+              <div v-if="t.defaultFor.filter(k => k !== '*').length" class="mt-1.5 flex flex-wrap gap-1">
+                <span v-for="k in t.defaultFor.filter(k => k !== '*').slice(0, 2)" :key="k" class="rounded bg-white px-1.5 py-0.5 text-xs text-default">{{ pathLabel(k) }}</span>
+                <span v-if="t.defaultFor.filter(k => k !== '*').length > 2" class="rounded bg-white px-1.5 py-0.5 text-xs text-default">+{{ t.defaultFor.filter(k => k !== '*').length - 2 }} more</span>
               </div>
+              <div v-else class="mt-1 text-xs text-muted">No paths assigned</div>
             </button>
           </li>
         </ul>
@@ -185,7 +192,13 @@ function confirmDelete() {
           </div>
 
           <div>
-            <div class="text-xs font-medium text-default mb-1.5">Starts every ticket for</div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-medium text-default">Starts every ticket for</span>
+              <div class="flex gap-1">
+                <UButton size="xs" color="neutral" variant="ghost" :disabled="allChecked" @click="checkAll">Check all</UButton>
+                <UButton size="xs" color="neutral" variant="ghost" :disabled="noneChecked" @click="uncheckAll">Uncheck all</UButton>
+              </div>
+            </div>
             <div class="rounded-lg border border-default divide-y divide-default">
               <div v-for="opt in pathOptions" :key="opt.reason" class="flex flex-wrap items-center gap-x-6 gap-y-1.5 px-4 py-2.5">
                 <span class="w-44 shrink-0 text-sm text-default">{{ opt.label }}</span>
@@ -193,12 +206,6 @@ function confirmDelete() {
                   <UCheckbox :model-value="draft.defaultFor.includes(`${opt.reason}:${m}`)" @update:model-value="(v) => togglePath(`${opt.reason}:${m}`, !!v)" />
                   {{ m === 'onsite' ? 'Onsite' : 'Remote' }}
                   <span v-if="ownerOf(`${opt.reason}:${m}`) && draft.defaultFor.includes(`${opt.reason}:${m}`)" class="text-xs text-muted">(from {{ ownerOf(`${opt.reason}:${m}`) }})</span>
-                </label>
-              </div>
-              <div class="flex items-center gap-2 px-4 py-2.5">
-                <label class="inline-flex items-center gap-2 text-sm text-default cursor-pointer">
-                  <UCheckbox :model-value="draft.defaultFor.includes('*')" @update:model-value="(v) => togglePath('*', !!v)" />
-                  Every path that has no template of its own
                 </label>
               </div>
             </div>

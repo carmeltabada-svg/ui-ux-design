@@ -9,8 +9,13 @@ const PAGES_BASE = process.env.AMS_PAGES_BASE || '/'
 
 export default defineNuxtConfig({
   ...(STATIC_DEMO
-    ? { ssr: false, app: { baseURL: PAGES_BASE }, router: { options: { hashMode: true } } }
+    ? { ssr: false, router: { options: { hashMode: true } } }
     : {}),
+
+  app: {
+    ...(STATIC_DEMO ? { baseURL: PAGES_BASE } : {}),
+    pageTransition: { name: 'ams-page' }
+  },
 
   modules: [
     '@nuxt/eslint',

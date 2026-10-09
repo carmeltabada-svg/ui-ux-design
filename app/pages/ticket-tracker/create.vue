@@ -11,7 +11,7 @@ import type { HrisRecord, TicketMode, TicketReason } from '~/data/ticketTrackers
 import { localISO, HRIS_DIRECTORY, ticketStatusLabel, templateForKey, MATRIX, computeTargetDateForPath, REASON_LABELS, resolvedPathFor, createTicket, findOpenDuplicate, ASSET_TEAM_MEMBERS, assetTeamMemberByName, currentUserName } from '~/data/ticketTrackers'
 import { flushTicketsToStorage } from '~/utils/ticketStorage'
 
-definePageMeta({ layout: 'retrieval', pageTransition: { name: 'ams-page', mode: 'out-in' } })
+definePageMeta({ layout: 'retrieval' })
 useSeoMeta({ title: 'AMS · Create Retrieval Ticket' })
 
 const toast = useToast()
