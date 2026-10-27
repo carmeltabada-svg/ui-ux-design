@@ -1,6 +1,33 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
+// Static prototype build for sharing (AMS_STATIC_DEMO=1 nuxt generate): a
+// client-only app with relative asset paths and hash routes, so it runs from
+// any static folder or sub-path with no server. Off by default; normal dev and
+// production builds are unaffected.
+const STATIC_DEMO = process.env.AMS_STATIC_DEMO === '1'
+const PAGES_BASE = process.env.AMS_PAGES_BASE || '/'
+
 export default defineNuxtConfig({
+  ...(STATIC_DEMO
+    ? { ssr: false, router: { options: { hashMode: true } } }
+    : {}),
+
+  runtimeConfig: {
+    public: {
+      // 'mock' reads app/mocks. 'http' calls the backend at apiBase.
+      // Override with NUXT_PUBLIC_API_MODE and NUXT_PUBLIC_API_BASE.
+      apiMode: 'mock',
+      apiBase: '/api'
+    }
+  },
+
+  app: {
+    // Shown by the client-only pages (the ticket tracker, /form-preview, the gate pass) until the app mounts.
+    spaLoadingTemplate: true,
+    ...(STATIC_DEMO ? { baseURL: PAGES_BASE } : {}),
+    pageTransition: { name: 'ams-page' }
+  },
+
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
@@ -30,10 +57,13 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  // the original AMS design has no dark mode — force light to match
+  // Light and dark. The default follows the system setting, a choice made in
+  // the navbar toggle is remembered (the key is namespaced like every other
+  // localStorage key here). Documents stay light, see `.ams-paper` in main.css.
   colorMode: {
-    preference: 'light',
-    fallback: 'light'
+    preference: 'system',
+    fallback: 'light',
+    storageKey: 'ams:color-mode'
   },
 
   routeRules: {

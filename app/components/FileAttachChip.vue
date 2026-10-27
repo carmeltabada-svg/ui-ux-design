@@ -27,12 +27,12 @@ defineEmits<{
   <div class="flex items-center w-full">
     <div
       class="flex items-center justify-between gap-2.5 rounded-full py-2.5 pr-2.5 pl-3.5 w-full"
-      style="background: rgb(239,246,255); border: 1px solid #D3E6FF;"
+      style="background: var(--ams-attach-bg); border: 1px solid var(--ams-attach-border);"
     >
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
         <div
-          class="flex items-center justify-center shrink-0 rounded-full bg-white"
-          style="width: 34px; height: 34px; color: rgb(56,107,230);"
+          class="flex items-center justify-center shrink-0 rounded-full bg-card"
+          style="width: 34px; height: 34px; color: var(--ams-attach-icon);"
         >
           <UIcon :name="icon" class="size-[18px]" />
         </div>

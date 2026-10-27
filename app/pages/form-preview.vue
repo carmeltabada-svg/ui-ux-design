@@ -6,14 +6,12 @@
 // records (app/data/retrievalForms.ts) - the builder autosaves into those same
 // records, so this always reflects the latest saved state, no draft-passing needed.
 // `ssr: false` - this page's whole point is to reflect whatever was most
-// recently saved in the builder, and that only ever lives in localStorage
-// (there's no backend). An SSR pass can't read localStorage, so it always
-// rendered the static seed data first and only swapped in the real,
-// saved state after a client-side hydration step - visible as the page
-// flashing from a default background to the real one a beat later.
-// Skipping SSR here means there's no server-rendered HTML to reconcile
-// against, so the saved snapshot can be read and applied synchronously,
-// before the very first paint, with nothing to flash away from.
+// recently saved in the builder. In the prototype that lives in this
+// browser's storage, which a server render cannot read, so it would render
+// the shipped forms first and swap in the saved ones after hydration, visible
+// as the page flashing from a default background to the real one. Without
+// SSR there is nothing to flash away from: the saved forms are already loaded
+// (plugins/00.masterData.ts) before the first paint.
 definePageMeta({ layout: 'blank', ssr: false })
 
 import { RETRIEVAL_FORMS, RETRIEVAL_FORM_CONTENT, PAGE_SIZES, DEFAULT_PAGE_MARGINS, type PageSize } from '~/data/retrievalForms'
@@ -22,12 +20,9 @@ import { backgroundStyle } from '~/utils/formBackground'
 import { provideFormFieldRegistry } from '~/utils/formFieldRegistry'
 import { provideFormSubmitAttempt } from '~/utils/formSubmitAttempt'
 import { provideFormFieldsInteractive } from '~/utils/formFieldsInteractive'
-import { hydrateFormsFromStorage } from '~/utils/formStorage'
 import { buildFormLetterhead } from '~/utils/formLetterhead'
 import { renderFormFieldsAsStaticHtml } from '~/utils/formFieldStaticRender'
 import { buildPrintCss } from '~/utils/formPrintStyles'
-
-hydrateFormsFromStorage()
 
 const route = useRoute()
 const formId = computed(() => (route.query.formId as string) || 'return-ack-onsite')
@@ -235,7 +230,7 @@ onBeforeUnmount(() => window.removeEventListener('afterprint', handleAfterPrint)
 </script>
 
 <template>
-  <div class="min-h-screen relative">
+  <div class="ams-paper min-h-screen relative">
     <!-- A fixed, viewport-sized layer behind everything - not a background
          set directly on this ever-growing (multi-page, potentially very
          tall) scrollable container. `background-size: cover` sizes itself
@@ -314,7 +309,12 @@ onBeforeUnmount(() => window.removeEventListener('afterprint', handleAfterPrint)
             </MasterDataFormDocumentEditor>
           </div>
 
-          <p class="shrink-0 text-[11px] text-[#6B7280] text-center">
+          <!-- This caption is page chrome, not part of the document, so it sits on the desk: a
+               light surface in light mode, the dark app background in dark mode. The whole page is
+               `.ams-paper`, which pins the slate tokens to their light values, so a theme token
+               (text-toned etc.) would stay dark-on-dark here. Explicit literals per theme instead:
+               #475569 on the light desk (>=5.9:1) and #cbd5e1 on the dark desk (~10:1), both AA. -->
+          <p class="shrink-0 text-[11px] text-center text-[#475569] dark:text-[#cbd5e1]">
             Submit the completed form to the Asset Management Team at {{ SAMPLE_VALUES.ASSET_TEAM_EMAIL }} or {{ SAMPLE_VALUES.ASSET_TEAM_MOBILE }}.
           </p>
         </div>

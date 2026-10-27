@@ -47,17 +47,37 @@ body {
    when that element's content is actually taller/wider than its own box -
    that's the actual mask trigger below. A short list that fits with room to
    spare gets no fade at all, since there's nothing to scroll to. */
+:root { --fade-scroll-size: 20px; }
 .fade-scroll-y.is-overflowing {
-  mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
+  mask-image: linear-gradient(to bottom, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
 }
 .fade-scroll-x.is-overflowing {
-  mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+  mask-image: linear-gradient(to right, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
 }
 
 @theme static {
   --font-sans: 'Inter', sans-serif;
+
+  /* Placeholder and empty-state text: one step lighter than --ui-text-dimmed (#64748b), which stays
+     AA for labels, icons and section labels. 3.5:1 on white, so it is below AA on purpose. */
+  --color-placeholder: #7b8aa0;
+
+  /* Helper and description text under a field or a title: the lightest slate that still passes AA
+     (4.55:1 on white). One step lighter than --ui-text-muted (#64748b, 4.76:1), which stays for
+     icons, dates and everything else. */
+  --color-helper: #67778f;
+
+  /* Dark mode tokens (see "Dark theme" below). Light values live here, the dark values in `.dark`.
+     card: the raised surface (cards, headers, popovers), `bg-card`. It replaces `bg-white`.
+     ams-success and ams-warning: the pinned green and brown used for text, icons and badges on a
+     light surface (#007f45 and #894b00). ams-nav: the active sidebar item fill. */
+  --color-card: #ffffff;
+  --color-ams-success: #007f45;
+  --color-ams-warning: #894b00;
+  --color-ams-nav: #eff6ff;
+  --color-ams-remote: #7008e7;
 
   --color-green-50: #EFFDF5;
   --color-green-100: #D9FBE8;
@@ -106,8 +126,471 @@ body {
   --ui-info: #3b82f6;
 }
 
-.dark {
+/* ===== Dark theme =====
+   Nuxt UI's color mode puts `.dark` on <html>. Light values are pinned above in :root, the dark
+   values below override them. Every text pair was measured (see AMS_DESIGN_SYSTEM.md, dark column).
+   Dark values are plain hex or rgba, never oklch() or color-mix(), for the same html2canvas reason.
+
+   .ams-paper marks a document surface (email canvas and preview, form documents, gate pass,
+   anything that represents paper or a real email client). Inside it every token goes back to its
+   light value, so a document stays a white page inside the dark app. */
+:root, .ams-paper {
+  --ui-text: #334155;
+  --ui-text-muted: #64748b;
+  --ui-text-dimmed: #64748b;
+  --ui-text-highlighted: #0f172a;
+  --ui-text-toned: #475569;
+  --ui-text-inverted: #ffffff;
+  --ui-bg: #ffffff;
+  --ui-bg-muted: #f8fafc;
+  --ui-bg-elevated: #f1f5f9;
+  --ui-bg-accented: #e2e8f0;
+  --ui-bg-inverted: #0f172a;
+  --ui-border: #e2e8f0;
+  --ui-border-muted: #e2e8f0;
+  --ui-border-accented: #cbd5e1;
+  --ui-border-inverted: #0f172a;
   --ui-primary: #386BE6;
+  --ui-success: #00A155;
+  --ui-warning: #ea580c;
+  --ui-error: #ef4444;
+  --ui-info: #3b82f6;
+  --color-card: #ffffff;
+  --color-ams-success: #007f45;
+  --color-ams-warning: #894b00;
+  --color-ams-nav: #eff6ff;
+  --color-ams-remote: #7008e7;
+  --color-placeholder: #7b8aa0;
+  --color-helper: #67778f;
+  --ams-tok-bg: rgba(56, 107, 230, 0.09);
+  --ams-tok-bg-hover: rgba(56, 107, 230, 0.18);
+  --ams-tok-active-bg: rgba(56, 107, 230, 0.35);
+  --ams-tok-active-pulse: rgba(56, 107, 230, 0.6);
+  --ams-tok-active-fg: #1e3a8a;
+  --ams-tok-active-ring: rgba(56, 107, 230, 0.65);
+  --ams-miss-bg: rgba(234, 88, 12, 0.14);
+  --ams-miss-bg-hover: rgba(234, 88, 12, 0.24);
+  --ams-miss-active-bg: rgba(234, 88, 12, 0.3);
+  --ams-miss-active-pulse: rgba(234, 88, 12, 0.55);
+  --ams-miss-active-fg: #9a3412;
+  --ams-miss-active-ring: rgba(234, 88, 12, 0.7);
+  --ams-bad-bg: rgba(220, 38, 38, 0.14);
+  --ams-bad-bg-hover: rgba(220, 38, 38, 0.24);
+  --ams-bad-line: rgba(220, 38, 38, 0.5);
+  --ams-const-bg: rgba(107, 114, 128, 0.12);
+  --ams-const-bg-hover: rgba(107, 114, 128, 0.2);
+  --ams-attach-bg: rgb(239, 246, 255);
+  --ams-attach-border: #d3e6ff;
+  --ams-attach-icon: rgb(56, 107, 230);
+  --ams-skeleton: 226, 232, 240;
+  --ams-warn-chip-bg: rgb(254, 249, 194);
+  --ams-warn-chip-fg: rgb(137, 75, 0);
+  --ams-nav-border: rgb(241, 245, 249);
+  --ams-canvas: #e4e4e7;
+  --ams-callout-fg: rgb(137, 75, 0);
+  --ams-doc-page: #ffffff;
+  --ams-doc-gap: #d4d4d8;
+  --ams-doc-text: #374151;
+  --ams-doc-strong: #111827;
+  --ams-doc-cell: #1f2937;
+  --ams-doc-muted: #6b7280;
+  --ams-doc-hint: #9ca3af;
+  --ams-doc-addr: #4b5563;
+  --ams-doc-border: #d1d5db;
+  --ams-doc-fill: #f9fafb;
+  --ams-doc-error: #dc2626;
+  --ams-doc-accent: #386be6;
+  --ams-doc-lock: #fafafd;
+  --ams-doc-warn-text: #7a5000;
+  --ams-doc-warn-title: #b4530f;
+}
+.dark {
+  color-scheme: dark;
+  --ui-text: #e2e8f0;
+  --ui-text-muted: #94a3b8;
+  --ui-text-dimmed: #94a3b8;
+  --ui-text-highlighted: #f8fafc;
+  --ui-text-toned: #cbd5e1;
+  --ui-text-inverted: #0f172a;
+  --ui-bg: #0f172a;
+  --ui-bg-muted: #172033;
+  --ui-bg-elevated: #263449;
+  --ui-bg-accented: #334155;
+  --ui-bg-inverted: #f8fafc;
+  --ui-border: #334155;
+  --ui-border-muted: #263449;
+  --ui-border-accented: #6b7a92;
+  --ui-border-inverted: #f8fafc;
+  /* One token feeds both text and fill in Nuxt UI, so the primary blue is the lighter #7da2ff
+     here: 5.9:1 as text on a card, and a solid primary button is #7da2ff with dark text. */
+  --ui-primary: #7da2ff;
+  --ui-success: #4ade80;
+  --ui-warning: #fb923c;
+  --ui-error: #f87171;
+  --ui-info: #60a5fa;
+  --color-card: #1e293b;
+  --color-ams-success: #4ade80;
+  --color-ams-warning: #fdba74;
+  --color-ams-nav: #1d2f57;
+  --color-ams-remote: #c4a3ff;
+  /* Placeholder and helper text pass AA in dark (the light placeholder exception is not carried over):
+     5.1:1 and 6.1:1 on a card. */
+  --color-placeholder: #98a6bb;
+  --color-helper: #9aa8bd;
+  --ams-tok-bg: rgba(125, 162, 255, 0.2);
+  --ams-tok-bg-hover: rgba(125, 162, 255, 0.3);
+  --ams-tok-active-bg: rgba(125, 162, 255, 0.4);
+  --ams-tok-active-pulse: rgba(125, 162, 255, 0.6);
+  --ams-tok-active-fg: #e0e9ff;
+  --ams-tok-active-ring: rgba(125, 162, 255, 0.85);
+  --ams-miss-bg: rgba(251, 146, 60, 0.2);
+  --ams-miss-bg-hover: rgba(251, 146, 60, 0.3);
+  --ams-miss-active-bg: rgba(251, 146, 60, 0.4);
+  --ams-miss-active-pulse: rgba(251, 146, 60, 0.6);
+  --ams-miss-active-fg: #ffe4cc;
+  --ams-miss-active-ring: rgba(251, 146, 60, 0.85);
+  --ams-bad-bg: rgba(248, 113, 113, 0.2);
+  --ams-bad-bg-hover: rgba(248, 113, 113, 0.3);
+  --ams-bad-line: rgba(248, 113, 113, 0.7);
+  --ams-const-bg: rgba(148, 163, 184, 0.2);
+  --ams-const-bg-hover: rgba(148, 163, 184, 0.3);
+  --ams-attach-bg: #1d2f57;
+  --ams-attach-border: #2f4a85;
+  --ams-attach-icon: #93b4ff;
+  --ams-skeleton: 51, 65, 85;
+  --ams-warn-chip-bg: #4a3a12;
+  --ams-warn-chip-fg: #fcd34d;
+  --ams-nav-border: #263449;
+  --ams-canvas: #0b1325;
+  --ams-callout-fg: #fcd34d;
+  --ams-doc-page: #172033;
+  --ams-doc-gap: #475569;
+  --ams-doc-text: #cbd5e1;
+  --ams-doc-strong: #f8fafc;
+  --ams-doc-cell: #e2e8f0;
+  --ams-doc-muted: #94a3b8;
+  --ams-doc-hint: #94a3b8;
+  --ams-doc-addr: #b4c0d1;
+  --ams-doc-border: #475569;
+  --ams-doc-fill: #243247;
+  --ams-doc-error: #f87171;
+  --ams-doc-accent: #7da2ff;
+  --ams-doc-lock: #172033;
+  --ams-doc-warn-text: #fcd34d;
+  --ams-doc-warn-title: #fdba74;
+  /* tinted fills and borders (50 to 300 of each ramp): a translucent hue over the card */
+  --color-red-50: #332c3c;
+  --color-red-100: #3f2d3c;
+  --color-red-200: #54303d;
+  --color-red-300: #72343f;
+  --color-orange-50: #343037;
+  --color-orange-100: #413535;
+  --color-orange-200: #573c31;
+  --color-orange-300: #76472c;
+  --color-amber-50: #343536;
+  --color-amber-100: #403c33;
+  --color-amber-200: #56472f;
+  --color-amber-300: #745828;
+  --color-yellow-50: #323736;
+  --color-yellow-100: #3f3f33;
+  --color-yellow-200: #534d2e;
+  --color-yellow-300: #706027;
+  --color-emerald-50: #1d3742;
+  --color-emerald-100: #1c4046;
+  --color-emerald-200: #1a4e4d;
+  --color-emerald-300: #186357;
+  --color-blue-50: #21324e;
+  --color-blue-100: #233759;
+  --color-blue-200: #26406c;
+  --color-blue-300: #2a4d86;
+  --color-indigo-50: #252f4d;
+  --color-indigo-100: #293358;
+  --color-indigo-200: #30396a;
+  --color-indigo-300: #3a4184;
+  --color-purple-50: #2c2d4e;
+  --color-purple-100: #343059;
+  --color-purple-200: #42346c;
+  --color-purple-300: #553b86;
+  --color-pink-50: #332c44;
+  --color-pink-100: #3f2e4a;
+  --color-pink-200: #543153;
+  --color-pink-300: #703561;
+  --color-teal-50: #1d3746;
+  --color-teal-100: #1c404c;
+  --color-teal-200: #1b4e57;
+  --color-teal-300: #1a6266;
+  --color-sky-50: #1c354c;
+  --color-sky-100: #1b3d57;
+  --color-sky-200: #1a4968;
+  --color-sky-300: #185b81;
+  --color-cyan-50: #1c374a;
+  --color-cyan-100: #1a4053;
+  --color-cyan-200: #184e63;
+  --color-cyan-300: #146178;
+  --color-violet-50: #292e4e;
+  --color-violet-100: #2f3159;
+  --color-violet-200: #3a366c;
+  --color-violet-300: #4a3d86;
+  --color-green-50: #1e393f;
+  --color-green-100: #1f4241;
+  --color-green-200: #1f5244;
+  --color-green-300: #206749;
+  --color-gray-50: #0f172a;
+  --color-gray-100: #263449;
+  --color-gray-200: #334155;
+  --color-gray-300: #475569;
+  --color-slate-50: #172033;
+  --color-slate-100: #263449;
+  --color-slate-200: #334155;
+  --color-slate-300: #475569;
+}
+.ams-paper {
+  color-scheme: light;
+  --color-red-50:  oklch(97.1% 0.013 17.38);
+  --color-red-100:  oklch(93.6% 0.032 17.717);
+  --color-red-200:  oklch(88.5% 0.062 18.334);
+  --color-red-300:  oklch(80.8% 0.114 19.571);
+  --color-orange-50:  oklch(98% 0.016 73.684);
+  --color-orange-100:  oklch(95.4% 0.038 75.164);
+  --color-orange-200:  oklch(90.1% 0.076 70.697);
+  --color-orange-300:  oklch(83.7% 0.128 66.29);
+  --color-amber-50:  oklch(98.7% 0.022 95.277);
+  --color-amber-100:  oklch(96.2% 0.059 95.617);
+  --color-amber-200:  oklch(92.4% 0.12 95.746);
+  --color-amber-300:  oklch(87.9% 0.169 91.605);
+  --color-yellow-50:  oklch(98.7% 0.026 102.212);
+  --color-yellow-100:  oklch(97.3% 0.071 103.193);
+  --color-yellow-200:  oklch(94.5% 0.129 101.54);
+  --color-yellow-300:  oklch(90.5% 0.182 98.111);
+  --color-emerald-50:  oklch(97.9% 0.021 166.113);
+  --color-emerald-100:  oklch(95% 0.052 163.051);
+  --color-emerald-200:  oklch(90.5% 0.093 164.15);
+  --color-emerald-300:  oklch(84.5% 0.143 164.978);
+  --color-blue-50:  oklch(97% 0.014 254.604);
+  --color-blue-100:  oklch(93.2% 0.032 255.585);
+  --color-blue-200:  oklch(88.2% 0.059 254.128);
+  --color-blue-300:  oklch(80.9% 0.105 251.813);
+  --color-indigo-50:  oklch(96.2% 0.018 272.314);
+  --color-indigo-100:  oklch(93% 0.034 272.788);
+  --color-indigo-200:  oklch(87% 0.065 274.039);
+  --color-indigo-300:  oklch(78.5% 0.115 274.713);
+  --color-purple-50:  oklch(97.7% 0.014 308.299);
+  --color-purple-100:  oklch(94.6% 0.033 307.174);
+  --color-purple-200:  oklch(90.2% 0.063 306.703);
+  --color-purple-300:  oklch(82.7% 0.119 306.383);
+  --color-pink-50:  oklch(97.1% 0.014 343.198);
+  --color-pink-100:  oklch(94.8% 0.028 342.258);
+  --color-pink-200:  oklch(89.9% 0.061 343.231);
+  --color-pink-300:  oklch(82.3% 0.12 346.018);
+  --color-teal-50:  oklch(98.4% 0.014 180.72);
+  --color-teal-100:  oklch(95.3% 0.051 180.801);
+  --color-teal-200:  oklch(91% 0.096 180.426);
+  --color-teal-300:  oklch(85.5% 0.138 181.071);
+  --color-sky-50:  oklch(97.7% 0.013 236.62);
+  --color-sky-100:  oklch(95.1% 0.026 236.824);
+  --color-sky-200:  oklch(90.1% 0.058 230.902);
+  --color-sky-300:  oklch(82.8% 0.111 230.318);
+  --color-cyan-50:  oklch(98.4% 0.019 200.873);
+  --color-cyan-100:  oklch(95.6% 0.045 203.388);
+  --color-cyan-200:  oklch(91.7% 0.08 205.041);
+  --color-cyan-300:  oklch(86.5% 0.127 207.078);
+  --color-violet-50:  oklch(96.9% 0.016 293.756);
+  --color-violet-100:  oklch(94.3% 0.029 294.588);
+  --color-violet-200:  oklch(89.4% 0.057 293.283);
+  --color-violet-300:  oklch(81.1% 0.111 293.571);
+  --color-green-50: #EFFDF5;
+  --color-green-100: #D9FBE8;
+  --color-green-200: #B3F5D1;
+  --color-green-300: #75EDAE;
+  --color-gray-50:  oklch(98.5% 0.002 247.839);
+  --color-gray-100:  oklch(96.7% 0.003 264.542);
+  --color-gray-200:  oklch(92.8% 0.006 264.531);
+  --color-gray-300:  oklch(87.2% 0.01 258.338);
+  --color-slate-50:  oklch(98.4% 0.003 247.858);
+  --color-slate-100:  oklch(96.8% 0.007 247.896);
+  --color-slate-200:  oklch(92.9% 0.013 255.508);
+  --color-slate-300:  oklch(86.9% 0.022 252.894);
+}
+/* Base layer, so a text color class on the paper element itself still wins */
+@layer base {
+  .ams-paper { color: var(--ui-text); }
+}
+/* printed output is always the light document */
+@media print {
+  .dark {
+    --ams-canvas: #e4e4e7;
+    --ams-callout-fg: rgb(137, 75, 0);
+    --ams-doc-page: #ffffff;
+    --ams-doc-gap: #d4d4d8;
+    --ams-doc-text: #374151;
+    --ams-doc-strong: #111827;
+    --ams-doc-cell: #1f2937;
+    --ams-doc-muted: #6b7280;
+    --ams-doc-hint: #9ca3af;
+    --ams-doc-addr: #4b5563;
+    --ams-doc-border: #d1d5db;
+    --ams-doc-fill: #f9fafb;
+    --ams-doc-error: #dc2626;
+    --ams-doc-accent: #386be6;
+    --ams-doc-lock: #fafafd;
+    --ams-doc-warn-text: #7a5000;
+    --ams-doc-warn-title: #b4530f;
+    --ui-text: #334155;
+    --ui-text-muted: #64748b;
+    --ui-text-dimmed: #64748b;
+    --ui-text-highlighted: #0f172a;
+    --ui-text-toned: #475569;
+    --ui-text-inverted: #ffffff;
+    --ui-bg: #ffffff;
+    --ui-bg-muted: #f8fafc;
+    --ui-bg-elevated: #f1f5f9;
+    --ui-bg-accented: #e2e8f0;
+    --ui-bg-inverted: #0f172a;
+    --ui-border: #e2e8f0;
+    --ui-border-muted: #e2e8f0;
+    --ui-border-accented: #cbd5e1;
+    --ui-border-inverted: #0f172a;
+    --ui-primary: #386BE6;
+    --ui-success: #00A155;
+    --ui-warning: #ea580c;
+    --ui-error: #ef4444;
+    --ui-info: #3b82f6;
+    --color-card: #ffffff;
+    --color-ams-success: #007f45;
+    --color-ams-warning: #894b00;
+    --color-ams-nav: #eff6ff;
+  --color-ams-remote: #7008e7;
+    --color-placeholder: #7b8aa0;
+    --color-helper: #67778f;
+    --ams-tok-bg: rgba(56, 107, 230, 0.09);
+    --ams-tok-bg-hover: rgba(56, 107, 230, 0.18);
+    --ams-tok-active-bg: rgba(56, 107, 230, 0.35);
+    --ams-tok-active-pulse: rgba(56, 107, 230, 0.6);
+    --ams-tok-active-fg: #1e3a8a;
+    --ams-tok-active-ring: rgba(56, 107, 230, 0.65);
+    --ams-miss-bg: rgba(234, 88, 12, 0.14);
+    --ams-miss-bg-hover: rgba(234, 88, 12, 0.24);
+    --ams-miss-active-bg: rgba(234, 88, 12, 0.3);
+    --ams-miss-active-pulse: rgba(234, 88, 12, 0.55);
+    --ams-miss-active-fg: #9a3412;
+    --ams-miss-active-ring: rgba(234, 88, 12, 0.7);
+    --ams-bad-bg: rgba(220, 38, 38, 0.14);
+    --ams-bad-bg-hover: rgba(220, 38, 38, 0.24);
+    --ams-bad-line: rgba(220, 38, 38, 0.5);
+    --ams-const-bg: rgba(107, 114, 128, 0.12);
+    --ams-const-bg-hover: rgba(107, 114, 128, 0.2);
+    --ams-attach-bg: rgb(239, 246, 255);
+    --ams-attach-border: #d3e6ff;
+    --ams-attach-icon: rgb(56, 107, 230);
+    --ams-skeleton: 226, 232, 240;
+    --ams-warn-chip-bg: rgb(254, 249, 194);
+    --ams-warn-chip-fg: rgb(137, 75, 0);
+    --ams-nav-border: rgb(241, 245, 249);
+    --color-red-50:  oklch(97.1% 0.013 17.38);
+    --color-red-100:  oklch(93.6% 0.032 17.717);
+    --color-red-200:  oklch(88.5% 0.062 18.334);
+    --color-red-300:  oklch(80.8% 0.114 19.571);
+    --color-orange-50:  oklch(98% 0.016 73.684);
+    --color-orange-100:  oklch(95.4% 0.038 75.164);
+    --color-orange-200:  oklch(90.1% 0.076 70.697);
+    --color-orange-300:  oklch(83.7% 0.128 66.29);
+    --color-amber-50:  oklch(98.7% 0.022 95.277);
+    --color-amber-100:  oklch(96.2% 0.059 95.617);
+    --color-amber-200:  oklch(92.4% 0.12 95.746);
+    --color-amber-300:  oklch(87.9% 0.169 91.605);
+    --color-yellow-50:  oklch(98.7% 0.026 102.212);
+    --color-yellow-100:  oklch(97.3% 0.071 103.193);
+    --color-yellow-200:  oklch(94.5% 0.129 101.54);
+    --color-yellow-300:  oklch(90.5% 0.182 98.111);
+    --color-emerald-50:  oklch(97.9% 0.021 166.113);
+    --color-emerald-100:  oklch(95% 0.052 163.051);
+    --color-emerald-200:  oklch(90.5% 0.093 164.15);
+    --color-emerald-300:  oklch(84.5% 0.143 164.978);
+    --color-blue-50:  oklch(97% 0.014 254.604);
+    --color-blue-100:  oklch(93.2% 0.032 255.585);
+    --color-blue-200:  oklch(88.2% 0.059 254.128);
+    --color-blue-300:  oklch(80.9% 0.105 251.813);
+    --color-indigo-50:  oklch(96.2% 0.018 272.314);
+    --color-indigo-100:  oklch(93% 0.034 272.788);
+    --color-indigo-200:  oklch(87% 0.065 274.039);
+    --color-indigo-300:  oklch(78.5% 0.115 274.713);
+    --color-purple-50:  oklch(97.7% 0.014 308.299);
+    --color-purple-100:  oklch(94.6% 0.033 307.174);
+    --color-purple-200:  oklch(90.2% 0.063 306.703);
+    --color-purple-300:  oklch(82.7% 0.119 306.383);
+    --color-pink-50:  oklch(97.1% 0.014 343.198);
+    --color-pink-100:  oklch(94.8% 0.028 342.258);
+    --color-pink-200:  oklch(89.9% 0.061 343.231);
+    --color-pink-300:  oklch(82.3% 0.12 346.018);
+    --color-teal-50:  oklch(98.4% 0.014 180.72);
+    --color-teal-100:  oklch(95.3% 0.051 180.801);
+    --color-teal-200:  oklch(91% 0.096 180.426);
+    --color-teal-300:  oklch(85.5% 0.138 181.071);
+    --color-sky-50:  oklch(97.7% 0.013 236.62);
+    --color-sky-100:  oklch(95.1% 0.026 236.824);
+    --color-sky-200:  oklch(90.1% 0.058 230.902);
+    --color-sky-300:  oklch(82.8% 0.111 230.318);
+    --color-cyan-50:  oklch(98.4% 0.019 200.873);
+    --color-cyan-100:  oklch(95.6% 0.045 203.388);
+    --color-cyan-200:  oklch(91.7% 0.08 205.041);
+    --color-cyan-300:  oklch(86.5% 0.127 207.078);
+    --color-violet-50:  oklch(96.9% 0.016 293.756);
+    --color-violet-100:  oklch(94.3% 0.029 294.588);
+    --color-violet-200:  oklch(89.4% 0.057 293.283);
+    --color-violet-300:  oklch(81.1% 0.111 293.571);
+    --color-green-50: #EFFDF5;
+    --color-green-100: #D9FBE8;
+    --color-green-200: #B3F5D1;
+    --color-green-300: #75EDAE;
+    --color-gray-50:  oklch(98.5% 0.002 247.839);
+    --color-gray-100:  oklch(96.7% 0.003 264.542);
+    --color-gray-200:  oklch(92.8% 0.006 264.531);
+    --color-gray-300:  oklch(87.2% 0.01 258.338);
+    --color-slate-50:  oklch(98.4% 0.003 247.858);
+    --color-slate-100:  oklch(96.8% 0.007 247.896);
+    --color-slate-200:  oklch(92.9% 0.013 255.508);
+    --color-slate-300:  oklch(86.9% 0.022 252.894);
+  }
+}
+
+/* Text and border shades that were written for a light surface (600 to 900, gray-500 to 900).
+   Utilities layer, specificity 0 extra, so a hover or focus variant still wins. */
+@layer utilities {
+  :where(.dark) .text-red-600:where(:not(.ams-paper *, .ams-paper)) { color: #f87171; }
+  :where(.dark) .text-red-700:where(:not(.ams-paper *, .ams-paper)) { color: #fca5a5; }
+  :where(.dark) .text-red-800:where(:not(.ams-paper *, .ams-paper)) { color: #fecaca; }
+  :where(.dark) .text-orange-600:where(:not(.ams-paper *, .ams-paper)) { color: #fb923c; }
+  :where(.dark) .text-orange-700:where(:not(.ams-paper *, .ams-paper)) { color: #fdba74; }
+  :where(.dark) .text-orange-800:where(:not(.ams-paper *, .ams-paper)) { color: #fed7aa; }
+  :where(.dark) .text-amber-600:where(:not(.ams-paper *, .ams-paper)) { color: #fbbf24; }
+  :where(.dark) .text-amber-700:where(:not(.ams-paper *, .ams-paper)) { color: #fcd34d; }
+  :where(.dark) .text-amber-800:where(:not(.ams-paper *, .ams-paper)) { color: #fde68a; }
+  :where(.dark) .text-yellow-700:where(:not(.ams-paper *, .ams-paper)) { color: #fde047; }
+  :where(.dark) .text-green-700:where(:not(.ams-paper *, .ams-paper)) { color: #4ade80; }
+  :where(.dark) .text-green-800:where(:not(.ams-paper *, .ams-paper)) { color: #86efac; }
+  :where(.dark) .text-emerald-600:where(:not(.ams-paper *, .ams-paper)) { color: #34d399; }
+  :where(.dark) .text-emerald-700:where(:not(.ams-paper *, .ams-paper)) { color: #6ee7b7; }
+  :where(.dark) .text-blue-600:where(:not(.ams-paper *, .ams-paper)) { color: #7da2ff; }
+  :where(.dark) .text-blue-700:where(:not(.ams-paper *, .ams-paper)) { color: #93b4ff; }
+  :where(.dark) .text-blue-800:where(:not(.ams-paper *, .ams-paper)) { color: #bcd0ff; }
+  :where(.dark) .hover\:text-blue-800:hover:where(:not(.ams-paper *, .ams-paper)) { color: #bcd0ff; }
+  :where(.dark) .focus\:text-blue-700:focus:where(:not(.ams-paper *, .ams-paper)) { color: #93b4ff; }
+  :where(.dark) .text-indigo-700:where(:not(.ams-paper *, .ams-paper)) { color: #a5b4fc; }
+  :where(.dark) .text-indigo-900:where(:not(.ams-paper *, .ams-paper)) { color: #c7d2fe; }
+  :where(.dark) .text-teal-700:where(:not(.ams-paper *, .ams-paper)) { color: #5eead4; }
+  :where(.dark) .text-cyan-700:where(:not(.ams-paper *, .ams-paper)) { color: #67e8f9; }
+  :where(.dark) .text-sky-700:where(:not(.ams-paper *, .ams-paper)) { color: #7dd3fc; }
+  :where(.dark) .text-purple-600:where(:not(.ams-paper *, .ams-paper)) { color: #c084fc; }
+  :where(.dark) .text-purple-700:where(:not(.ams-paper *, .ams-paper)) { color: #d8b4fe; }
+  :where(.dark) .text-pink-700:where(:not(.ams-paper *, .ams-paper)) { color: #f9a8d4; }
+  :where(.dark) .text-gray-500:where(:not(.ams-paper *, .ams-paper)) { color: #94a3b8; }
+  :where(.dark) .text-gray-600:where(:not(.ams-paper *, .ams-paper)) { color: #b0bccd; }
+  :where(.dark) .text-gray-700:where(:not(.ams-paper *, .ams-paper)) { color: #cbd5e1; }
+  :where(.dark) .text-gray-800:where(:not(.ams-paper *, .ams-paper)) { color: #e2e8f0; }
+  :where(.dark) .text-gray-900:where(:not(.ams-paper *, .ams-paper)) { color: #f1f5f9; }
+  :where(.dark) .text-slate-500:where(:not(.ams-paper *, .ams-paper)) { color: #94a3b8; }
+  :where(.dark) .text-slate-600:where(:not(.ams-paper *, .ams-paper)) { color: #b0bccd; }
+  :where(.dark) .border-gray-400:where(:not(.ams-paper *, .ams-paper)) { border-color: #64748b; }
 }
 
 /* every {{TOKEN}} / sample value is highlighted by default so users can spot
@@ -115,24 +598,24 @@ body {
    stronger, more saturated blue so the "just clicked" state stands out from
    the soft always-on default */
 .tok-hl {
-  background-color: rgba(56, 107, 230, 0.09);
+  background-color: var(--ams-tok-bg);
   border-radius: 3px;
   padding: 0 2px;
   cursor: pointer;
   transition: background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
 }
 .tok-hl:hover {
-  background-color: rgba(56, 107, 230, 0.18);
+  background-color: var(--ams-tok-bg-hover);
 }
 .tok-hl.tok-active {
-  background-color: rgba(56, 107, 230, 0.35);
-  color: #1e3a8a;
-  box-shadow: 0 0 0 1px rgba(56, 107, 230, 0.65);
+  background-color: var(--ams-tok-active-bg);
+  color: var(--ams-tok-active-fg);
+  box-shadow: 0 0 0 1px var(--ams-tok-active-ring);
   animation: tok-pulse 0.6s ease;
 }
 @keyframes tok-pulse {
-  0% { background-color: rgba(56, 107, 230, 0.6); }
-  100% { background-color: rgba(56, 107, 230, 0.35); }
+  0% { background-color: var(--ams-tok-active-pulse); }
+  100% { background-color: var(--ams-tok-active-bg); }
 }
 
 /* Ticket-aware status coloring (retrieval workspace's Placeholder Check
@@ -145,10 +628,16 @@ body {
 /* Subtle entrance when moving between ticket stages / Case Details steps:
    the re-keyed block fades in and rises 4px. Off for reduced-motion users. */
 @keyframes stage-enter {
-  from { opacity: 0; transform: translateY(4px); }
+  /* Starts at 55%, not 0: a fade from nothing shows the bare page background for a moment, which on a
+     dark surface reads as a black flash between views. */
+  from { opacity: 0.55; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
 }
-.stage-enter { animation: stage-enter 0.22s ease-out both; }
+/* `backwards`, not `both`: the end state equals the natural style, and holding
+   it would leave a permanent identity transform (a containing block and
+   stacking context) on whatever is animated, which matters now that whole
+   page roots use this. */
+.stage-enter { animation: stage-enter 0.22s ease-out backwards; }
 @media (prefers-reduced-motion: reduce) {
   .stage-enter { animation: none; }
 }
@@ -238,22 +727,27 @@ body {
   z-index: 0;
 }
 
-/* Page transition between routes (used by definePageMeta pageTransition).
-   Short fade + 6px drop. Reduced-motion disables. */
-.page-enter-active,
-.page-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+/* Page transition between routes (global app.pageTransition in nuxt.config).
+   Short fade only — no mode, so both pages overlap briefly. The leaving page
+   is pulled out of flow so the entering page takes its natural position. */
+.ams-page-enter-active {
+  transition: opacity 0.06s ease-out;
 }
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(6px);
+.ams-page-leave-active {
+  transition: opacity 0.04s ease-out;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
 }
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
+/* No opacity change between routes: the old page leaves behind the new one, so there is never a moment
+   with only the page background on screen (a black flash in dark). */
+.ams-page-enter-from,
+.ams-page-leave-to {
+  opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  .page-enter-active, .page-leave-active { transition: none; }
+  .ams-page-enter-active, .ams-page-leave-active { transition: none; }
 }
 
 /* Skeleton shimmer keyframes used by SharedSkeleton. */
@@ -265,36 +759,19 @@ body {
 /* vue-draggable-plus (SortableJS) ghost and drag classes for the checklist. */
 .checklist-ghost {
   opacity: 0.4;
-  background: rgba(56, 107, 230, 0.08);
+  background: var(--ams-tok-bg);
   border-radius: 6px;
 }
 .checklist-drag {
   box-shadow: 0 8px 20px -8px rgba(15, 23, 42, 0.18);
-  background: #fff;
+  background: var(--color-card);
   border-radius: 6px;
-}
-
-/* Smooth slide when drag-reordering (or adding/removing) checklist items. */
-.list-move,
-.list-enter-active,
-.list-leave-active {
-  transition: transform 0.26s ease, opacity 0.18s ease;
-}
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-.list-leave-active {
-  position: absolute;
-  width: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .copy-flash,
   .btn-ready-pulse,
-  .btn-ready-pulse::before, .btn-ready-pulse::after,
-  .list-move, .list-enter-active, .list-leave-active { animation: none; transition: none; }
+  .btn-ready-pulse::before, .btn-ready-pulse::after { animation: none; transition: none; }
 }
 
 /* orange-600 (#ea580c), matching the "No data on this ticket" banner. The
@@ -302,29 +779,29 @@ body {
    reading as urgent when it is located from the Placeholder Check drawer
    instead of switching to the resolved-token blue. */
 .tok-hl--missing {
-  background-color: rgba(234, 88, 12, 0.14);
+  background-color: var(--ams-miss-bg);
 }
-.tok-hl--missing:hover { background-color: rgba(234, 88, 12, 0.24); }
+.tok-hl--missing:hover { background-color: var(--ams-miss-bg-hover); }
 .tok-hl--missing.tok-active {
-  background-color: rgba(234, 88, 12, 0.3);
-  color: #9a3412;
-  box-shadow: 0 0 0 1px rgba(234, 88, 12, 0.7);
+  background-color: var(--ams-miss-active-bg);
+  color: var(--ams-miss-active-fg);
+  box-shadow: 0 0 0 1px var(--ams-miss-active-ring);
   animation: tok-pulse-missing 0.6s ease;
 }
 @keyframes tok-pulse-missing {
-  0% { background-color: rgba(234, 88, 12, 0.55); }
-  100% { background-color: rgba(234, 88, 12, 0.3); }
+  0% { background-color: var(--ams-miss-active-pulse); }
+  100% { background-color: var(--ams-miss-active-bg); }
 }
 .tok-hl--unrecognized {
-  background-color: rgba(220, 38, 38, 0.14);
+  background-color: var(--ams-bad-bg);
   text-decoration: line-through;
-  text-decoration-color: rgba(220, 38, 38, 0.5);
+  text-decoration-color: var(--ams-bad-line);
 }
-.tok-hl--unrecognized:hover { background-color: rgba(220, 38, 38, 0.24); }
+.tok-hl--unrecognized:hover { background-color: var(--ams-bad-bg-hover); }
 .tok-hl--org-constant {
-  background-color: rgba(107, 114, 128, 0.12);
+  background-color: var(--ams-const-bg);
 }
-.tok-hl--org-constant:hover { background-color: rgba(107, 114, 128, 0.2); }
+.tok-hl--org-constant:hover { background-color: var(--ams-const-bg-hover); }
 
 /* custom two-line tooltip for placeholder tokens (name above, {{CODE}} below),
    replacing the browser's native title tooltip - always light, regardless of
@@ -386,6 +863,35 @@ body {
   z-index: 9999;
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+/* A brief highlight on the Case Details field the operator is sent to from the
+   Placeholder Check (a charging token with no value), so the jump target is
+   obvious for a moment after landing. */
+.case-field-flash {
+  position: relative;
+}
+/* The same pulse as the primary button when a stage is ready (btn-ready-pulse):
+   two rings swell outward from the element's edge and fade, three times. Used
+   on a field the operator is sent to and on the Custodian card. The panels that
+   hold them leave room for the ring, so it is not clipped. */
+.case-field-flash::before,
+.case-field-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 0 0 rgba(56, 107, 230, 0.55);
+  animation: btn-ready-pulse-ring 1s ease-out 3 both;
+}
+.case-field-flash::after {
+  box-shadow: 0 0 0 0 rgba(56, 107, 230, 0.35);
+  animation-delay: 0.3s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .case-field-flash::before, .case-field-flash::after { animation: none; }
 }
 
 /* Tiptap body editor content - Tailwind resets remove default list/quote styling */
@@ -544,14 +1050,14 @@ body {
   padding: 0 2px;
 }
 .prose-tiptap [data-callout] {
-  border-left: 3px solid rgb(137, 75, 0);
+  border-left: 3px solid var(--ams-callout-fg);
   /* Was a fully-saturated rgb(254, 249, 194) - a vivid, glare-y yellow that
      read as "too contrasted"/hard on the eyes to read for any length of
      time. A light alpha tint of the same amber (same technique as the
      message-banner below) keeps the callout's identity/border/text color
      but as a much softer wash instead of a solid bright fill. */
   background: rgba(202, 138, 4, 0.08);
-  color: rgb(137, 75, 0);
+  color: var(--ams-callout-fg);
   /* accent border sits flush against the left edge - only the outer corners
      away from it (top-right/bottom-right) stay rounded */
   border-radius: 0 6px 6px 0;
@@ -646,4 +1152,57 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .notif-badge { animation: none; }
+}
+
+
+/* Placeholder token (see --color-placeholder): input and textarea placeholders, date segments.
+   Unlayered, and `[class]` lifts it above Nuxt UI's own `placeholder:text-dimmed`. */
+input[class]::placeholder,
+textarea[class]::placeholder {
+  color: var(--color-placeholder);
+  opacity: 1;
+}
+[data-segment][data-placeholder] {
+  color: var(--color-placeholder);
+}
+
+/* Keyboard focus ring (both themes). Nuxt UI's own ring on ghost/neutral buttons, the phase
+   stepper and the header links is the primary at 25% opacity: measured about 1.1:1 on dark and
+   1.8:1 on light, well below the 3:1 a focus indicator needs (WCAG 2.4.7 / 2.4.11). This draws a
+   full-strength primary outline instead: about 5.9:1 on dark surfaces and 4.6:1 on light.
+   The `:root ` prefix is deliberate, not decoration: Nuxt UI's ring utility carries specificity
+   (0,2,0), so a plain `button:focus-visible` would lose to it; `:root` lifts each selector to
+   (0,2,1) or higher so this wins the cascade in both themes without `!important` (an earlier
+   `!important` version was silently dropped by Lightning CSS at build time). Form controls (input,
+   select, textarea) already clear 3:1 and are not targeted here. */
+:root a:focus-visible,
+:root button:focus-visible,
+:root [role="button"]:focus-visible,
+:root [role="link"]:focus-visible,
+:root [role="tab"]:focus-visible,
+:root [role="menuitem"]:focus-visible,
+:root [role="menuitemradio"]:focus-visible,
+:root [role="menuitemcheckbox"]:focus-visible,
+:root [role="switch"]:focus-visible,
+:root summary:focus-visible {
+  outline: 2px solid var(--ui-primary) !important;
+  outline-offset: 2px !important;
+}
+.dark [data-segment]:focus {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: 1px;
+}
+
+/* Letterhead mark on a dark form page: the mark is dark navy, so draw it white. Paper surfaces and
+   print keep the original. */
+.dark .ams-doc-logo { filter: brightness(0) invert(1); }
+.dark .ams-paper .ams-doc-logo { filter: none; }
+@media print {
+  .dark .ams-doc-logo { filter: none; }
+}
+
+/* Loading skeleton of a form page: a page-colored sheet with the page shadow, so it matches the real page. */
+.ams-doc-skeleton {
+  background: var(--ams-doc-page);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1);
 }

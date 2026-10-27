@@ -20,6 +20,9 @@ if (typeof window !== 'undefined') {
   })
 }
 
+/** When on, the next email send is refused by the mock mail server, once, so the failed state can be shown. */
+export const failNextSend = ref(false)
+
 // --- Prototype simulator bar -------------------------------------------
 //
 // Verification scaffolding, not a product feature: a persistent strip at the
@@ -29,12 +32,17 @@ if (typeof window !== 'undefined') {
 // reset on reload so a forgotten setting never survives into a real review.
 // Only whether the bar is shown is remembered.
 export type SimState = 'populated' | 'loading' | 'notfound' | 'error'
-export type SimScenario = 'standard' | 'first-timer'
+export type SimScenario = 'standard' | 'first-timer' | 'high-volume'
 export type SimSituation = 'normal' | 'no-contact'
 
 /** Loading / not found / error views of the ticket workspace and the list. */
 export const simState = ref<SimState>('populated')
-/** Standard data, or a first-timer who has no tickets yet. */
+/**
+ * Standard data, a first-timer who has no tickets yet, or a high-volume list (the seed tickets
+ * cloned up to ~40 rows) so the Ticket Tracker list can be reviewed with pagination and the
+ * "Show N per page" control actually doing something. Only the list reads 'high-volume'; every
+ * other screen treats it the same as 'standard'.
+ */
 export const simScenario = ref<SimScenario>('standard')
 /** Normal, or the team member has no contact number on file. */
 export const simSituation = ref<SimSituation>('normal')

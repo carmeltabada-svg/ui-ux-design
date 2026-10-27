@@ -36,11 +36,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 py-8 px-4 print:bg-white print:p-0">
-    <div v-if="!ticket || !gatePass" class="max-w-lg mx-auto bg-white rounded-lg p-8 text-center text-gray-500">
+  <div class="ams-paper min-h-screen bg-gray-100 py-8 px-4 print:bg-white print:p-0">
+    <div v-if="!ticket || !gatePass" class="max-w-lg mx-auto bg-card rounded-lg p-8 text-center text-gray-500">
       Gate pass not found. This link only works for a gate pass that's already been issued.
     </div>
-    <div v-else class="max-w-2xl mx-auto bg-white rounded-lg shadow-sm p-8 print:shadow-none print:rounded-none" style="font-family:'Inter',sans-serif">
+    <div v-else class="max-w-2xl mx-auto bg-card rounded-lg shadow-sm p-8 print:shadow-none print:rounded-none" style="font-family:'Inter',sans-serif">
       <div class="flex items-start justify-between border-b border-gray-200 pb-4 mb-5 print:hidden">
         <div class="text-lg font-bold text-[#161642]">GoTeam AMS</div>
         <button type="button" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50" onclick="window.print()">Print</button>

@@ -11,7 +11,7 @@
 interface Props {
   title: string
   description?: string
-  /** fmtDateTime() output, e.g. "Oct 1, 2026, 8:40 AM" */
+  /** A stored time (UTC ISO). Shown in the viewer's own time zone, e.g. "Oct 1, 2026 · 8:40 AM". */
   when?: string | null
   icon?: string
   variant?: 'default' | 'closed'
@@ -22,8 +22,9 @@ const props = withDefaults(defineProps<Props>(), { icon: 'i-lucide-mail-check', 
 
 const whenParts = computed(() => {
   if (!props.when) return null
-  const m = props.when.match(/^(.*?)(?:,| at)?\s+(\d{1,2}:\d{2}\s?[AP]M)$/i)
-  return m ? { date: m[1], time: m[2] } : { date: props.when, time: '' }
+  const when = formatDateTime(props.when)
+  const m = when.match(/^(.*?)(?:,| at)?\s+(\d{1,2}:\d{2}\s?[AP]M)$/i)
+  return m ? { date: m[1], time: m[2] } : { date: when, time: '' }
 })
 </script>
 

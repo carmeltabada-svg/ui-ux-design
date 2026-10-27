@@ -40,7 +40,7 @@ interface Props {
   readOnly?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), { formOptions: () => [], icon: 'i-lucide-file-text', replaceLabel: 'Replace form', previewTooltip: 'Preview form in new tab', previewIcon: 'i-lucide-external-link', readOnly: false })
+const props = withDefaults(defineProps<Props>(), { formOptions: () => [], icon: 'i-lucide-file-text', replaceLabel: 'Replace form', previewTooltip: 'Preview form', previewIcon: 'i-lucide-eye', readOnly: false })
 
 const emit = defineEmits<{
   preview: []
@@ -103,12 +103,12 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => [[
   <div class="flex items-center w-full">
     <div
       class="flex items-center justify-between gap-2.5 rounded-full py-2.5 pr-2.5 pl-3.5 w-full"
-      style="background: rgb(239,246,255); border: 1px solid #D3E6FF;"
+      style="background: var(--ams-attach-bg); border: 1px solid var(--ams-attach-border);"
     >
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
         <div
-          class="flex items-center justify-center shrink-0 rounded-full bg-white"
-          style="width: 34px; height: 34px; color: rgb(56,107,230);"
+          class="flex items-center justify-center shrink-0 rounded-full bg-card"
+          style="width: 34px; height: 34px; color: var(--ams-attach-icon);"
         >
           <UIcon :name="icon" class="size-[18px]" />
         </div>
@@ -132,7 +132,7 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => [[
             type="button"
             aria-label="Check placeholders"
             class="relative flex items-center justify-center size-8 rounded-md transition-colors"
-            :class="placeholderIssueCount ? 'text-amber-700 hover:bg-white' : 'text-primary hover:bg-white'"
+            :class="placeholderIssueCount ? 'text-amber-700 hover:bg-card' : 'text-primary hover:bg-card'"
             @click="$emit('check-placeholders')"
           >
             <UIcon :name="placeholderIssueCount ? 'i-lucide-shield-alert' : 'i-lucide-list-checks'" class="size-4" />

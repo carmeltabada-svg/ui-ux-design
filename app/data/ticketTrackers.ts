@@ -12,10 +12,12 @@
 // return-ack-remote already exist with real subject/body/attachment content,
 // so the workspace can render/send the actual template instead of a stand-in.
 import { reactive, ref } from 'vue'
-import { DEFAULT_CHECKLIST_TASKS, checklistTemplateFor, type ChecklistTask } from './checklistTemplates'
+import { DEFAULT_CHECKLIST_TASKS, setChecklistTemplates, type ChecklistTask } from './checklistTemplates'
 import { TEMPLATES } from './templates'
 import { ensureTemplateRuntime, TEMPLATE_RUNTIME } from './templateRuntime'
 import { RETRIEVAL_FORMS } from './retrievalForms'
+import { api } from '~/api'
+import type { ApiResult, MasterData, NewTicketInput, SendEmailRequest, TicketActionName } from '~/api/types'
 
 export type TicketReason = 'resignation' | 'immediate-resignation' | 'end-of-contract' | 'recalled' | 'unexplained-absence'
 
@@ -63,15 +65,16 @@ export type TicketMode = 'onsite' | 'remote'
 
 /** Asset Team members a ticket can be assigned to. `D. Reyes` is treated as the current logged-in operator for this module (Ticket Tracker's own persona - distinct from CURRENT_USER_NAME in templateRuntime.ts, which is the app-wide signed-in designer account shown in the sidebar footer), so "My Tickets" and assignee-notification routing both resolve against it. */
 export interface AssetTeamMember {
+  /** Short display identity used everywhere as the actor/assignee key (e.g. "D. Reyes"). */
   name: string
   email: string
+  /** Full name and employee ID, for richer pickers (the create-ticket assignee option). */
+  fullName?: string
+  id?: string
 }
 
-export const ASSET_TEAM_MEMBERS: AssetTeamMember[] = [
-  { name: 'D. Reyes', email: 'd.reyes@goteam.io' },
-  { name: 'J. Santos', email: 'j.santos@goteam.io' },
-  { name: 'M. Bautista', email: 'm.bautista@goteam.io' }
-]
+// Filled at startup by applyMasterData(), from the api layer (app/api).
+export const ASSET_TEAM_MEMBERS = reactive<AssetTeamMember[]>([])
 
 /** The Asset Team member the app acts as when nobody has switched. */
 export const CURRENT_ASSIGNEE_NAME = 'D. Reyes'
@@ -98,6 +101,43 @@ export function setCurrentUser(name: string) {
 
 export function assetTeamMemberByName(name: string): AssetTeamMember {
   return ASSET_TEAM_MEMBERS.find(m => m.name === name) ?? ASSET_TEAM_MEMBERS[0]!
+}
+
+/** Replaces the notifications with what the api layer returned. */
+export function applyNotifications(list: AppNotification[]) {
+  NOTIFICATIONS.splice(0, NOTIFICATIONS.length, ...list)
+}
+
+/** Reloads the notifications from the server: an action may have raised one, and time may have. */
+export async function refreshNotifications() {
+  applyNotifications(await api().notifications.list())
+}
+
+/** Marks notifications as read on the server, then reloads them. */
+export async function markNotificationsRead(ids: string[]) {
+  await api().notifications.markRead(ids)
+  await refreshNotifications()
+}
+
+/** Replaces every ticket with what the api layer returned, and re-derives the number sequences from them. */
+export function applyTickets(list: Ticket[]) {
+  for (const key of Object.keys(TICKETS)) delete TICKETS[key]
+  for (const ticket of list) TICKETS[ticket.id] = ticket
+}
+
+/**
+ * Fills the reference data stores above. Called once at startup (plugins/masterData.ts)
+ * with whatever the api layer returned, mock or real. Replaces contents in place so
+ * every existing reader keeps working.
+ */
+export function applyMasterData(data: MasterData) {
+  ASSET_TEAM_MEMBERS.splice(0, ASSET_TEAM_MEMBERS.length, ...data.assetTeam)
+  COURIER_PROVIDERS.splice(0, COURIER_PROVIDERS.length, ...data.courierProviders)
+  COURIER_BRANCHES.splice(0, COURIER_BRANCHES.length, ...data.courierBranches)
+  HRIS_DIRECTORY.splice(0, HRIS_DIRECTORY.length, ...data.hrisDirectory)
+  setChecklistTemplates(data.checklistTemplates)
+  // The saved persona is checked against the team list, which was empty when this module loaded.
+  currentUser.value = readCurrentUser()
 }
 
 export const REASON_LABELS: Record<TicketReason, string> = {
@@ -209,11 +249,8 @@ export interface CourierProvider {
   trackingWebsiteUrl: string
 }
 
-export const COURIER_PROVIDERS: CourierProvider[] = [
-  { id: 'jrs-express', name: 'JRS Express', priority: 'recommended', accountManager: 'Nico Dalisay', accountManagerEmail: 'nico.dalisay@jrs-express.com.ph', corporateAccount: true, accountNumber: '4471-2209-13', status: 'active', trackingWebsiteUrl: 'https://www.jrs-express.com' },
-  { id: 'jt-express', name: 'J&T Express', priority: 'alternate', accountManager: 'Mia Santos', accountManagerEmail: 'mia.santos@jtexpress.ph', corporateAccount: true, accountNumber: '8802-5517-40', status: 'active', trackingWebsiteUrl: 'https://www.jtexpress.ph' },
-  { id: 'lbc-express', name: 'LBC Express', priority: 'alternate', accountManager: 'Carlo Reyes', accountManagerEmail: 'carlo.reyes@lbcexpress.com', corporateAccount: true, accountNumber: '0192-8834-01', status: 'active', trackingWebsiteUrl: 'https://www.lbcexpress.com' }
-]
+// Filled at startup by applyMasterData(), from the api layer (app/api).
+export const COURIER_PROVIDERS = reactive<CourierProvider[]>([])
 
 export function recommendedCourierProvider(): CourierProvider | null {
   return COURIER_PROVIDERS.find(p => p.status === 'active' && p.priority === 'recommended') ?? COURIER_PROVIDERS.find(p => p.status === 'active') ?? null
@@ -233,15 +270,10 @@ export function courierProviderById(id: string | null): CourierProvider | null {
  * either a courier API integration or a Master Data upload (CSV/JSON) that
  * this front-end can read, not a manually-typed free-text field.
  *
- * This session checked jrs-express.com/branches directly - only the Head
- * Office (Pasig) address below is a real, verified address from that page;
- * the branch locator's full nationwide list is behind an interactive
- * search widget this session couldn't script through. The remaining
- * entries follow this codebase's existing seed-data convention of named
- * but illustrative branches (the seed tickets already used placeholder
- * names like "JRS Express - Cebu IT Park Branch" before this change) -
- * they stand in for what a real directory would return, not a claim that
- * these are verified live addresses.
+ * JRS Express: the full list (391 branches) was loaded from JRS's own branch
+ * endpoint (api/Branch/GetBranchesInAzure) into mocks/courier_branches.json. The
+ * feed marks every branch isActive false and isPickup false, so those flags are
+ * ignored. LBC Express was loaded the same way from its locator (get_local_branches), Philippine branches with an address only.
  */
 export interface CourierBranch {
   id: string
@@ -250,21 +282,15 @@ export interface CourierBranch {
   address: string
   /** Matched against the team member's on-file address (a plain substring check, not real geocoding - this app has no geolocation service) to auto-suggest the nearest branch. */
   city: string
+  /** From the JRS branch list. */
+  contactPerson?: string
+  contactNumbers?: string
+  lat?: number
+  lon?: number
 }
 
-export const COURIER_BRANCHES: CourierBranch[] = [
-  { id: 'jrs-pasig-ho', courierId: 'jrs-express', name: 'JRS Express - Head Office (Pasig)', address: 'No. 19 Brixton Street, Barangay Kapitolyo, Pasig City, Metro Manila', city: 'Manila' },
-  { id: 'jrs-cebu-itpark', courierId: 'jrs-express', name: 'JRS Express - Cebu IT Park Branch', address: 'Cebu IT Park, Lahug, Cebu City, Cebu', city: 'Cebu' },
-  { id: 'jrs-davao', courierId: 'jrs-express', name: 'JRS Express - Davao Branch', address: 'Quimpo Blvd, Talomo, Davao City, Davao del Sur', city: 'Davao' },
-  { id: 'jrs-iloilo', courierId: 'jrs-express', name: 'JRS Express - Iloilo Branch', address: 'Diversion Road, Mandurriao, Iloilo City, Iloilo', city: 'Iloilo' },
-  { id: 'jrs-baguio', courierId: 'jrs-express', name: 'JRS Express - Baguio Branch', address: 'Session Road, Baguio City, Benguet', city: 'Baguio' },
-  { id: 'jt-manila', courierId: 'jt-express', name: 'J&T Express - Manila Hub', address: 'Barangay San Antonio, Pasig City, Metro Manila', city: 'Manila' },
-  { id: 'jt-cebu', courierId: 'jt-express', name: 'J&T Express - Cebu Branch', address: 'Mandaue City, Cebu', city: 'Cebu' },
-  { id: 'jt-davao', courierId: 'jt-express', name: 'J&T Express - Davao Branch', address: 'Buhangin, Davao City, Davao del Sur', city: 'Davao' },
-  { id: 'lbc-manila', courierId: 'lbc-express', name: 'LBC Express - Manila Branch', address: 'United Nations Avenue, Manila, Metro Manila', city: 'Manila' },
-  { id: 'lbc-cebu', courierId: 'lbc-express', name: 'LBC Express - Cebu Branch', address: 'Osmena Blvd, Cebu City, Cebu', city: 'Cebu' },
-  { id: 'lbc-iloilo', courierId: 'lbc-express', name: 'LBC Express - Iloilo Branch', address: 'Diversion Road, Iloilo City, Iloilo', city: 'Iloilo' }
-]
+// Filled at startup by applyMasterData(), from the api layer (app/api).
+export const COURIER_BRANCHES = reactive<CourierBranch[]>([])
 
 export function branchesForCourier(courierId: string | null): CourierBranch[] {
   if (!courierId) return []
@@ -348,7 +374,7 @@ export const STAGE_NAMES: Record<StageKey, string> = {
   A1: 'Entry',
   A2: 'Create',
   A3: 'Offboarding checklist',
-  A4: 'IT lock scheduling',
+  A4: 'IT access lock',
   A5: 'Custodian Card and asset confirmation',
   B8: 'Branch confirmation capture',
   B9: 'Courier endorsement',
@@ -513,13 +539,8 @@ export interface HrisRecord {
 // was actually at work, before the absence began), it's just in the past by
 // the nature of an absence rather than a forward-scheduled date. `sep` stays
 // blank: no separation has been decided for an ongoing absence case.
-export const HRIS_DIRECTORY: HrisRecord[] = [
-  { id: 'EMP-04821', shift: { days: 'Mon to Fri', start: '09:00', end: '18:00' }, name: 'Marisol Ferrer', position: 'Client Success Manager', dept: 'Client Success', client: 'Northwind Retail', email: 'm.ferrer@goteam.io', contactNumber: '+63 917 555 0142', personalEmail: 'marisol.ferrer88@gmail.com', altContactName: 'Liza Ferrer', altContactNumber: '+63 917 555 0199', leadershipCoach: 'Jerome Cruz - Team Lead', address: '142 Salinas Drive, Barangay Lahug, Cebu City, 6000 Cebu', addressMode: 'remote', caseType: 'Voluntary Resignation', suggestedReason: 'resignation', lwd: '2026-09-25', sep: '2026-09-30', assets: [{ name: 'Laptop', model: 'MacBook Pro 14" M3' }, { name: 'Mouse', model: 'Apple Magic Mouse' }, { name: 'Docking Station', model: 'CalDigit TS4' }, { name: 'Headset', model: 'Jabra Evolve2 65' }, { name: 'Laptop Charger', model: 'Apple 96W USB-C' }] },
-  { id: 'EMP-03310', shift: { days: 'Mon to Fri', start: '10:00', end: '19:00' }, name: 'Kevin Ong', position: 'Software Engineer', dept: 'Engineering', client: 'Internal', email: 'k.ong@goteam.io', contactNumber: '+63 917 555 0210', personalEmail: '', altContactName: '', altContactNumber: '', leadershipCoach: 'Miguel Ramos - Engineering Manager', address: '88 Jose Abad Santos Ave, Barangay Tondo, Manila, 1012 Metro Manila', addressMode: 'onsite', caseType: 'Contract End', suggestedReason: 'end-of-contract', lwd: '2026-10-01', sep: '2026-10-05', assets: [{ name: 'Laptop', model: 'Lenovo ThinkPad X1 Carbon Gen 11' }, { name: 'Monitor', model: 'Dell UltraSharp 27" U2723QE' }, { name: 'Docking Station', model: 'Lenovo ThinkPad USB-C Dock Gen 2' }, { name: 'Keyboard & Mouse', model: 'Logitech MK540' }] },
-  { id: 'EMP-05102', shift: { days: 'Mon to Fri', start: '08:00', end: '17:00' }, name: 'Andrea Villar', position: 'People & Culture Associate', dept: 'People & Culture', client: 'Internal', email: 'a.villar@goteam.io', contactNumber: '', personalEmail: 'andrea.v.villar@yahoo.com', altContactName: 'Ramon Villar', altContactNumber: '+63 917 555 0341', leadershipCoach: 'Sophia Reyes - HRBP', address: '27 Quimpo Blvd, Barangay Talomo, Davao City, 8000 Davao del Sur', addressMode: 'remote', caseType: 'Unexplained Absence Case', suggestedReason: 'unexplained-absence', lwd: '2026-09-21', sep: '2026-09-28', assets: [{ name: 'Laptop', model: 'MacBook Air 13" M2' }, { name: 'Webcam', model: 'Logitech Brio 505' }, { name: 'Headset', model: 'Jabra Evolve2 40' }] },
-  { id: 'EMP-02214', shift: { days: 'Mon to Fri', start: '07:00', end: '16:00' }, name: 'Rafael Tan', position: 'Financial Analyst', dept: 'Finance', client: 'Meridian Logistics', email: 'r.tan@goteam.io', contactNumber: '+63 917 555 0455', personalEmail: 'rtan.finance@gmail.com', altContactName: 'Grace Tan', altContactNumber: '+63 917 555 0460', leadershipCoach: 'Patricia Villanueva - Finance Manager', address: '212 United Nations Ave, Barangay Malate, Manila, 1004 Metro Manila', addressMode: 'onsite', caseType: 'Immediate Resignation', suggestedReason: 'immediate-resignation', lwd: '2026-09-16', sep: '2026-09-16', assets: [{ name: 'Laptop', model: 'MacBook Pro 13" M2' }, { name: 'External SSD', model: 'Samsung T7 1TB' }, { name: 'Laptop Charger', model: 'Apple 67W USB-C' }] },
-  { id: 'EMP-01187', shift: { days: 'Mon to Fri', start: '22:00', end: '07:00' }, name: 'Josef Cruz', position: 'Operations Supervisor', dept: 'Operations', client: 'Meridian Logistics', email: 'j.cruz@goteam.io', contactNumber: '+63 917 555 0623', personalEmail: '', altContactName: 'Elena Cruz', altContactNumber: '+63 917 555 0630', leadershipCoach: 'Andres Fernandez - Operations Manager', address: '56 Diversion Road, Barangay Mandurriao, Iloilo City, 5000 Iloilo', addressMode: 'remote', caseType: 'Recall from Leave', suggestedReason: 'recalled', lwd: '2026-09-20', sep: '2026-09-22', assets: [{ name: 'Laptop', model: 'Lenovo ThinkPad T14 Gen 4' }, { name: 'Monitor', model: 'LG 24MK430H 24"' }, { name: 'Docking Station', model: 'Dell WD19S' }, { name: 'Headset', model: 'Plantronics Blackwire 3220' }, { name: 'USB Hub', model: 'Anker 7-in-1 USB-C Hub' }] }
-]
+// Filled at startup by applyMasterData(), from the api layer (app/api).
+export const HRIS_DIRECTORY = reactive<HrisRecord[]>([])
 
 // ---------------------------------------------------------------------------
 // Runtime ticket store - one reactive record per created ticket, replacing
@@ -579,6 +600,36 @@ export type HistoryCategory =
   | 'navigation' // Back/Forward/direct stage jumps - not a business event, but real log noise worth being able to filter out
   | 'closure' // ticket closed
 
+/** What a send is for. Each kind is one stage's email. */
+export type EmailSendKind = 'notice' | 'courier-endorsement' | 'branch-request' | 'reminder' | 'overdue' | 'charging'
+
+/**
+ * One email the server sent for a ticket, kept exactly as it went out: the rendered subject and body, the form that was
+ * attached, who it went to and when. The server owns it. A real server also stores failed attempts (status 'failed').
+ */
+export interface SentEmail {
+  id: string
+  kind: EmailSendKind
+  stage: StageKey
+  templateKey: string
+  formId: string | null
+  to: string[]
+  cc: string[]
+  bcc: string[]
+  subject: string
+  html: string
+  formHtml: string | null
+  status: 'queued' | 'sent' | 'failed'
+  error?: string
+  /** True when the operator sent this from outside the system and confirmed it here, rather than the app sending it. */
+  sentExternally?: boolean
+  sentBy: string
+  /** UTC ISO instant. */
+  sentAt: string
+  /** Sending the same key twice returns the first result instead of sending again. */
+  idempotencyKey: string
+}
+
 export interface TicketHistoryEntry {
   action: string
   actor: string
@@ -610,7 +661,7 @@ export interface TicketContact {
   altNumber: string
 }
 
-/** A4 IT lock scheduling - FR-003.6 requires confirmation at two distinct points: on scheduling (the lock is booked) and on execution (it actually ran), not one bare click. `scheduledFor` is anchored after the last shift on the LWD per the doc. */
+/** A4 IT access lock. Locking access is IT's responsibility, so the Asset Team only notifies IT. `scheduledConfirmed` means "IT was notified" and `scheduledFor` is the Last Working Day it was told. `executedConfirmed` is no longer set by any action (IT owns execution) and is kept only so older saved tickets still load. */
 export interface TicketItLock {
   scheduledConfirmed: boolean
   scheduledFor: string | null
@@ -710,6 +761,8 @@ export interface Ticket {
   /** True when IT lock was already scheduled against a Last Working Day that HRIS/R24 has since changed - a real downstream-dependency flag (FR-003.8a ref f), only ever set by simulateHrisLwdUpdate() when there's an actual schedule to desync. Cleared when the operator re-confirms IT lock scheduling (confirmItLockScheduling), never automatically. */
   itLockNeedsReschedule: boolean
   history: TicketHistoryEntry[]
+  /** The emails the server sent for this ticket, newest first. Absent on tickets saved before sends were recorded. */
+  emails?: SentEmail[]
   /** This is specifically the GoTeam Gate Pass - see buildingGatePassRef/buildingGatePass below for the second, independent gate pass type this ticket can also carry (matching the real system's own two gate pass types). */
   gatePassRef: string | null
   /** The full Gate Pass record, once issued - see FR-003.11's "Gate pass" requirement (must mirror the real GoTeam AMS Gate Pass form, GP-OUT/GP-IN, raised from the ticket and carrying its reference). Null until an operator actually fills and issues one - it is never auto-created. */
@@ -830,85 +883,17 @@ export interface GatePass {
  * (addChecklistItem/removeChecklistItem below) - editing one ticket's list
  * never touches this default or any other ticket's already-created list.
  */
-export const OFFBOARDING_CHECKLIST_ITEMS = DEFAULT_CHECKLIST_TASKS
-
-const optionalFlags = (ticket: Ticket): boolean[] => {
+export const optionalFlags = (ticket: Ticket): boolean[] => {
   // Keeps the optional flags the same length as the tasks, for tickets saved before the flags existed.
   if (!Array.isArray(ticket.checklistOptional)) ticket.checklistOptional = ticket.checklistItems.map(() => false)
   while (ticket.checklistOptional.length < ticket.checklistItems.length) ticket.checklistOptional.push(false)
   return ticket.checklistOptional
 }
 
-const doneByList = (ticket: Ticket): (string | null)[] => {
+export const doneByList = (ticket: Ticket): (string | null)[] => {
   if (!Array.isArray(ticket.checklistDoneBy)) ticket.checklistDoneBy = ticket.checklistItems.map(() => null)
   while (ticket.checklistDoneBy.length < ticket.checklistItems.length) ticket.checklistDoneBy.push(null)
   return ticket.checklistDoneBy
-}
-
-/** Ticks or unticks a task and remembers who did it. */
-export function setChecklistDone(ticket: Ticket, index: number, done: boolean, actor = currentUserName()) {
-  if (index < 0 || index >= ticket.checklistItems.length) return
-  ticket.checklistDone[index] = done
-  doneByList(ticket)[index] = done ? actor : null
-}
-
-/** Adds a new item to this ticket's own checklist - appended, unchecked, required unless said otherwise. No-op on blank text. */
-export function addChecklistItem(ticket: Ticket, text: string, optional = false) {
-  const trimmed = text.trim()
-  if (!trimmed) return
-  optionalFlags(ticket).push(optional)
-  doneByList(ticket).push(null)
-  ticket.checklistItems.push(trimmed)
-  ticket.checklistDone.push(false)
-  pushHistory(ticket, `Offboarding checklist item added: "${trimmed}"`, 'checklist')
-}
-
-/** Removes an item by index. The tasks, their done flags and their optional flags are kept 1:1, so all three are spliced together. */
-export function removeChecklistItem(ticket: Ticket, index: number) {
-  if (index < 0 || index >= ticket.checklistItems.length) return
-  const [removed] = ticket.checklistItems.splice(index, 1)
-  ticket.checklistDone.splice(index, 1)
-  optionalFlags(ticket).splice(index, 1)
-  doneByList(ticket).splice(index, 1)
-  pushHistory(ticket, `Offboarding checklist item removed: "${removed}"`, 'checklist')
-}
-
-/** Switches a task between required and optional. */
-export function toggleChecklistRequired(ticket: Ticket, index: number) {
-  const flags = optionalFlags(ticket)
-  if (index < 0 || index >= ticket.checklistItems.length) return
-  flags[index] = !flags[index]
-  pushHistory(ticket, `Offboarding checklist item set to ${flags[index] ? 'optional' : 'required'}: "${ticket.checklistItems[index]}"`, 'checklist')
-}
-
-/**
- * Replaces this ticket's checklist with the tasks of a saved template, as fresh unchecked items.
- * It is a copy, not a link: later edits to the template never reach this ticket, and any progress on
- * the list being replaced is dropped (the caller confirms that first when there is some).
- */
-export function applyChecklistTemplate(ticket: Ticket, templateName: string, tasks: ChecklistTask[]) {
-  const clean = tasks.map(t => ({ text: t.text.trim(), required: t.required })).filter(t => t.text)
-  ticket.checklistItems = clean.map(t => t.text)
-  ticket.checklistDone = clean.map(() => false)
-  ticket.checklistOptional = clean.map(t => !t.required)
-  ticket.checklistDoneBy = clean.map(() => null)
-  pushHistory(ticket, `Offboarding checklist loaded from template: "${templateName}" (${clean.length} items)`, 'checklist')
-}
-
-/** Moves a checklist item from one position to another (drag-to-reorder, or the Move up/down fallback). The three lists stay 1:1, so they move together. No-op for an out-of-range index. */
-export function reorderChecklistItem(ticket: Ticket, from: number, to: number) {
-  const max = ticket.checklistItems.length - 1
-  if (from < 0 || from > max || to < 0 || to > max || from === to) return
-  const [item] = ticket.checklistItems.splice(from, 1)
-  ticket.checklistItems.splice(to, 0, item!)
-  const [done] = ticket.checklistDone.splice(from, 1)
-  ticket.checklistDone.splice(to, 0, done!)
-  const flags = optionalFlags(ticket)
-  const [opt] = flags.splice(from, 1)
-  flags.splice(to, 0, !!opt)
-  const by = doneByList(ticket)
-  const [who] = by.splice(from, 1)
-  by.splice(to, 0, who ?? null)
 }
 
 /** Required and optional counts, and whether the final review can be done (every required task is ticked). */
@@ -946,27 +931,6 @@ export function checklistDoneByCounts(ticket: Ticket): { name: string, count: nu
   const out = new Map<string, number>()
   doneByList(ticket).forEach((who, i) => { if (who && ticket.checklistDone[i]) out.set(who, (out.get(who) ?? 0) + 1) })
   return [...out].map(([name, count]) => ({ name, count }))
-}
-
-/**
- * Signs off the final review (who, when, optional note) and moves the ticket
- * on. Only once every required task is done. A note is captured when the
- * reviewer wants to record context ("waiver on item 3 agreed with ops lead"),
- * kept with the sign-off record and shown with the signed-off banner.
- */
-export function finalizeChecklist(ticket: Ticket, actor = currentUserName(), noteText?: string): { ok: true } | { ok: false, error: string } {
-  if (ticket.checklistReview) return { ok: false, error: 'The final review is already signed off.' }
-  if (!checklistProgress(ticket).ready) return { ok: false, error: 'Do every required task first.' }
-  const note = noteText?.trim() || undefined
-  ticket.checklistReview = { by: actor, at: new Date().toISOString(), note }
-  pushHistory(
-    ticket,
-    note ? `Offboarding checklist completed, with reviewer note: ${note}` : 'Offboarding checklist completed',
-    'checklist',
-    actor
-  )
-  advanceStage(ticket)
-  return { ok: true }
 }
 
 export const TICKETS = reactive<Record<string, Ticket>>({})
@@ -1033,7 +997,7 @@ function addNotification(
     ticketId: n.ticketId,
     title: n.title,
     description: n.description,
-    when: fmtDateTime((n.at ?? new Date()).toISOString()),
+    when: (n.at ?? new Date()).toISOString(),
     at: (n.at ?? new Date()).toISOString(),
     read: n.read ?? false,
     delivery: DIGEST_KINDS.has(n.kind) ? 'digest' : 'now',
@@ -1051,7 +1015,7 @@ export function localISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 /** A date-only ISO string (YYYY-MM-DD) as local midnight. new Date('2026-10-04') is UTC midnight, which is the evening of the day before in timezones west of UTC, so overdue checks, day counts and weekday maths would be a day out there. */
-function parseLocalDate(iso: string): Date {
+export function parseLocalDate(iso: string): Date {
   return new Date(`${iso}T00:00:00`)
 }
 function shortDate(iso: string): string {
@@ -1087,13 +1051,6 @@ export function scanTicketAlerts(): number {
       const due = addBusinessDays(localISO(new Date(t.branchRequestSentAt)), 1)
       if (today > due) {
         go({ kind: 'branch-overdue', action: true, key: `${t.id}:branch-overdue:${t.branchRequestSentAt}`, title: `Branch reply overdue · ${who}`, description: `${who} · Was due in 1 business day` })
-      }
-    }
-
-    if (t.itLock.scheduledConfirmed && !t.itLock.executedConfirmed) {
-      const run = lockRunsAt(t)?.dateISO ?? t.itLock.scheduledFor
-      if (run && run <= today) {
-        go({ kind: 'it-lock', action: true, key: `${t.id}:it-lock:${run}`, title: `IT lock not confirmed · ${who}`, description: `${who} · Set for ${shortDate(run)}` })
       }
     }
 
@@ -1182,7 +1139,6 @@ export const NOTIFICATION_KINDS: { value: NotificationKind, label: string }[] = 
   { value: 'form-signed', label: 'Signed form returned' },
   { value: 'acknowledgment', label: 'Acknowledgment submitted' },
   { value: 'record-update', label: 'Last Working Day changed' },
-  { value: 'it-lock', label: 'IT lock not confirmed' },
   { value: 'checklist', label: 'Checklist due' },
   { value: 'shipment-delayed', label: 'Shipment delayed' },
   { value: 'quotation', label: 'Quotation update due' },
@@ -1251,50 +1207,9 @@ export function ticketsNeedingAttention(): Ticket[] {
   return Object.values(TICKETS).filter(t => t.hrisUpdatePending)
 }
 
-// FR-003.11: APR-YY-NNNNN, year-scoped so the running sequence resets every
-// January. The seed data lives in 2026, hence 26 starts at 417.
-const referenceSeqByYear: Record<string, number> = { '26': 417 }
-let ticketNumberSeq = 421
-
-function nextReference(yearOverride?: string): string {
-  const yy = yearOverride ?? String(new Date().getFullYear()).slice(-2)
-  const next = (referenceSeqByYear[yy] ?? 0) + 1
-  referenceSeqByYear[yy] = next
-  return `APR-${yy}-${String(next).padStart(5, '0')}`
-}
-
-function nextTicketNumber(): number {
-  ticketNumberSeq += 1
-  return ticketNumberSeq
-}
-
-/**
- * Re-derives the ticketNumber/reference/gate-pass sequence counters from
- * whatever's actually in TICKETS right now - call this after TICKETS gets
- * replaced wholesale (see ticketStorage.ts's hydrateTicketsFromStorage).
- * These counters are plain module-level state, not part of what gets
- * persisted/restored, so without this a fresh page load's counters start
- * back at their hardcoded defaults regardless of what ticket numbers
- * already exist in the restored data - the real bug this fixes: creating a
- * ticket right after a fresh load could mint a ticketNumber that collides
- * with an existing one (e.g. a new ticket landing on #422, the same number
- * an already-restored seed ticket has).
- */
-export function syncSequencesToTickets() {
-  const tickets = Object.values(TICKETS)
-  for (const t of tickets) {
-    ticketNumberSeq = Math.max(ticketNumberSeq, t.ticketNumber)
-    const refMatch = t.reference.match(/^APR-(\d{2})-(\d+)$/)
-    if (refMatch) referenceSeqByYear[refMatch[1]!] = Math.max(referenceSeqByYear[refMatch[1]!] ?? 0, Number(refMatch[2]))
-    const gpMatch = t.gatePass?.ref.match(/-(\d+)$/)
-    if (gpMatch) gatePassSeq = Math.max(gatePassSeq, Number(gpMatch[1]))
-  }
-}
-
 /**
  * Self-heals a ticket restored from a localStorage snapshot saved before a
- * field existed on the `Ticket` type - same pattern as formStorage.ts's own
- * self-heal for a corrupted saved snapshot. `Object.assign` in
+ * field existed on the `Ticket` type. `Object.assign` in
  * ticketStorage.ts's applyStored() overwrites a freshly-seeded ticket
  * wholesale with whatever shape was saved, so an old snapshot genuinely
  * lacks fields this session added (checklistItems, authorizingEndorsementDate,
@@ -1304,7 +1219,7 @@ export function syncSequencesToTickets() {
  */
 export function repairRestoredTicket(t: Ticket) {
   if (!Array.isArray(t.checklistItems)) {
-    t.checklistItems = OFFBOARDING_CHECKLIST_ITEMS.slice(0, t.checklistDone?.length ?? OFFBOARDING_CHECKLIST_ITEMS.length)
+    t.checklistItems = DEFAULT_CHECKLIST_TASKS.slice(0, t.checklistDone?.length ?? DEFAULT_CHECKLIST_TASKS.length)
   }
   if (!Array.isArray(t.checklistDone)) {
     t.checklistDone = t.checklistItems.map(() => false)
@@ -1357,195 +1272,52 @@ export function repairRestoredTicket(t: Ticket) {
  * Dev/demo-only reset - this app has no backend, so the duplicate-open-ticket
  * guardrail (findOpenDuplicate) otherwise makes it impossible to re-test
  * ticket creation for the same HRIS record without first closing or
- * fabricating an unrelated one. Wipes every ticket and notification and
- * resets the sequence counters back to their original defaults, so the next
- * created ticket starts clean rather than picking up wherever the last
- * session left off. Caller is responsible for flushing the cleared state to
- * storage (see flushTicketsToStorage) - kept out of this module the same way
- * every other ticket-store mutation here leaves persistence to the pages/
- * components that call it.
+ * fabricating an unrelated one. Wipes every ticket and notification. Caller is
+ * responsible for flushing the cleared state to storage (see flushTicketsToStorage).
  */
 export function clearAllTickets() {
   for (const key of Object.keys(TICKETS)) delete TICKETS[key]
   NOTIFICATIONS.splice(0, NOTIFICATIONS.length)
-  for (const k of Object.keys(referenceSeqByYear)) delete referenceSeqByYear[k]
-  referenceSeqByYear['26'] = 417
-  ticketNumberSeq = 421
-  gatePassSeq = 100000
 }
 
-function serialFor(empId: string, i: number): string {
+export function serialFor(empId: string, i: number): string {
   const digits = empId.replace(/\D/g, '').slice(-3) || '000'
   return `SN-${String(10000 + i * 37 + Number(digits)).padStart(5, '0')}`
 }
 
 /** Same deterministic idiom as serialFor() above, for the asset tag field (GT-AST-#### - matches the SAMPLE_VALUES.ASSET_TAG format used in email/form templates). */
-function assetTagFor(empId: string, i: number): string {
+export function assetTagFor(empId: string, i: number): string {
   const digits = empId.replace(/\D/g, '').slice(-4) || '0000'
   return `GT-AST-${String(1000 + i * 53 + Number(digits)).padStart(4, '0')}`
 }
 
 /**
- * Creates and starts a new ticket - the equivalent of the prototype's
- * startWorkflow(), but returning a real per-ticket record instead of
- * mutating shared module state. Logs A1/A2 as already-happened history
- * immediately, per FR-003.6 (they're recorded, not re-clicked as stages).
- *
- * `idOverride` exists only for seedDemoTickets() below: a real create (from
- * the Create Ticket Tracker page) always gets a fresh crypto.randomUUID(),
- * but a *demo* ticket needs the same id on the server-rendered HTML and the
- * client's post-hydration re-run of the same seeding call (this module is a
- * fresh instance in each) - a random id there produced two different
- * `/ticket-tracker/<id>` hrefs for the same row and Vue flagged it as a
- * hydration mismatch. Seeding instead passes the employee's own (fixed) id.
+ * Creates a ticket. The server owns everything about a new one: its id, ticket
+ * number, reference and acknowledgment token, the checklist it is issued, the
+ * assets it lists and the first lines of its history. This sends the request and
+ * puts the ticket the server returns into the store. A request the server rejects
+ * (the team member already has an open ticket, say) comes back as `ok: false`
+ * with a message to show.
  */
-export function createTicket(
-  employee: HrisRecord, reason: TicketReason, mode: TicketMode, lwd: string, sep: string,
-  authorizingEndorsement: string, authorizingEndorsementDate = '', idOverride?: string,
-  assignee: AssetTeamMember = assetTeamMemberByName(currentUserName()),
-  /** Present only when the operator changed Reason away from HRIS's own suggestedReason - the create form requires and captures this justification, this is where it actually lands on the ticket's own record. */
-  reasonOverrideNote?: string,
-  /** Present only when the operator changed Mode away from the address-derived auto default - same override/justification pattern as reasonOverrideNote above. */
-  modeOverrideNote?: string,
-  /** Required by the Recalled paths only (FR-003.2: their Day-0 anchor is the Recall Effective Date). */
-  recallEffectiveDate?: string
-): Ticket {
-  const entry = MATRIX[reason]
-  const issuedChecklist = checklistTemplateFor(reason, mode)
-  const id = idOverride ?? crypto.randomUUID()
-  // Seed tickets are 2026 demo data whatever today's date is.
-  const reference = nextReference(idOverride ? '26' : undefined)
-  const ticketNumber = nextTicketNumber()
-  const ticket: Ticket = {
-    id,
-    ticketNumber,
-    reference,
-    employee,
-    assignee,
-    reason,
-    mode,
-    lwd,
-    sep,
-    authorizingEndorsement,
-    authorizingEndorsementDate,
-    gateCount: entry.gateCount,
-    gatesReleased: 0,
-    gateNotes: {},
-    stageIdx: 0,
-    furthestStageIdx: 0,
-    overdueForced: false,
-    // FR-003.6: the checklist is issued at notice, from the template set for this path.
-    checklistItems: issuedChecklist.tasks.map(t => t.text),
-    checklistDone: issuedChecklist.tasks.map(() => false),
-    checklistOptional: issuedChecklist.tasks.map(t => !t.required),
-    checklistReview: null,
-    assetsLocked: false,
-    assets: employee.assets.map((a, i) => ({ name: a.name, model: a.model, type: assetCatalogEntry(a.name).type, serial: serialFor(employee.id, i), assetTag: assetTagFor(employee.id, i), checked: true, remarks: '', resolution: null })),
-    targetDateISO: null,
-    callAttempts: [],
-    smsSentAt: null,
-    overdueReminderSentAt: null,
-    overdueReminderCount: 0,
-    reminderCount: 0,
-    deductionApplicable: null,
-    contact: {
-      number: employee.contactNumber,
-      numberVerified: false,
-      email: employee.personalEmail,
-      emailVerified: false,
-      altName: employee.altContactName,
-      altNumber: employee.altContactNumber
-    },
-    itLock: { scheduledConfirmed: false, scheduledFor: null, executedConfirmed: false },
-    courierProviderId: mode === 'remote' ? (recommendedCourierProvider()?.id ?? null) : null,
-    courierBranchName: '',
-    courierBranchAddress: '',
-    courierBranchSubstituted: false,
-    branchCaptureMethod: null,
-    teamMemberAddressOverride: null,
-    branchRequestSentAt: null,
-    branchRequestTemplateKey: null,
-    branchRequestReplyReceived: false,
-    transitTrackingRef: '',
-    transitConfirmedAt: null,
-    gateReleaseDates: {},
-    targetDateHistory: [],
-    hrisUpdatePending: false,
-    hrisUpdateChangedAt: null,
-    hrisUpdateAcknowledgedAt: null,
-    itLockNeedsReschedule: false,
-    history: [],
-    gatePassRef: null,
-    gatePass: null,
-    buildingGatePassRef: null,
-    buildingGatePass: null,
-    evidenceProof: null,
-    evidenceCondition: null,
-    atdReference: null,
-    deductionDate: '',
-    deductionItem: '',
-    deductionAmount: '',
-    deductionAuthorizedBy: '',
-    deductionCaseFirstNameOverride: null,
-    deductionCaseOfficerOverride: null,
-    deductionCaseReturnRequestedDate: '',
-    deductionCaseReceivedDate: '',
-    deductionCaseAssessedDate: '',
-    deductionCaseBuyoutElectionDate: '',
-    deductionCaseQuotationExpectedDate: '',
-    deductionCaseHearBackByDate: '',
-    deductionCaseResponseDueDate: '',
-    deductionCaseAmountBasis: null,
-    deductionCaseSupportingDocRef: '',
-    deductionCaseAmountFigures: '',
-    deductionCaseAmountWords: '',
-    deductionCaseAssetSerials: [],
-    deductionOutcome: null,
-    quotationReceivedISO: null,
-    quotationReference: '',
-    quotationFileName: '',
-    referredToPayrollAt: null,
-    referredToPayrollBy: '',
-    inspectionRoute: null,
-    status: 'open',
-    createdAt: localISO(new Date()),
-    createdBy: currentUserName(),
-    // A Recalled seed has no operator to type it, so it takes its Separation Date.
-    recallEffectiveDate: reason === 'recalled' ? (recallEffectiveDate || (idOverride ? sep : '')) : undefined,
-    // Seeds use a fixed token so server and client renders agree (see idOverride note above).
-    acknowledgmentToken: idOverride ? `seed-${idOverride}` : crypto.randomUUID().replace(/-/g, ''),
-    auditTrailId: `AUD-${new Date().getFullYear()}-${String(ticketNumber).padStart(5, '0')}`
-  }
-  TICKETS[id] = ticket
-  pushHistory(ticket, 'Entry recorded: authorizing endorsement (+ recorded date) + Last Working Day + Separation Date captured', 'entry')
-  if (reasonOverrideNote) pushHistory(ticket, `Reason overridden from the suggested case type: "${reasonOverrideNote}"`, 'entry')
-  if (modeOverrideNote) pushHistory(ticket, `Mode overridden from the address-derived auto default: "${modeOverrideNote}"`, 'entry')
-  pushHistory(ticket, `Ticket Created - ${reference}`, 'entry')
-  // A ticket created for someone else is news to that person (seeds are not).
-  if (!idOverride && assignee.name !== currentUserName()) {
-    raiseNotification(ticket, {
-      kind: 'assigned',
-      action: true,
-      title: `Ticket assigned to you · ${employee.name}`,
-      description: `${employee.name} · ${REASON_LABELS[reason]}`
-    })
-  }
-  return ticket
+export async function createTicket(input: NewTicketInput): Promise<ApiResult<Ticket>> {
+  const res = await api().tickets.create(input)
+  if (res.ok) TICKETS[res.data.id] = res.data
+  return res
 }
 
 // `when` defaults to the real current date/time rather than a "Just now"
 // placeholder - every call site records the moment the action actually
 // happened, so the Activity Log can show a genuine timestamp instead of
 // freezing every entry at whatever text a demo session hardcoded.
-export function pushHistory(ticket: Ticket, action: string, category: HistoryCategory, actor = currentUserName(), when = fmtDateTime(new Date().toISOString())) {
+export function pushHistory(ticket: Ticket, action: string, category: HistoryCategory, actor = currentUserName(), when = nowISO()) {
   ticket.history.unshift({ action, actor, when, category })
   ticket.lastUpdatedBy = actor
-  ticket.lastUpdatedAt = new Date().toISOString()
+  ticket.lastUpdatedAt = nowISO()
 }
 
-/** Real date+time formatting, e.g. "Sep 24, 2026, 2:41 PM". */
+/** A stored time shown as e.g. "Sep 24, 2026, 2:41 PM" in the viewer's own time zone (see utils/dateTime.ts). */
 export function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return formatDateTime(iso)
 }
 
 export function currentStageKey(ticket: Ticket): StageKey | null {
@@ -1558,14 +1330,7 @@ export function currentStageKey(ticket: Ticket): StageKey | null {
   return list[idx]!
 }
 
-export function advanceStage(ticket: Ticket) {
-  ticket.overdueForced = false
-  const list = stageListFor(ticket.mode)
-  ticket.stageIdx = Math.min(ticket.stageIdx + 1, list.length - 1)
-  ticket.furthestStageIdx = Math.max(ticket.furthestStageIdx ?? 0, ticket.stageIdx)
-}
-
-function addCalendarDays(iso: string, days: number): string {
+export function addCalendarDays(iso: string, days: number): string {
   const d = parseLocalDate(iso)
   d.setDate(d.getDate() + days)
   return localISO(d)
@@ -1628,69 +1393,6 @@ export function syncTicketAssetsFromRegister(ticket: Ticket) {
   })
 }
 
-/** Confirms the asset list at A5 - locks it read-only and derives the Target Date from the resolved path's matrix deadline rule (FR-003.8d). */
-export function confirmAssets(ticket: Ticket) {
-  ticket.assetsLocked = true
-  const resolved = computeTargetDateForPath(ticket)
-  if (resolved) {
-    ticket.targetDateISO = resolved
-  } else if (!resolvedPathFor(ticket.reason, ticket.mode) && ticket.lwd) {
-    // Defensive fallback for a reason/mode combo with no rule at all - not
-    // currently reachable by any modeled path (Unexplained Absence's null
-    // path is P12's Onsite, which is never offered, not created), kept as a
-    // backstop rather than leaving targetDateISO unset with no explanation.
-    ticket.targetDateISO = addCalendarDays(ticket.lwd, 7)
-  }
-  const confirmedCount = ticket.assets.filter(a => a.checked).length
-  pushHistory(ticket, `Asset list confirmed (${confirmedCount} of ${ticket.assets.length}) - locked, status moves to Pending Return`, 'asset')
-  advanceStage(ticket)
-}
-
-/**
- * FR-003.8a - the Target Date re-baseline engine. Editing the Target Date is
- * not a field update: every scheduled item on the ticket hangs off it, so
- * this recalculates rather than leaving the ticket inconsistent. Concretely:
- * daysLeftLabel/isOverdueReturn below both read targetDateISO live, so once
- * it changes here, the countdown, the Overdue Return status, and the
- * Overview's Return Deadline column all recompute automatically on their own
- * next render - nothing else needs a manual sync for those. What genuinely
- * needs an explicit write is the audit trail (ref c: actor/timestamp/reason
- * required, previous value preserved) and clearing the legacy manual
- * overdueForced flag so a demo/seeded ticket doesn't keep forcing Overdue
- * Return after a correction (ref b: a re-baseline is a correction, not a
- * waiver - the original lapse still gets recorded below, just not left
- * forcing the status forward).
- *
- * FR-003.8a(f)'s downstream-dependency flag (e.g. a scheduled IT lock that
- * no longer matches the new date) is intentionally not wired here: in this
- * app's data model, IT lock scheduling (A4) keys off the Last Working Day,
- * not the Target Date, so a Target-Date-only edit has no downstream
- * schedule to desync today. That hook belongs on a future Last Working Day
- * amendment flow (ref d), not this one.
- */
-export function rebaselineTargetDate(ticket: Ticket, newDateISO: string, reason: string, actor = currentUserName()) {
-  const trimmedReason = reason.trim()
-  if (!trimmedReason) throw new Error('A reason is required to change the Target Date.')
-  if (!newDateISO) throw new Error('A new Target Date is required.')
-  // Nothing to re-baseline: never write an "Oct 6 to Oct 6" entry into the history.
-  if (newDateISO === ticket.targetDateISO) return
-
-  const wasOverdue = isOverdueReturn(ticket)
-  const previousDateISO = ticket.targetDateISO
-
-  ticket.targetDateHistory.push({ previousDateISO, newDateISO, reason: trimmedReason, actor, when: new Date().toISOString(), wasOverdue })
-  ticket.targetDateISO = newDateISO
-  ticket.overdueForced = false
-
-  const fmt = (iso: string | null) => iso ? parseLocalDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'not set'
-  pushHistory(
-    ticket,
-    `Target Date re-baselined: ${fmt(previousDateISO)} -> ${fmt(newDateISO)} (reason: ${trimmedReason})${wasOverdue ? ' - ticket was in Overdue Return at the time of this change; that lapse remains on record' : ''}`,
-    'rebaseline',
-    actor
-  )
-}
-
 /**
  * Simulates R24/HRIS pushing a Last Working Day correction for this
  * ticket's employee. This app has no backend and no real R24 integration to
@@ -1748,8 +1450,8 @@ export function simulateHrisLwdUpdate(ticket: Ticket, newLwd: string) {
   ticket.hrisUpdatePending = true
   ticket.hrisUpdateChangedAt = changedAt
   ticket.hrisUpdateAcknowledgedAt = null
-  pushHistory(ticket, `Last Working Day updated in the employee record: ${fmt(oldLwd)} -> ${fmt(newLwd)}`, 'hris', 'System', fmtDateTime(changedAt))
-  pushHistory(ticket, `Notification emailed to assignee: ${ticket.assignee.name} <${ticket.assignee.email}>`, 'hris', 'System', fmtDateTime(changedAt))
+  pushHistory(ticket, `Last Working Day updated in the employee record: ${fmt(oldLwd)} -> ${fmt(newLwd)}`, 'hris', 'System', changedAt)
+  pushHistory(ticket, `Notification emailed to assignee: ${ticket.assignee.name} <${ticket.assignee.email}>`, 'hris', 'System', changedAt)
 
   raiseNotification(ticket, {
     kind: 'record-update',
@@ -1757,104 +1459,6 @@ export function simulateHrisLwdUpdate(ticket: Ticket, newLwd: string) {
     title: `Last Working Day changed · ${ticket.employee.name}`,
     description: `${ticket.employee.name} · ${fmt(oldLwd)} to ${fmt(newLwd)}`
   })
-}
-
-/**
- * Clears the ticket-level "needs attention" flag (Overview badge, sidebar
- * count) and records a real acknowledged-at timestamp - the Activity Log
- * entry for the original change stays regardless, this only records that
- * it's been seen and, where applicable, that the resulting IT lock flag
- * still needs the operator's own follow-up action (see itLockNeedsReschedule
- * - acknowledging the notice and resolving the lock are two separate
- * confirmations, not one bare dismissal).
- */
-export function acknowledgeHrisUpdate(ticket: Ticket) {
-  const acknowledgedAt = new Date().toISOString()
-  ticket.hrisUpdatePending = false
-  ticket.hrisUpdateAcknowledgedAt = acknowledgedAt
-  pushHistory(
-    ticket,
-    `Employee record update acknowledged${ticket.itLockNeedsReschedule ? ' - IT lock still needs to be rescheduled' : ''}`,
-    'hris',
-    currentUserName(),
-    fmtDateTime(acknowledgedAt)
-  )
-}
-
-/**
- * Records a gate release - FR-003.5's own definition of the "recorded event"
- * element is deliberately light: "a dated entry with the recording actor.
- * Until it exists, the gate is closed." It does not require a reference
- * number or an uploaded document - an earlier pass over-built this into a
- * required-file gate, which was a real, corrected misstep, not the spec.
- * `note` is optional context (what P&C actually said/via what channel), never
- * a precondition for the button being enabled.
- */
-export function releaseGate(ticket: Ticket, gateN: number, note?: string) {
-  ticket.gatesReleased = gateN
-  ticket.gateNotes[gateN] = note?.trim() || 'Recorded'
-  ticket.gateReleaseDates[gateN] = localISO(new Date())
-  const step = GATE_STEPS.find(g => g.n === gateN)
-  pushHistory(ticket, `Gate ${gateN} recorded${note?.trim() ? ` (${note.trim()})` : ''} - ${step?.unlocks ?? ''}`, 'gate')
-  // Unexplained Absence's Target Date anchors on Gate 3 release
-  // (determination), not LWD - only resolvable once this actually fires,
-  // and only if assets were already confirmed by then (see confirmAssets).
-  if (gateN === 3 && ticket.assetsLocked && !ticket.targetDateISO) {
-    const resolved = computeTargetDateForPath(ticket)
-    if (resolved) ticket.targetDateISO = resolved
-  }
-}
-
-/**
- * Moves the ticket's stage pointer back one real step, e.g. after an
- * operator realizes they advanced too soon. Floors naturally at A3:
- * stepping back into A1/A2 just gets resolved forward again by
- * currentStageKey() since those are marked skip (already-logged entry steps,
- * never re-clickable).
- *
- * Walks past any skip-stage it lands on, same as currentStageKey() does
- * going forward - a naive single decrement is not enough wherever a skip
- * stage sits immediately before the current one (B11a, between B11 and A9,
- * is exactly this case): landing on B11a's index, currentStageKey()'s own
- * forward-skip resolution would immediately walk it right back to A9,
- * making Back a complete no-op from A9 - reproduced exactly this way.
- */
-export function goBackStage(ticket: Ticket) {
-  const list = stageListFor(ticket.mode)
-  let idx = Math.max(0, ticket.stageIdx - 1)
-  while (idx > 0 && SKIP_STAGES.includes(list[idx]!)) idx--
-  ticket.stageIdx = idx
-}
-
-/** Steps forward again after a goBackStage, up to the furthest stage this ticket has actually completed - never further, so this can't be used to skip a stage that hasn't been done. */
-export function goForwardStage(ticket: Ticket) {
-  if (ticket.stageIdx >= (ticket.furthestStageIdx ?? 0)) return
-  ticket.stageIdx += 1
-}
-
-/**
- * Direct jump to a specific stage - the phase tracker's clickable phase
- * nodes and its hover popover's own step rows use this instead of stepping
- * one at a time via goBackStage/goForwardStage. Bounded the exact same way
- * goForwardStage already is - never past furthestStageIdx, so this can't be
- * used to skip ahead of a stage that hasn't actually been completed yet. A
- * no-op if the target is already the current stage.
- */
-export function jumpToStage(ticket: Ticket, target: StageKey) {
-  const list = stageListFor(ticket.mode)
-  const idx = list.indexOf(target)
-  if (idx === -1) return
-  const bounded = Math.min(idx, ticket.furthestStageIdx ?? 0)
-  if (bounded === ticket.stageIdx) return
-  ticket.stageIdx = bounded
-  pushHistory(ticket, `Jumped to ${STAGE_NAMES[list[bounded]!]}`, 'navigation')
-}
-
-/** Marks a custodian contact field as verified directly (an explicit operator action - e.g. they reached the team member through some other channel), independent of the A7 call-confirmation auto-verify path. */
-export function verifyContact(ticket: Ticket, field: 'number' | 'email') {
-  if (field === 'number') ticket.contact.numberVerified = true
-  else ticket.contact.emailVerified = true
-  pushHistory(ticket, `${field === 'number' ? 'Contact number' : 'Personal email'} manually confirmed active`, 'contact')
 }
 
 /**
@@ -1868,14 +1472,6 @@ export function verifyContact(ticket: Ticket, field: 'number' | 'email') {
 /** employee.address is R24 hard-truth and never mutated directly - every read site should call this instead of reading ticket.employee.address itself, so a per-ticket correction (see teamMemberAddressOverride on Ticket) is never silently ignored. */
 export function effectiveTeamMemberAddress(ticket: Ticket): string {
   return ticket.teamMemberAddressOverride ?? ticket.employee.address
-}
-
-/** Records a correction to the team member's on-file address for this ticket only - never mutates employee.address (R24 hard-truth, see HrisRecord). Pass null to clear the override and fall back to the R24 address again. */
-export function setTeamMemberAddressOverride(ticket: Ticket, address: string | null) {
-  ticket.teamMemberAddressOverride = address && address.trim() ? address.trim() : null
-  pushHistory(ticket, ticket.teamMemberAddressOverride
-    ? `Team member address corrected for this ticket: ${ticket.teamMemberAddressOverride}`
-    : 'Team member address correction cleared - reverted to the address on file', 'contact')
 }
 
 /**
@@ -1919,7 +1515,7 @@ function isoDateOf(d: Date): string {
 function earliestHistoryDate(ticket: Ticket, category: HistoryCategory, textIncludes?: string): string | null {
   const times = ticket.history
     .filter(h => h.category === category && (!textIncludes || h.action.includes(textIncludes)))
-    .map(h => new Date(h.when).getTime())
+    .map(h => instantMs(h.when))
     .filter(t => !Number.isNaN(t))
   if (!times.length) return null
   return isoDateOf(new Date(Math.min(...times)))
@@ -1933,51 +1529,6 @@ export function derivedReturnRequestedDate(ticket: Ticket): string | null {
 /** A11 Case Details Step 3 - "Date received," the one Dates-step field with a real computed default: confirmEvidence() (A10) always pushes a 'return'-category history line reading "Proof-of-Receipt + condition photos uploaded...", so the moment evidence is confirmed IS the received date, same derivation pattern as derivedReturnRequestedDate above. Returns null (not blank) when evidence hasn't been confirmed yet. */
 export function derivedReceivedDate(ticket: Ticket): string | null {
   return earliestHistoryDate(ticket, 'return', 'Proof-of-Receipt')
-}
-
-export function confirmCourierBranch(ticket: Ticket, providerId: string, branchName: string, branchAddress: string, captureMethod: 'call' | 'email', substituted = false) {
-  ticket.courierProviderId = providerId
-  ticket.courierBranchName = branchName
-  ticket.courierBranchAddress = branchAddress
-  ticket.courierBranchSubstituted = substituted
-  ticket.branchCaptureMethod = captureMethod
-  const provider = courierProviderById(providerId)
-  const via = captureMethod === 'call' ? 'via confirmation call' : 'via email reply'
-  pushHistory(ticket, substituted
-    ? `Courier branch substituted from address on file (team member non-response): ${provider?.name ?? providerId}, ${branchName}, ${branchAddress}`
-    : `Courier branch confirmed ${via}: ${provider?.name ?? providerId}, ${branchName}, ${branchAddress}`, 'branch')
-  advanceStage(ticket)
-}
-
-/** FR-003.9(a): the retrieval instructions request the preferred courier, exact branch name and branch address, with a reply requested within 1 business day - this records when that request actually went out, so "within 1 business day" has a real anchor instead of being an unenforced sentence in the notice copy. */
-export function sendBranchRequest(ticket: Ticket, templateKey: string | null = null) {
-  ticket.branchRequestSentAt = new Date().toISOString()
-  ticket.branchRequestTemplateKey = templateKey
-  ticket.branchRequestReplyReceived = false
-  ticket.branchReplyDetectedAt = null
-  pushHistory(ticket, 'Branch confirmation request sent to team member - reply requested within 1 business day', 'send')
-}
-
-/** FR-003.12: the operator's own sent-confirmation for a companion SMS, clicked once the text has actually gone out from their phone. Recorded on the Activity Log with actor and time. */
-export function confirmSmsSentFor(ticket: Ticket, code: string, label: string) {
-  if (ticket.smsSent?.[code]) return
-  ticket.smsSent = { ...(ticket.smsSent ?? {}), [code]: new Date().toISOString() }
-  pushHistory(ticket, `SMS sent to the team member (${label})`, 'send')
-}
-
-/**
- * Manually confirms the team member's email reply has been read. This app
- * has no live inbox integration (Outlook/Graph API or similar), so there is
- * no automatic way to detect a reply landed - the same limitation this
- * module already accepts for SMS (FR-003.12: "manual sent-confirmation
- * control, clicked by the operator once the message has actually gone").
- * A confirmation call doesn't need this at all since the operator is on the
- * line when it happens; only the email fallback path is ever actually
- * pending.
- */
-export function markBranchReplyReceived(ticket: Ticket) {
-  ticket.branchRequestReplyReceived = true
-  pushHistory(ticket, 'Team member email reply confirmed read', 'branch')
 }
 
 /**
@@ -2041,25 +1592,6 @@ export function isValidTrackingLink(value: string, courierId?: string | null): b
   return url.hostname === providerHost || url.hostname.endsWith(`.${providerHost}`) || url.hostname === `www.${providerHost}`
 }
 
-/** Records the B11 Confirm In Transit handoff, capturing the courier/tracking reference per FR-003.9's Remote table ("Captures courier and tracking or reference number"). Also anchors B11a's 14-day delay flag and halts the Overdue Return countdown (FR-003.6: "Halts the Overdue Return countdown") - see isTransitDelayed/isOverdueReturn, both of which key off hasReachedStage(ticket, 'B11'). */
-export function confirmInTransit(ticket: Ticket, trackingNumber: string, trackingLink = '') {
-  ticket.trackingNumber = trackingNumber
-  ticket.trackingLink = trackingLink
-  ticket.transitTrackingRef = trackingLink || trackingNumber
-  ticket.transitConfirmedAt = localISO(new Date())
-  pushHistory(ticket, `Marked In Transit - tracking number: ${trackingNumber || 'not provided'}${trackingLink ? ', tracking link added' : ''}`, 'transit')
-  advanceStage(ticket)
-}
-
-/** Saves or edits the tracking number and link from the Courier & Shipping card without moving the stage: the shipment is filled in as details arrive, and only B11's own button confirms the handoff. */
-export function saveShipmentDetails(ticket: Ticket, trackingNumber: string, trackingLink: string) {
-  const had = !!(ticket.trackingNumber || ticket.trackingLink || ticket.transitTrackingRef)
-  ticket.trackingNumber = trackingNumber
-  ticket.trackingLink = trackingLink
-  ticket.transitTrackingRef = trackingLink || trackingNumber
-  pushHistory(ticket, `Tracking details ${had ? 'updated' : 'added'}: ${trackingNumber ? `number ${trackingNumber}` : 'no number'}${trackingLink ? ', link saved' : ''}`, 'transit')
-}
-
 /** Where the shipment is, for the Courier & Shipping card. */
 export type ShipmentStatus = 'not-shipped' | 'in-transit' | 'delayed' | 'received'
 export function shipmentStatus(ticket: Ticket): ShipmentStatus {
@@ -2097,56 +1629,13 @@ export function lockRunsAt(ticket: Pick<Ticket, 'employee' | 'lwd'>): { dateISO:
   return { dateISO, clock: formatClock(shift.end), overnight }
 }
 
-/** A4 step 1 of 2 - marks the lock as scheduled. FR-003.6: "Scheduled within 1 business day of the Notice Endorsement, anchored after the last shift on the Last Working Day." */
-export function confirmItLockScheduling(ticket: Ticket) {
-  const wasStale = ticket.itLockNeedsReschedule
-  ticket.itLock.scheduledConfirmed = true
-  ticket.itLock.scheduledFor = ticket.lwd
-  ticket.itLockNeedsReschedule = false
-  pushHistory(ticket, `IT lock scheduled for end of last shift on ${ticket.lwd || 'the Last Working Day'}${wasStale ? ' (rescheduled against the updated Last Working Day)' : ''} - awaiting execution confirmation`, 'itlock')
-}
-
-/** A4 step 2 of 2 - confirms the lock actually executed on schedule. Does
- * NOT auto-advance: a success banner replaces the warning and the user
- * clicks Continue to proceed (user feedback 5 Oct 2026, 5th pass).
- * FR-003.6: "Confirmed on scheduling and on execution." */
-export function confirmItLockExecution(ticket: Ticket) {
-  ticket.itLock.executedConfirmed = true
-  pushHistory(ticket, 'IT lock executed on schedule - confirmed', 'itlock')
-}
-
 /** An existing OPEN ticket for the same team member, if any - the guardrail a Create flow checks before allowing a second ticket for someone who already has one in flight. */
 export function findOpenDuplicate(employeeId: string): Ticket | undefined {
   return Object.values(TICKETS).find(t => t.employee.id === employeeId && t.status === 'open')
 }
 
-let gatePassSeq = 100000
-
 export type GatePassKind = 'goteam' | 'building'
 export const GATE_PASS_KIND_LABEL: Record<GatePassKind, string> = { goteam: 'GoTeam Gate Pass', building: 'Building Gate Pass' }
-
-/**
- * Issues a Gate Pass against this ticket - a deliberate operator action
- * with real form content (FR-003.11), never an automatic side effect of
- * viewing the ticket. `assets` and the team-member fields are expected to
- * already be pre-filled from the ticket by the caller; this just stamps a
- * reference, records it, and writes the audit-trail entry. `kind` picks
- * which of the ticket's two independent gate pass records this writes to
- * (see buildingGatePassRef/buildingGatePass's own comment on Ticket).
- */
-export function issueGatePass(ticket: Ticket, input: Omit<GatePass, 'ref'>, kind: GatePassKind = 'goteam'): GatePass {
-  gatePassSeq += 1
-  const pass: GatePass = { ref: `GP-2026-${gatePassSeq}`, ...input }
-  if (kind === 'building') {
-    ticket.buildingGatePass = pass
-    ticket.buildingGatePassRef = pass.ref
-  } else {
-    ticket.gatePass = pass
-    ticket.gatePassRef = pass.ref
-  }
-  pushHistory(ticket, `${GATE_PASS_KIND_LABEL[kind]} issued - ${pass.ref} (${pass.movement === 'checkin' ? 'Check In' : 'Check Out'})`, 'gatepass', input.requestedBy)
-  return pass
-}
 
 export type StageKind =
   | 'checklist' | 'itlock' | 'assets' | 'branch' | 'template-send' | 'calllog'
@@ -2164,7 +1653,7 @@ export interface StageMeta {
 /** Per-stage title/description/behavior-kind - the workspace page switches on `kind` to render the right interactive panel. A1/A2/B11a never appear here (see SKIP_STAGES). */
 export const STAGE_META: Partial<Record<StageKey, StageMeta>> = {
   A3: { title: STAGE_NAMES.A3, desc: 'Review the items below before moving on. Due no later than 3 business days before the Last Working Day.', kind: 'checklist', actionLabel: 'Complete Checklist' },
-  A4: { title: STAGE_NAMES.A4, desc: 'Cuts off this team member\'s access to company systems and accounts once their last shift ends, so nothing stays reachable after they\'ve left. Confirming schedules IT to execute it right on time, not early and not late.', kind: 'itlock', actionLabel: 'Schedule Access Lock' },
+  A4: { title: STAGE_NAMES.A4, desc: 'IT locks this team member\'s access once their last shift ends. Notify IT of the date here. The retrieval does not depend on the lock.', kind: 'itlock', actionLabel: 'Notify IT and continue' },
   A5: { title: STAGE_NAMES.A5, desc: 'Check off the equipment this team member actually has before proceeding. Once confirmed, the list locks and stays visible in the panel on the left for the rest of the ticket.', kind: 'assets', actionLabel: 'Confirm Assets' },
   B8: { title: STAGE_NAMES.B8, desc: 'Capture the custodian\'s preferred courier and their exact branch before the courier endorsement goes out. A reply is requested within 1 business day.', kind: 'branch', actionLabel: 'Confirm Branch' },
   B9: { title: STAGE_NAMES.B9, desc: 'Sent to the courier\'s corporate account manager, choose the email to send, then confirm.', kind: 'template-send', actionLabel: 'Send Courier Endorsement' },
@@ -2182,100 +1671,6 @@ export const STAGE_META: Partial<Record<StageKey, StageMeta>> = {
   A11: { title: STAGE_NAMES.A11, desc: 'Only if an item came back damaged or wasn\'t returned.', kind: 'deduction' },
   A12: { title: STAGE_NAMES.A12, desc: 'Check condition and send each returned item to its next stop: stock, servicing, or disposal.', kind: 'inspection', actionLabel: 'Confirm Inspection & Routing' },
   A13: { title: STAGE_NAMES.A13, desc: 'Check that nothing is still open below, then close the ticket.', kind: 'closure', actionLabel: 'Review & Close Ticket' }
-}
-
-// ---------------------------------------------------------------------------
-// Demo seed data - gives the Overview list something real to show (one
-// ticket per interesting state) without requiring a live backend. Each seed
-// ticket is created through the same createTicket() every real ticket goes
-// through, then fast-forwarded directly to its target state (rather than
-// replaying every stage click) purely for demo purposes.
-let seeded = false
-
-function byEmpId(id: string): HrisRecord {
-  return HRIS_DIRECTORY.find(e => e.id === id) ?? HRIS_DIRECTORY[0]!
-}
-
-/** Every seed ticket below is fast-forwarded past A4, so its IT lock is already fully confirmed - scheduled and executed - rather than left half-done. */
-function finalizeItLock(t: Ticket) {
-  t.itLock = { scheduledConfirmed: true, scheduledFor: t.lwd, executedConfirmed: true }
-}
-
-export function seedDemoTickets() {
-  if (seeded) return
-  seeded = true
-
-  // In Transit (remote) - Marisol Ferrer
-  {
-    const emp = byEmpId('EMP-04821')
-    const t = createTicket(emp, emp.suggestedReason, 'remote', emp.lwd, emp.sep, 'PC-END-2026-0417', '2026-09-15', emp.id)
-    finalizeItLock(t)
-    confirmAssets(t)
-    confirmCourierBranch(t, recommendedCourierProvider()!.id, 'JRS Express - Cebu IT Park Branch', emp.address, 'call')
-    t.gatesReleased = t.gateCount
-    pushHistory(t, 'Courier endorsement sent', 'send')
-    t.stageIdx = stageListFor(t.mode).indexOf('B11')
-    t.furthestStageIdx = t.stageIdx
-    pushHistory(t, 'Retrieval notice sent (email + SMS)', 'send')
-    pushHistory(t, 'Marked In Transit', 'transit')
-  }
-
-  // Overdue Return (onsite) - Rafael Tan. Genuinely stage-advanced to A9
-  // rather than faked via the legacy overdueForced flag - Target Date
-  // resolves to 2 calendar days after the Sep 16 LWD (Sep 18), already past
-  // relative to today, so Overdue Return is live-computed, matching real
-  // ticket behavior instead of a seed-only shortcut.
-  {
-    const emp = byEmpId('EMP-02214')
-    const t = createTicket(emp, emp.suggestedReason, 'onsite', emp.lwd, emp.sep, 'PC-END-2026-0301', '2026-09-14', emp.id)
-    finalizeItLock(t)
-    confirmAssets(t)
-    t.gatesReleased = t.gateCount
-    pushHistory(t, 'Retrieval notice sent', 'send')
-    t.stageIdx = stageListFor(t.mode).indexOf('A9')
-    t.furthestStageIdx = t.stageIdx
-  }
-
-  // Gate Not Yet Recorded (remote, Unexplained Absence, 3 gates, none
-  // recorded yet) - Andrea Villar. Sitting at B9 (courier endorsement) with
-  // no gate recorded - advisory only, doesn't stop the ticket working.
-  {
-    const emp = byEmpId('EMP-05102')
-    const t = createTicket(emp, emp.suggestedReason, 'remote', emp.lwd, emp.sep, '', '', emp.id)
-    finalizeItLock(t)
-    confirmAssets(t)
-    confirmCourierBranch(t, recommendedCourierProvider()!.id, 'JRS Express - Davao Branch', emp.address, 'call')
-    t.stageIdx = stageListFor(t.mode).indexOf('B9')
-    t.furthestStageIdx = t.stageIdx
-  }
-
-  // Hold Off (onsite, evidence pending) - Kevin Ong... reassigned to Josef Cruz's Hold Off slot per Overview demo row
-  {
-    const emp = byEmpId('EMP-01187')
-    const t = createTicket(emp, emp.suggestedReason, 'remote', emp.lwd, emp.sep, 'PC-END-2026-0290', '2026-09-13', emp.id, assetTeamMemberByName('J. Santos'))
-    finalizeItLock(t)
-    confirmAssets(t)
-    confirmCourierBranch(t, recommendedCourierProvider()!.id, 'JRS Express - Iloilo Branch', emp.address, 'call')
-    t.gatesReleased = t.gateCount
-    pushHistory(t, 'Courier endorsement sent', 'send')
-    t.stageIdx = stageListFor(t.mode).indexOf('A10')
-    t.furthestStageIdx = t.stageIdx
-    pushHistory(t, 'Marked In Transit', 'transit')
-    pushHistory(t, 'Assets physically received', 'return')
-  }
-
-  // Closed (onsite) - Kevin Ong
-  {
-    const emp = byEmpId('EMP-03310')
-    const t = createTicket(emp, emp.suggestedReason, 'onsite', emp.lwd, emp.sep, 'PC-END-2026-0155', '2026-09-10', emp.id, assetTeamMemberByName('M. Bautista'))
-    finalizeItLock(t)
-    confirmAssets(t)
-    t.gatesReleased = t.gateCount
-    t.stageIdx = stageListFor(t.mode).length - 1
-    t.furthestStageIdx = t.stageIdx
-    t.status = 'closed'
-    pushHistory(t, 'Ticket Closed', 'closure')
-  }
 }
 
 /**
@@ -2324,8 +1719,7 @@ export function isOverdueReturn(ticket: Ticket): boolean {
 export function isTransitDelayed(ticket: Ticket): boolean {
   if (ticket.mode !== 'remote' || ticket.status !== 'open' || !ticket.transitConfirmedAt) return false
   if (hasReachedStage(ticket, 'A10')) return false
-  const turnover = new Date(ticket.transitConfirmedAt)
-  turnover.setHours(0, 0, 0, 0)
+  const turnover = parseLocalDate(ticket.transitConfirmedAt)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const days = Math.round((today.getTime() - turnover.getTime()) / 86400000)
@@ -2380,143 +1774,6 @@ export function pathChangeLockReasons(ticket: Ticket): string[] {
   if (ticket.callAttempts.length) out.push('a call has been logged')
   if (Object.keys(ticket.gateReleaseDates ?? {}).length || Object.keys(ticket.gateNotes ?? {}).length) out.push('an acknowledgment has been captured')
   return out
-}
-
-/**
- * Changes Reason and Mode before the path is locked, and re-resolves everything
- * the path derives: the notice template (always read live from the matrix), the
- * Day-0 anchor and the Target Date (re-baselined, with the reason on record),
- * and the courier branch capture, which only exists on a remote path.
- */
-export function changeReasonAndMode(
-  ticket: Ticket, reason: TicketReason, mode: TicketMode, note: string, recallDate?: string, actor = currentUserName()
-): { ok: true } | { ok: false, error: string } {
-  const locks = pathChangeLockReasons(ticket)
-  if (locks.length) return { ok: false, error: `Reason and Mode are locked: ${locks.join(', ')}.` }
-  const trimmed = note.trim()
-  if (!trimmed) return { ok: false, error: 'Enter a reason for this change.' }
-  if (!resolvedPathFor(reason, mode)) return { ok: false, error: `${REASON_LABELS[reason]} is not offered for ${mode === 'onsite' ? 'Onsite' : 'Remote'} returns.` }
-  const recall = reason === 'recalled' ? (recallDate || ticket.recallEffectiveDate || '') : ''
-  if (reason === 'recalled' && !recall) return { ok: false, error: 'Enter the Recall Effective Date.' }
-  if (reason === ticket.reason && mode === ticket.mode && recall === (ticket.recallEffectiveDate ?? '')) return { ok: false, error: 'Nothing changed.' }
-
-  const label = (r: TicketReason, m: TicketMode) => `${REASON_LABELS[r]}, ${m === 'onsite' ? 'Onsite' : 'Remote'}`
-  const before = label(ticket.reason, ticket.mode)
-  const modeChanged = mode !== ticket.mode
-  ticket.reason = reason
-  ticket.mode = mode
-  ticket.recallEffectiveDate = reason === 'recalled' ? recall : undefined
-  if (modeChanged && mode === 'onsite') {
-    // The courier branch capture only exists on a remote path.
-    ticket.courierBranchName = ''
-    ticket.courierBranchAddress = ''
-    ticket.branchCaptureMethod = null
-    ticket.branchRequestSentAt = null
-    ticket.branchRequestReplyReceived = false
-    ticket.courierBranchSubstituted = false
-  }
-  const list = stageListFor(mode)
-  ticket.stageIdx = Math.min(ticket.stageIdx, list.length - 1)
-  ticket.furthestStageIdx = Math.min(ticket.furthestStageIdx ?? 0, list.length - 1)
-  pushHistory(ticket, `Reason and Mode changed: ${before} to ${label(reason, mode)} (reason: ${trimmed})`, 'entry', actor)
-  // Path-derived values re-resolve: the Target Date follows the new rule once assets are confirmed.
-  if (ticket.assetsLocked) {
-    const recomputed = computeTargetDateForPath(ticket)
-    if (recomputed && recomputed !== ticket.targetDateISO) {
-      if (ticket.targetDateISO) rebaselineTargetDate(ticket, recomputed, `Path changed to ${label(reason, mode)}`, actor)
-      else ticket.targetDateISO = recomputed
-    }
-  }
-  return { ok: true }
-}
-
-/** FR-003.11: any Asset Team user may take a ticket over from another, with the handover recorded. */
-export function takeOverTicket(ticket: Ticket, note: string, newAssigneeName = currentUserName()): { ok: true } | { ok: false, error: string } {
-  const trimmed = note.trim()
-  if (ticket.status !== 'open') return { ok: false, error: 'A closed ticket cannot be taken over.' }
-  if (ticket.assignee.name === newAssigneeName) return { ok: false, error: 'You already own this ticket.' }
-  if (!trimmed) return { ok: false, error: 'Enter a handover note.' }
-  const from = ticket.assignee.name
-  ticket.handovers = [...(ticket.handovers ?? []), { from, to: newAssigneeName, note: trimmed, at: new Date().toISOString() }]
-  const previous = ticket.assignee
-  ticket.assignee = assetTeamMemberByName(newAssigneeName)
-  pushHistory(ticket, `Ticket taken over from ${from} by ${newAssigneeName} (handover: ${trimmed})`, 'entry', newAssigneeName)
-  raiseNotification(ticket, {
-    kind: 'takeover',
-    title: `Ticket taken over · ${ticket.employee.name}`,
-    description: `${newAssigneeName} took over ${ticket.employee.name}'s ticket`,
-    to: previous
-  })
-  return { ok: true }
-}
-
-/**
- * FR-003.11 cancellation: a retracted resignation or reversed recall closes the
- * case with no retrieval, and the assets' Pending Return status reverts. It is
- * a recorded outcome, never a deletion.
- */
-export function cancelRetrieval(ticket: Ticket, reason: CancellationReason, note: string, actor = currentUserName()): { ok: true } | { ok: false, error: string } {
-  const trimmed = note.trim()
-  if (ticket.status !== 'open') return { ok: false, error: 'This ticket is already closed.' }
-  if (!trimmed) return { ok: false, error: 'Enter a note for the cancellation.' }
-  ticket.cancellation = { reason, note: trimmed, at: new Date().toISOString(), by: actor }
-  ticket.status = 'closed'
-  ticket.overdueForced = false
-  ticket.assets.forEach((a) => { a.resolution = null })
-  pushHistory(ticket, `Retrieval cancelled: ${CANCELLATION_REASON_LABELS[reason]} (${trimmed}). No retrieval, assets are no longer pending return`, 'closure', actor)
-  return { ok: true }
-}
-
-/**
- * FR-003.11 partial returns: items the operator pathed to charge open a
- * Post-Retrieval Charging case for exactly those items, and the ticket moves to
- * that stage instead of closing with them outstanding. Returns false when there
- * is nothing to charge.
- */
-/** #37 Referred to Payroll (added 5 Oct 2026): records that the Authority to
- * Deduct outcome has been handed off to HR and Payroll. AMS has no payroll
- * integration, so this is a formal manual acknowledgement so the handoff
- * exists on the ticket's record even without a system call. Idempotent;
- * reruns do not stack. */
-export function confirmReferredToPayroll(ticket: Ticket, actor = currentUserName()): boolean {
-  if (ticket.referredToPayrollAt) return false
-  ticket.referredToPayrollAt = new Date().toISOString()
-  ticket.referredToPayrollBy = actor
-  pushHistory(ticket, 'Authority to Deduct referred to HR and Payroll', 'return', actor)
-  return true
-}
-
-/** #30 Quotation tracking (added 5 Oct 2026): records the quotation
- * received date, reference and file. Partial updates are allowed; the
- * caller passes only the fields it is changing. Appends a history line
- * only when a received date is being set (the real "quotation came in"
- * moment), not on subsequent corrections. */
-export function saveQuotationDetails(
-  ticket: Ticket,
-  details: { receivedISO?: string | null, reference?: string, fileName?: string },
-  actor = currentUserName()
-): void {
-  const first = !ticket.quotationReceivedISO && !!details.receivedISO
-  if (details.receivedISO !== undefined) ticket.quotationReceivedISO = details.receivedISO
-  if (details.reference !== undefined) ticket.quotationReference = details.reference.trim()
-  if (details.fileName !== undefined) ticket.quotationFileName = details.fileName
-  if (first) {
-    pushHistory(ticket, `Quotation received${ticket.quotationReference ? ` (ref ${ticket.quotationReference})` : ''}`, 'return', actor)
-  }
-}
-
-export function openChargeCaseForItems(ticket: Ticket, serials: string[], actor = currentUserName()): boolean {
-  const items = ticket.assets.filter(a => serials.includes(a.serial))
-  if (!items.length) return false
-  const target = stageListFor(ticket.mode).indexOf('A11')
-  if (target < 0) return false
-  ticket.deductionApplicable = true
-  ticket.deductionCaseAssetSerials = items.map(a => a.serial)
-  ticket.equipmentNotReturned = items.length === ticket.assets.length
-  ticket.stageIdx = target
-  ticket.furthestStageIdx = Math.max(ticket.furthestStageIdx ?? 0, target)
-  pushHistory(ticket, `Sent to charging: ${items.length} item${items.length === 1 ? '' : 's'} moved to Post-Retrieval Charging (${items.map(a => a.model).join(', ')})`, 'return', actor)
-  return true
 }
 
 export function ticketStatusLabel(ticket: Ticket): string {
@@ -2597,4 +1854,276 @@ export function daysLeftLabel(ticket: Ticket): string | null {
   if (ticket.status === 'closed') return null
   if (days < 0 || isOverdueReturn(ticket)) return `Overdue by ${Math.abs(days)}d`
   return `${days}d left`
+}
+
+// ---------------------------------------------------------------------------
+// Ticket actions. Every change to a ticket is a request to the server, which owns the
+// rules (api/ticketActions.ts in the prototype, the backend in production), applies it
+// and returns the updated ticket. These keep the names the pages already use; the
+// bodies only send the request and put the answer in the store.
+//
+// A server rejection throws, except for the actions that return { ok, error }: those
+// return the failure as a value, as they always did.
+
+/** The server rejected an action. The message is meant to be shown to the user. */
+export class TicketActionError extends Error {}
+
+const actionFailure = (e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) })
+
+/** Replaces what the store holds for a ticket with what the server returned, keeping the same object so anything that holds it keeps working. */
+function patchTicket(target: Ticket, source: Ticket, keep: string[] = []) {
+  const t = target as unknown as Record<string, unknown>
+  for (const key of Object.keys(target)) {
+    if (!(key in source) && !keep.includes(key)) delete t[key]
+  }
+  for (const [key, value] of Object.entries(source)) {
+    if (!keep.includes(key)) t[key] = value
+  }
+}
+
+/**
+ * Sends one stage email through the server and returns what was sent. Throws a TicketActionError with the
+ * server's message when it is refused (a placeholder it cannot fill, the mail server failing); the ticket is
+ * unchanged then, so the operator can fix it and press Send again.
+ */
+export async function sendTicketEmail(ticket: Ticket, request: SendEmailRequest): Promise<SentEmail> {
+  const res = await api().emails.send(ticket.ticketNumber, request)
+  if (!res.ok) throw new TicketActionError(res.error)
+  patchTicket(ticket, res.data.ticket)
+  await refreshNotifications().catch(e => console.warn('[tickets] could not reload notifications:', e))
+  return res.data.email
+}
+
+async function runTicketAction<R>(ticket: Ticket, name: TicketActionName, args: Record<string, unknown>): Promise<R> {
+  const res = await api().tickets.act(ticket.ticketNumber, name, args)
+  if (!res.ok) throw new TicketActionError(res.error)
+  patchTicket(ticket, res.data.ticket)
+  // The action is done by now; a failed reload of the notifications must not make it look as if it failed.
+  await refreshNotifications().catch(e => console.warn('[tickets] could not reload notifications:', e))
+  return res.data.result as R
+}
+
+export function setChecklistDone(ticket: Ticket, index: number, done: boolean): Promise<void> {
+  return runTicketAction<void>(ticket, 'setChecklistDone', { index, done })
+}
+
+export function addChecklistItem(ticket: Ticket, text: string, optional = false): Promise<void> {
+  return runTicketAction<void>(ticket, 'addChecklistItem', { text, optional })
+}
+
+export function removeChecklistItem(ticket: Ticket, index: number): Promise<void> {
+  return runTicketAction<void>(ticket, 'removeChecklistItem', { index })
+}
+
+export function toggleChecklistRequired(ticket: Ticket, index: number): Promise<void> {
+  return runTicketAction<void>(ticket, 'toggleChecklistRequired', { index })
+}
+
+export function applyChecklistTemplate(ticket: Ticket, templateName: string, tasks: ChecklistTask[]): Promise<void> {
+  return runTicketAction<void>(ticket, 'applyChecklistTemplate', { templateName, tasks })
+}
+
+export function reorderChecklistItem(ticket: Ticket, from: number, to: number): Promise<void> {
+  return runTicketAction<void>(ticket, 'reorderChecklistItem', { from, to })
+}
+
+export function finalizeChecklist(ticket: Ticket, noteText?: string): Promise<{ ok: true } | { ok: false, error: string }> {
+  return runTicketAction<{ ok: true } | { ok: false, error: string }>(ticket, 'finalizeChecklist', { noteText }).catch(actionFailure)
+}
+
+export function advanceStage(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'advanceStage', {  })
+}
+
+export function confirmAssets(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'confirmAssets', {  })
+}
+
+export function rebaselineTargetDate(ticket: Ticket, newDateISO: string, reason: string): Promise<void> {
+  return runTicketAction<void>(ticket, 'rebaselineTargetDate', { newDateISO, reason })
+}
+
+export function acknowledgeHrisUpdate(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'acknowledgeHrisUpdate', {  })
+}
+
+export function releaseGate(ticket: Ticket, gateN: number, note?: string): Promise<void> {
+  return runTicketAction<void>(ticket, 'releaseGate', { gateN, note })
+}
+
+export function goBackStage(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'goBackStage', {  })
+}
+
+export function goForwardStage(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'goForwardStage', {  })
+}
+
+export function jumpToStage(ticket: Ticket, target: StageKey): Promise<void> {
+  return runTicketAction<void>(ticket, 'jumpToStage', { target })
+}
+
+export function verifyContact(ticket: Ticket, field: 'number' | 'email'): Promise<void> {
+  return runTicketAction<void>(ticket, 'verifyContact', { field })
+}
+
+export function setContactNumber(ticket: Ticket, number: string | null): Promise<void> {
+  return runTicketAction<void>(ticket, 'setContactNumber', { number })
+}
+
+export function setTeamMemberAddressOverride(ticket: Ticket, address: string | null): Promise<void> {
+  return runTicketAction<void>(ticket, 'setTeamMemberAddressOverride', { address })
+}
+
+export function confirmCourierBranch(ticket: Ticket, providerId: string, branchName: string, branchAddress: string, captureMethod: 'call' | 'email', substituted = false): Promise<void> {
+  return runTicketAction<void>(ticket, 'confirmCourierBranch', { providerId, branchName, branchAddress, captureMethod, substituted })
+}
+
+export function sendBranchRequest(ticket: Ticket, templateKey: string | null = null): Promise<void> {
+  return runTicketAction<void>(ticket, 'sendBranchRequest', { templateKey })
+}
+
+export function confirmSmsSentFor(ticket: Ticket, code: string, label: string): Promise<void> {
+  return runTicketAction<void>(ticket, 'confirmSmsSentFor', { code, label })
+}
+
+export function markBranchReplyReceived(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'markBranchReplyReceived', {  })
+}
+
+export function confirmInTransit(ticket: Ticket, trackingNumber: string, trackingLink = ''): Promise<void> {
+  return runTicketAction<void>(ticket, 'confirmInTransit', { trackingNumber, trackingLink })
+}
+
+export function saveShipmentDetails(ticket: Ticket, trackingNumber: string, trackingLink: string): Promise<void> {
+  return runTicketAction<void>(ticket, 'saveShipmentDetails', { trackingNumber, trackingLink })
+}
+
+export function notifyItLock(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'notifyItLock', {  })
+}
+
+export function skipItNotice(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'skipItNotice', {  })
+}
+
+export function issueGatePass(ticket: Ticket, input: Omit<GatePass, 'ref'>, kind: GatePassKind = 'goteam'): Promise<GatePass> {
+  return runTicketAction<GatePass>(ticket, 'issueGatePass', { input, kind })
+}
+
+export function changeReasonAndMode(ticket: Ticket, reason: TicketReason, mode: TicketMode, note: string, recallDate?: string): Promise<{ ok: true } | { ok: false, error: string }> {
+  return runTicketAction<{ ok: true } | { ok: false, error: string }>(ticket, 'changeReasonAndMode', { reason, mode, note, recallDate }).catch(actionFailure)
+}
+
+export function takeOverTicket(ticket: Ticket, note: string, newAssigneeName = currentUserName()): Promise<{ ok: true } | { ok: false, error: string }> {
+  return runTicketAction<{ ok: true } | { ok: false, error: string }>(ticket, 'takeOverTicket', { note, newAssigneeName }).catch(actionFailure)
+}
+
+export function cancelRetrieval(ticket: Ticket, reason: CancellationReason, note: string): Promise<{ ok: true } | { ok: false, error: string }> {
+  return runTicketAction<{ ok: true } | { ok: false, error: string }>(ticket, 'cancelRetrieval', { reason, note }).catch(actionFailure)
+}
+
+export function confirmReferredToPayroll(ticket: Ticket): Promise<boolean> {
+  return runTicketAction<boolean>(ticket, 'confirmReferredToPayroll', {  })
+}
+
+export function saveQuotationDetails(ticket: Ticket, details: { receivedISO?: string | null, reference?: string, fileName?: string }): Promise<void> {
+  return runTicketAction<void>(ticket, 'saveQuotationDetails', { details })
+}
+
+export function openChargeCaseForItems(ticket: Ticket, serials: string[]): Promise<boolean> {
+  return runTicketAction<boolean>(ticket, 'openChargeCaseForItems', { serials })
+}
+
+// Actions the ticket page used to perform inline.
+
+export function recordNoticeSent(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordNoticeSent', {})
+}
+
+export function recordSafekeepingSent(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordSafekeepingSent', {})
+}
+
+export function recordCallAttempt(ticket: Ticket, outcome: 'No answer' | 'Answered - confirmed'): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordCallAttempt', { outcome })
+}
+
+export function continueAfterCalls(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'continueAfterCalls', {})
+}
+
+export function recordSmsFollowUpSent(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordSmsFollowUpSent', {})
+}
+
+export function recordReminderSent(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordReminderSent', {})
+}
+
+export function recordReminderSkipped(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordReminderSkipped', {})
+}
+
+export function recordEquipmentNotReturned(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordEquipmentNotReturned', {})
+}
+
+export function recordEquipmentReceived(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordEquipmentReceived', {})
+}
+
+export function clearChargingClassification(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'clearChargingClassification', {})
+}
+
+export function recordOverdueReminderSent(ticket: Ticket, templateKey: string | null): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordOverdueReminderSent', { templateKey })
+}
+
+export function recordEvidence(ticket: Ticket, proof: TicketFileRef | null, condition: TicketFileRef | null): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordEvidence', { proof, condition })
+}
+
+export function recordDeductionNotApplicable(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordDeductionNotApplicable', {})
+}
+
+export function recordDeductionOutcome(ticket: Ticket, outcome: DeductionOutcome, templateKey: string, formName: string | null): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordDeductionOutcome', { outcome, templateKey, formName })
+}
+
+export function continueAfterCharging(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'continueAfterCharging', {})
+}
+
+export function recordInspection(ticket: Ticket, route: InspectionRoute): Promise<void> {
+  return runTicketAction<void>(ticket, 'recordInspection', { route })
+}
+
+/** Closes the ticket, or opens a charging case instead when items were sent to charging (`closed` is false then). */
+export function closeTicket(ticket: Ticket, resolutions: ('returned' | 'charge' | 'open' | null)[], documented: boolean): Promise<{ closed: boolean, chargeCount: number }> {
+  return runTicketAction<{ closed: boolean, chargeCount: number }>(ticket, 'closeTicket', { resolutions, documented })
+}
+
+export function reopenClosedTicket(ticket: Ticket): Promise<void> {
+  return runTicketAction<void>(ticket, 'reopenClosedTicket', {})
+}
+
+/** The fields an operator edits directly while working on a ticket. The server refuses any other. */
+export type EditableTicketFields = Partial<Pick<Ticket,
+  'deductionCaseFirstNameOverride' | 'deductionCaseOfficerOverride' | 'deductionCaseReturnRequestedDate' | 'deductionCaseReceivedDate'
+  | 'deductionCaseAssessedDate' | 'deductionCaseBuyoutElectionDate' | 'deductionCaseQuotationExpectedDate' | 'deductionCaseHearBackByDate'
+  | 'deductionCaseResponseDueDate' | 'deductionCaseAmountBasis' | 'deductionCaseSupportingDocRef' | 'deductionCaseAmountFigures'
+  | 'deductionCaseAmountWords' | 'deductionCaseAssetSerials' | 'deductionCaseAssetNotes' | 'deductionApplicable' | 'checklistNudgeDismissed'>>
+
+/**
+ * Saves edits to those fields. The form shows the edit straight away. The server's answer fills in
+ * everything else it changed, but never the fields just sent, so it cannot overwrite what is being typed.
+ */
+export async function updateTicketFields(ticket: Ticket, fields: EditableTicketFields): Promise<void> {
+  Object.assign(ticket, fields)
+  const res = await api().tickets.act(ticket.ticketNumber, 'updateTicketFields', { fields })
+  if (!res.ok) throw new TicketActionError(res.error)
+  patchTicket(ticket, res.data.ticket, Object.keys(fields))
 }

@@ -21,7 +21,7 @@ Open DevTools (F12) → Console tab → paste this → Enter:
 
 ```js
 const dump = {
-  forms: localStorage.getItem('ams:retrievalForms:v1'),
+  forms: localStorage.getItem('ams:mock:retrievalForms'),
   submissions: localStorage.getItem('ams:formSubmissions:v1')
 }
 copy(JSON.stringify(dump, null, 2))

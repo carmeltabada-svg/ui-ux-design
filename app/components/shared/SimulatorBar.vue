@@ -21,7 +21,8 @@ const stateOptions: { label: string, value: SimState }[] = [
 ]
 const scenarioOptions: { label: string, value: SimScenario }[] = [
   { label: 'Standard data', value: 'standard' },
-  { label: 'First-timer, no tickets', value: 'first-timer' }
+  { label: 'First-timer, no tickets', value: 'first-timer' },
+  { label: 'High volume (list)', value: 'high-volume' }
 ]
 const situationOptions: { label: string, value: SimSituation }[] = [
   { label: 'Normal', value: 'normal' },
@@ -48,7 +49,7 @@ const selectClass = 'rounded border border-slate-600 bg-slate-800 text-slate-100
 </script>
 
 <template>
-  <div v-if="barVisible" role="region" aria-label="Prototype simulator controls" class="bg-slate-900 text-xs text-slate-100">
+  <div v-if="barVisible" role="region" aria-label="Prototype simulator controls" class="ams-paper dark:border-b dark:border-slate-700 bg-slate-900 text-xs text-slate-100">
     <div class="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2">
       <span class="shrink-0 inline-flex items-center gap-1.5 font-semibold uppercase tracking-wide text-slate-300">
         <UIcon name="i-lucide-flask-conical" class="size-3.5" aria-hidden="true" />

@@ -44,7 +44,7 @@ export function buildPrintCss(pageSize: PageSize, margins: PageMargins, themeCol
       @top-left { content: element(pageHeaderLeft); }
       @top-right { content: element(pageHeaderRight); }
       @bottom-left { content: element(pageFooterLeft); }
-      @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9.5px; color: #9CA3AF; }
+      @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9.5px; color: #6B7280; }
     }
     #print-header-left { position: running(pageHeaderLeft); }
     #print-header-right { position: running(pageHeaderRight); }
@@ -111,7 +111,7 @@ export function buildPrintCss(pageSize: PageSize, margins: PageMargins, themeCol
        keeps the static-render function's output identical between the two
        call sites that use it). */
     ${scope} .pf-hint { display: none; }
-    ${scope} .pf-empty { font-size: 13px; color: #9CA3AF; font-style: italic; margin: 0; }
+    ${scope} .pf-empty { font-size: 13px; color: #6B7280; font-style: italic; margin: 0; }
     ${scope} .pf-answer-line { padding: 2px 0; font-size: 14px; min-height: 20px; }
     ${scope} .pf-checkbox-row { display: flex; align-items: center; gap: 8px; }
     ${scope} .pf-checkbox { width: 14px; height: 14px; border: 1px solid #9CA3AF; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; flex-shrink: 0; }

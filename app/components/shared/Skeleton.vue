@@ -39,13 +39,13 @@ const lineClass = computed(() => [
 
 <style scoped>
 .skeleton {
-  background: linear-gradient(100deg, rgba(226, 232, 240, 0.6) 20%, rgba(226, 232, 240, 1) 50%, rgba(226, 232, 240, 0.6) 80%);
+  background: linear-gradient(100deg, rgba(var(--ams-skeleton), 0.6) 20%, rgba(var(--ams-skeleton), 1) 50%, rgba(var(--ams-skeleton), 0.6) 80%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
-    background: rgb(226, 232, 240);
+    background: rgb(var(--ams-skeleton));
     animation: none;
   }
 }

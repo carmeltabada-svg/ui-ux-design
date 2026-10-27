@@ -20,18 +20,18 @@ defineProps<Props>()
 
 <template>
   <div>
-    <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-2">
+    <label class="text-xs font-normal text-default block mb-2">
       Recipients
-      <span class="normal-case font-normal tracking-normal text-dimmed">· Sent by Asset Management</span>
+      <span class="font-normal text-dimmed">· Sent by Asset Management</span>
     </label>
 
     <div class="flex items-center gap-2.5 py-1">
-      <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10 shrink-0">To</span>
+      <span class="text-xs font-normal text-default min-w-10 shrink-0">To</span>
       <span class="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1.5 bg-primary/10 text-primary truncate max-w-full">{{ to }}</span>
     </div>
 
     <div class="flex items-start gap-2.5 py-1">
-      <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10 pt-1.5 shrink-0">CC</span>
+      <span class="text-xs font-normal text-default min-w-10 pt-1.5 shrink-0">CC</span>
       <div v-if="cc.length" class="flex flex-wrap gap-1.5">
         <span
           v-for="r in cc"
@@ -47,7 +47,7 @@ defineProps<Props>()
     </div>
 
     <div class="flex items-start gap-2.5 py-1">
-      <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10 pt-1.5 shrink-0">BCC</span>
+      <span class="text-xs font-normal text-default min-w-10 pt-1.5 shrink-0">BCC</span>
       <div v-if="bcc.length" class="flex flex-wrap gap-1.5">
         <span v-for="r in bcc" :key="r.email" class="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1.5 bg-primary/10 text-primary">
           {{ r.email }}

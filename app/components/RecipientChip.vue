@@ -18,7 +18,7 @@ defineProps<Props>()
 
 <template>
   <div>
-    <label v-if="label" class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">{{ label }}</label>
+    <label v-if="label" class="text-xs font-normal text-default block mb-2">{{ label }}</label>
     <div class="flex items-center justify-between gap-3 border border-default rounded-lg px-3 py-2 w-full">
       <div class="flex items-center gap-3 flex-1 min-w-0">
         <span class="inline-flex items-center justify-center shrink-0 rounded-full bg-primary/10 size-8 text-primary text-xs font-bold">

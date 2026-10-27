@@ -1,9 +1,6 @@
 import { GOTEAM_ENTITY_ADDRESS } from '~/data/templates'
 import type { RetrievalForm } from '~/data/retrievalForms'
-
-function esc(s: string) {
-  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
+import { escapeText as esc } from '~/utils/escapeHtml'
 
 /**
  * The repeating per-page letterhead (logo + address left, ref+mode stamp
@@ -21,8 +18,8 @@ export function buildFormLetterhead(form: Pick<RetrievalForm, 'name' | 'themeCol
   // accent-color divider line under the address either - just the mark and
   // the address, nothing else.
   const headerLeft = `
-    <img src="/img/logo-goteam-only.svg" alt="GoTeam Logo" width="82" height="24" style="height:24px;width:82px;display:block;margin-bottom:4px">
-    <div style="font-size:10.5px;color:#4B5563">${esc(GOTEAM_ENTITY_ADDRESS)}</div>
+    <img class="ams-doc-logo" src="/img/logo-goteam-only.svg" alt="GoTeam Logo" width="82" height="24" style="height:24px;width:82px;display:block;margin-bottom:4px">
+    <div style="font-size:10.5px;color:var(--ams-doc-addr,#4B5563)">${esc(GOTEAM_ENTITY_ADDRESS)}</div>
   `.trim()
 
   // No header-right stamp (used to be an auto-generated initials+mode code,
@@ -31,7 +28,7 @@ export function buildFormLetterhead(form: Pick<RetrievalForm, 'name' | 'themeCol
   // label at the top of every page was redundant.
   const headerRight = ''
 
-  const footerLeft = `<span style="font-size:9.5px;color:#9CA3AF">${esc(form.name)} &middot; Internal Use Only</span>`
+  const footerLeft = `<span style="font-size:9.5px;color:var(--ams-doc-muted,#6B7280)">${esc(form.name)} &middot; Internal Use Only</span>`
 
   return { headerLeft, headerRight, footerLeft }
 }

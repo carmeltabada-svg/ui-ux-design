@@ -31,11 +31,15 @@ export function useReadyPulse(key: Ref<string>, ready: Ref<boolean>, durationMs 
   // if the stage is already ready, which means it was satisfied in a prior
   // visit).
   let seenReady = ready.value
+  // The key watcher is registered first so that, when a page loads its ticket after mounting (the key
+  // goes from '' to the ticket's id in the same tick the ready state turns true), it absorbs the new
+  // ready state before the ready watcher runs. Otherwise the load itself counts as a transition and
+  // spends the one-shot pulse before the operator has done anything.
+  watch(key, () => { seenReady = ready.value })
   watch(ready, (now) => {
     if (now && !seenReady) fire()
     seenReady = now
   })
-  watch(key, () => { seenReady = ready.value })
 
   onBeforeUnmount(() => { if (timer) clearTimeout(timer) })
 

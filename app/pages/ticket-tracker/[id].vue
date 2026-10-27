@@ -6,38 +6,40 @@
 // REAL TEMPLATE_RUNTIME content and the real Equipment Return Acknowledgment
 // form via EmailAttachSection, in place of the prototype's mocked arrays.
 import {
-  TICKETS, seedDemoTickets, GATE_STEPS, PHASE_LABELS, STAGE_PHASE, STAGE_NAMES, STAGE_META,
+  TICKETS, GATE_STEPS, PHASE_LABELS, STAGE_PHASE, STAGE_NAMES, STAGE_META,
   STAGES_ONSITE, STAGES_REMOTE, SKIP_STAGES, addChecklistItem, removeChecklistItem, reorderChecklistItem, applyChecklistTemplate, toggleChecklistRequired, checklistProgress, checklistDueISO, finalizeChecklist, setChecklistDone, checklistDoneByCounts,
   REASON_LABELS, REMINDER_TEMPLATES, COURIER_ENDORSEMENT_TEMPLATE_KEY,
-  COURIER_PROVIDERS, courierProviderById, confirmCourierBranch, confirmItLockScheduling, confirmItLockExecution,
+  COURIER_PROVIDERS, courierProviderById, confirmCourierBranch, notifyItLock, skipItNotice,
   branchCaptureUrgent, confirmInTransit as confirmInTransitStage, saveShipmentDetails, shipmentStatus, isValidTrackingLink, GATE_PASS_KIND_LABEL,
   effectiveTeamMemberAddress, setTeamMemberAddressOverride, firstNameOf, derivedReturnRequestedDate, derivedReceivedDate, assetOwnerInfo,
   DEDUCTION_AMOUNT_BASIS_LABELS, DEDUCTION_BASES_BY_OUTCOME, DEDUCTION_DATES_BY_OUTCOME, DEDUCTION_OUTCOME_META,
-  branchesForCourier, courierBranchById, nearestBranchFor, sendBranchRequest, markBranchReplyReceived,
-  currentStageKey, stageListFor, advanceStage, confirmAssets, releaseGate, pushHistory, goBackStage, goForwardStage, jumpToStage, verifyContact,
+  branchesForCourier, courierBranchById, nearestBranchFor, markBranchReplyReceived, sendTicketEmail,
+  currentStageKey, stageListFor, advanceStage, confirmAssets, releaseGate, goBackStage, goForwardStage, jumpToStage, verifyContact, setContactNumber,
   safekeepingAvailable, resolvedPathFor, templateForKey, attachedFormFor, phasesFor,
   isOverdueReturn, isTransitDelayed, hasReachedStage, rebaselineTargetDate, syncTicketAssetsFromRegister, acknowledgeHrisUpdate, daysLeftLabel,
   ticketStatusLabel, ticketStatusTone, INSPECTION_ROUTE_STATUS, assetCatalogEntry, assetTypeIcon,
   shiftFor, shiftLabel, lockRunsAt,
   pathChangeLockReasons, changeReasonAndMode, takeOverTicket, cancelRetrieval, openChargeCaseForItems, computeTargetDateForPath,
   confirmReferredToPayroll, saveQuotationDetails,
-  currentUserName, confirmSmsSentFor, ACKNOWLEDGMENT_HOST, CANCELLATION_REASON_LABELS, type CancellationReason, type TicketReason, type TicketMode,
-  type StageKey, type PhaseKey, type InspectionRoute, type HistoryCategory, type TicketHistoryEntry, type Ticket, type TicketAsset, type GatePassKind, type DeductionAmountBasis, type DeductionOutcome, type DeductionDateKey
+  currentUserName, localISO, parseLocalDate, confirmSmsSentFor, type EditableTicketFields,
+  recordSafekeepingSent, recordCallAttempt, continueAfterCalls, recordSmsFollowUpSent, recordReminderSkipped,
+  recordEquipmentNotReturned, recordEquipmentReceived, clearChargingClassification, recordEvidence,
+  recordDeductionNotApplicable, continueAfterCharging, recordInspection, closeTicket, reopenClosedTicket, updateTicketFields, ACKNOWLEDGMENT_HOST, CANCELLATION_REASON_LABELS, type CancellationReason, type TicketReason, type TicketMode,
+  type StageKey, type PhaseKey, type InspectionRoute, type HistoryCategory, type TicketHistoryEntry, type Ticket, type TicketAsset, type GatePassKind, type DeductionAmountBasis, type DeductionOutcome, type EmailSendKind, type DeductionDateKey
 } from '~/data/ticketTrackers'
 
 import { RETRIEVAL_FORMS, RETRIEVAL_FORM_CONTENT, DEFAULT_PAGE_MARGINS } from '~/data/retrievalForms'
 import { useChecklistTemplates, saveChecklistTemplate, checklistMatchesATemplate, type ChecklistTemplate, type ChecklistTask } from '~/data/checklistTemplates'
-import { VueDraggable } from 'vue-draggable-plus'
+// Lazy: the drag-reorder library is only needed in the checklist stage, so it
+// is kept out of the initial route chunk and loaded the first time the
+// checklist renders (performance pass - smaller initial parse on this page).
+const VueDraggable = defineAsyncComponent(() => import('vue-draggable-plus').then(m => m.VueDraggable))
 import { smsTemplateByCode, smsCodesForStage } from '~/data/smsTemplates'
 import { TEMPLATES, TEMPLATE_GROUPS, SAMPLE_VALUES, ORG_CONSTANT_TOKENS, expandCaseAssetRows, expandTicketAssets, omitReceivedDate, resolveTokensForPrint, checkPlaceholders, placeholderStatusFor, wrapTokens, type PlaceholderCheckEntry, CALL_ESCALATION_SMS_TEMPLATE } from '~/data/templates'
+import { buildEmailExportHtml } from '~/utils/emailExportHtml'
 import { buildPrintCss } from '~/utils/formPrintStyles'
 import { buildFormLetterhead } from '~/utils/formLetterhead'
 import { ensureTemplateRuntime, CUSTOM_TEMPLATE_IDS, DELETED_TEMPLATE_KEYS } from '~/data/templateRuntime'
-
-// A ticket link opened directly (a fresh browser, a shared link) must find its ticket: seed the demo tickets here too, exactly as the list page does. Safe to repeat.
-seedDemoTickets()
-
-definePageMeta({ layout: 'retrieval' })
 
 const route = useRoute()
 // Communications "All steps" list stays collapsed until asked for, to keep the rail short.
@@ -91,35 +93,11 @@ watchEffect(() => {
   if (ticket.value && !ticket.value.assetsLocked) syncTicketAssetsFromRegister(ticket.value)
 })
 
-function fmtDate(iso: string | null) {
-  if (!iso) return 'Not set'
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-// Calendar-day arithmetic on YYYY-MM-DD strings. Local getters, not
-// toISOString(), which shifts the date back a day ahead of UTC.
-function addDaysISO(iso: string, days: number) {
-  const d = new Date(`${iso}T00:00:00`)
-  d.setDate(d.getDate() + days)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function nextWorkingDayISO(iso: string) {
-  let out = addDaysISO(iso, 1)
-  while ([0, 6].includes(new Date(`${out}T00:00:00`).getDay())) out = addDaysISO(out, 1)
-  return out
-}
-function acknowledgmentDueISO(t: NonNullable<typeof ticket.value>): string {
-  switch (t.reason) {
-    case 'recalled': return t.recallEffectiveDate || t.targetDateISO || ''
-    case 'immediate-resignation': return t.mode === 'onsite' ? nextWorkingDayISO(t.createdAt) : addDaysISO(t.createdAt, 3)
-    case 'unexplained-absence': return t.targetDateISO || ''
-    default: return t.lwd || t.targetDateISO || ''
-  }
-}
+const fmtDate = formatCalendarDate
 
 function fmtDateTime(iso: string | null) {
   if (!iso) return 'Not set'
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return formatDateTime(iso)
 }
 
 
@@ -207,22 +185,22 @@ function childStepsFor(phaseKey: PhaseKey) {
 // there via jumpToStage, instead of only ever being able to step one stage
 // at a time with Back/Forward. A "future" phase/step has nothing to jump to
 // yet, so it explains that instead of silently doing nothing.
-function jumpToPhase(node: { key: PhaseKey, state: string }) {
+async function jumpToPhase(node: { key: PhaseKey, state: string }) {
   if (!ticket.value) return
   if (node.state === 'future') {
     toast.add({ title: 'Not reached yet', description: `${PHASE_LABELS[node.key]} hasn't been reached yet.`, icon: 'i-lucide-info', color: 'warning' })
     return
   }
   const firstStep = childStepsFor(node.key)[0]
-  if (firstStep) jumpToStage(ticket.value, firstStep.key)
+  if (firstStep) await jumpToStage(ticket.value, firstStep.key)
 }
-function jumpToChildStep(child: { key: StageKey, label: string, dotState: string }) {
+async function jumpToChildStep(child: { key: StageKey, label: string, dotState: string }) {
   if (!ticket.value) return
   if (child.dotState === 'future') {
     toast.add({ title: 'Not reached yet', description: `${child.label} hasn't been reached yet.`, icon: 'i-lucide-info', color: 'warning' })
     return
   }
-  jumpToStage(ticket.value, child.key)
+  await jumpToStage(ticket.value, child.key)
 }
 
 // --- Stage card header's step count ("Step X of Y") - the same child-step
@@ -242,18 +220,18 @@ const stepProgress = computed(() => {
 // stepping back from there would just land on the already-logged A1/A2
 // entries and resolve straight back to A3 anyway - a visible no-op.
 const canGoBack = computed(() => !!stageKey.value && stageKey.value !== 'A3')
-function goBack() {
+async function goBack() {
   if (!ticket.value) return
-  goBackStage(ticket.value)
+  await goBackStage(ticket.value)
 }
 // --- Forward navigation - the mirror of Back: only re-enabled once the
 // operator has stepped back to recheck something. Can never go past the
 // furthest stage this ticket has actually completed (furthestStageIdx),
 // so it's never a way to skip a stage that hasn't been done.
 const canGoForward = computed(() => !!ticket.value && ticket.value.stageIdx < (ticket.value.furthestStageIdx ?? 0))
-function goForward() {
+async function goForward() {
   if (!ticket.value) return
-  goForwardStage(ticket.value)
+  await goForwardStage(ticket.value)
 }
 
 // --- A3 Offboarding Checklist -------------------------------------------
@@ -275,24 +253,21 @@ const checklistDueInfo = computed(() => {
   if (days === 0) return { tone: 'soon' as const, label: 'Due today' }
   return { tone: days <= 2 ? 'soon' as const : 'ok' as const, label: `Due ${fmtDate(due)}` }
 })
-function toggleChecklistItem(i: number, checked: boolean) {
+async function toggleChecklistItem(i: number, checked: boolean) {
   if (!ticket.value || checklistReadOnly.value) return
-  setChecklistDone(ticket.value, i, checked)
+  await setChecklistDone(ticket.value, i, checked)
 }
-function toggleRequired(i: number) {
+async function toggleRequired(i: number) {
   if (!ticket.value || checklistReadOnly.value) return
-  toggleChecklistRequired(ticket.value, i)
+  await toggleChecklistRequired(ticket.value, i)
 }
-// Policy finalised 5 Oct 2026: anyone on the Asset Team can sign off; the
-// reviewer may leave an optional note (kept with the signed-off record and in
-// the Activity Log). Who did each task is always recorded and shown.
+// There is no review step: once every required task is done, anyone on the
+// Asset Team completes the checklist. Who did each task is recorded and shown.
 const checklistDoneBy = computed(() => ticket.value ? checklistDoneByCounts(ticket.value) : [])
-const reviewerNoteDraft = ref('')
-function finishChecklist() {
+async function finishChecklist() {
   if (!ticket.value) return
-  const res = finalizeChecklist(ticket.value, currentUserName(), reviewerNoteDraft.value)
-  if (!res.ok) toast.add({ title: 'Cannot sign off yet', description: res.error, icon: 'i-lucide-lock', color: 'warning' })
-  else reviewerNoteDraft.value = ''
+  const res = await finalizeChecklist(ticket.value)
+  if (!res.ok) toast.add({ title: 'Cannot complete the checklist yet', description: res.error, icon: 'i-lucide-lock', color: 'warning' })
 }
 /** This ticket's tasks in the shape a template stores them. */
 const currentChecklistTasks = (): ChecklistTask[] => (ticket.value?.checklistItems ?? []).map((text, i) => ({ text, required: !ticket.value?.checklistOptional?.[i] }))
@@ -309,25 +284,25 @@ function openSaveTemplate() {
   saveTemplateError.value = ''
   saveTemplateOpen.value = true
 }
-function doSaveTemplate() {
+async function doSaveTemplate() {
   if (!ticket.value) return
-  const res = saveChecklistTemplate(saveTemplateName.value, currentChecklistTasks())
+  const res = await saveChecklistTemplate(saveTemplateName.value, currentChecklistTasks())
   if (!res.ok) { saveTemplateError.value = res.error; return }
-  ticket.value.checklistNudgeDismissed = true
+  await updateTicketFields(ticket.value, { checklistNudgeDismissed: true })
   saveTemplateOpen.value = false
   toast.add({ title: 'Template saved', description: `"${res.template.name}" is ready to reuse. Set which tickets start from it in Master Data.`, icon: 'i-lucide-bookmark-check', color: 'success' })
 }
 const useTemplateOpen = ref(false)
 const templateToReplaceWith = ref<ChecklistTemplate | null>(null)
-function chooseChecklistTemplate(t: ChecklistTemplate) {
+async function chooseChecklistTemplate(t: ChecklistTemplate) {
   if (!ticket.value) return
   // Progress on the list being replaced is dropped, so ask first when there is some.
   if (ticket.value.checklistDone.some(Boolean)) { templateToReplaceWith.value = t; return }
-  useChecklistTemplate(t)
+  await useChecklistTemplate(t)
 }
-function useChecklistTemplate(t: ChecklistTemplate) {
+async function useChecklistTemplate(t: ChecklistTemplate) {
   if (!ticket.value) return
-  applyChecklistTemplate(ticket.value, t.name, t.tasks)
+  await applyChecklistTemplate(ticket.value, t.name, t.tasks)
   templateToReplaceWith.value = null
   useTemplateOpen.value = false
 }
@@ -346,44 +321,96 @@ function newChecklistItemInputFocus() {
     el?.focus?.()
   })
 }
-function addChecklistItemFromInput() {
+async function addChecklistItemFromInput() {
   if (!ticket.value || !newChecklistItemText.value.trim()) return
-  addChecklistItem(ticket.value, newChecklistItemText.value)
+  await addChecklistItem(ticket.value, newChecklistItemText.value)
   newChecklistItemText.value = ''
 }
-function removeChecklistItemAt(i: number) {
+async function removeChecklistItemAt(i: number) {
   if (!ticket.value) return
-  removeChecklistItem(ticket.value, i)
+  await removeChecklistItem(ticket.value, i)
 }
-function moveChecklistItem(i: number, direction: -1 | 1) {
+async function moveChecklistItem(i: number, direction: -1 | 1) {
   if (!ticket.value) return
-  reorderChecklistItem(ticket.value, i, i + direction)
+  await reorderChecklistItem(ticket.value, i, i + direction)
 }
 // Called from VueDraggable's @update: swaps items via the ticket's own
 // reorder helper so the parallel checklistDone/Optional/DoneBy arrays stay
 // in lockstep with the visible items array (5 Oct 2026, 5th pass).
-function reorderChecklistItemBetween(oldIndex: number, newIndex: number) {
+async function reorderChecklistItemBetween(oldIndex: number, newIndex: number) {
   if (!ticket.value || typeof oldIndex !== 'number' || typeof newIndex !== 'number' || oldIndex === newIndex) return
-  reorderChecklistItem(ticket.value, oldIndex, newIndex)
+  await reorderChecklistItem(ticket.value, oldIndex, newIndex)
 }
 
-// --- A4 IT lock scheduling - two distinct confirmations (FR-003.6): the
-// lock is scheduled first, then separately confirmed as actually executed -
-// not one bare click. -------
-function doConfirmItLockScheduling() {
+// --- A4 IT access lock. Locking access is IT's responsibility, not the Asset
+// Team's, so this stage only tells IT and never waits on them: one click
+// notifies IT and moves on, or the operator can move on without telling IT. ---
+async function doNotifyIt() {
   if (!ticket.value) return
-  confirmItLockScheduling(ticket.value)
+  await notifyItLock(ticket.value)
+  toast.add({ title: 'IT notified', description: "The access lock is now with IT.", icon: 'i-lucide-lock', color: 'success' })
 }
-function doConfirmItLockExecution() {
+async function doSkipItNotice() {
   if (!ticket.value) return
-  confirmItLockExecution(ticket.value)
+  await skipItNotice(ticket.value)
+}
+
+// --- Asset confirmation points at the Custodian card. The stage itself only
+// lists the assets, so the cue names the card and takes the operator to it:
+// opens the rail if it is hidden, expands the card, scrolls and flashes it. ---
+const custodianCardRef = ref<HTMLElement>()
+const custodianCue = computed(() => meta.value?.kind === 'assets' && !ticket.value?.assetsLocked && ticket.value?.status === 'open')
+function showCustodianCard() {
+  railCollapsed.value = false
+  railOpen.custodian = true
+  persistRailOpen()
+  nextTick(() => {
+    const el = custodianCardRef.value
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    flashElement(el)
+  })
 }
 
 // --- Custodian contact verification (explicit operator confirmation,
 // separate from the A7 call-confirmation auto-verify path) ---------------
-function onVerifyContact(field: 'number' | 'email') {
+async function onVerifyContact(field: 'number' | 'email') {
   if (!ticket.value) return
-  verifyContact(ticket.value, field)
+  await verifyContact(ticket.value, field)
+}
+
+// --- Contact number inline edit. The number is seeded from the employee
+// record but can be wrong or missing; the operator can correct it here for
+// this ticket (a correction drops the "confirmed active" badge until it is
+// verified again). Mirrors the Case Details override edits (draft + save).
+const editingContactNumber = ref(false)
+const contactNumberDraft = ref('')
+// A phone number is numeric only (plus the usual +, spaces, dashes and
+// parentheses) - strip anything a phone number can't contain, so letters
+// can't be typed into it. Mixed fields (references, tracking numbers) are
+// left alone; this is only for genuinely numeric inputs.
+function sanitizePhone(v: string | number) {
+  return String(v ?? '').replace(/[^\d+()\-\s]/g, '')
+}
+function onContactNumberInput(v: string | number) {
+  contactNumberDraft.value = sanitizePhone(v)
+}
+function startEditContactNumber() {
+  contactNumberDraft.value = ticket.value?.contact.number ?? ''
+  editingContactNumber.value = true
+  nextTick(() => contactNumberInputEl.value?.$el?.querySelector('input')?.focus())
+}
+const contactNumberInputEl = ref<{ $el?: HTMLElement } | null>(null)
+function cancelEditContactNumber() {
+  editingContactNumber.value = false
+}
+async function saveContactNumber() {
+  if (!ticket.value) return
+  const next = contactNumberDraft.value.trim()
+  if (next === (ticket.value.contact.number ?? '')) { editingContactNumber.value = false; return }
+  await setContactNumber(ticket.value, next || null)
+  editingContactNumber.value = false
+  toast.add({ title: next ? 'Contact number saved' : 'Contact number cleared', icon: 'i-lucide-phone', color: 'success' })
 }
 
 // --- A5 Asset Confirmation ------------------------------------------------
@@ -398,9 +425,9 @@ function setAllAssets(checked: boolean) {
   if (!ticket.value) return
   ticket.value.assets.forEach(a => { a.checked = checked })
 }
-function doConfirmAssets() {
+async function doConfirmAssets() {
   if (!ticket.value) return
-  confirmAssets(ticket.value)
+  await confirmAssets(ticket.value)
 }
 
 // --- Target Date edit / re-baseline (FR-003.8e/f, FR-003.8a) --------------
@@ -423,9 +450,9 @@ const targetDateSaveBlocker = computed(() => {
   if (!targetDateReasonDraft.value.trim()) return 'Enter a reason for this change first.'
   return ''
 })
-function saveTargetDateEdit() {
+async function saveTargetDateEdit() {
   if (!ticket.value || targetDateSaveBlocker.value) return
-  rebaselineTargetDate(ticket.value, targetDateDraft.value, targetDateReasonDraft.value.trim())
+  await rebaselineTargetDate(ticket.value, targetDateDraft.value, targetDateReasonDraft.value.trim())
   editingTargetDate.value = false
 }
 // Only the 2 most recent re-baseline entries show inline - the full trail
@@ -502,10 +529,10 @@ watch(stageKey, () => {
     else scrollToStageSection()
   })
 })
-function acknowledgeUpdate() {
+async function acknowledgeUpdate() {
   if (!ticket.value) return
   const needsReschedule = ticket.value.itLockNeedsReschedule
-  acknowledgeHrisUpdate(ticket.value)
+  await acknowledgeHrisUpdate(ticket.value)
   // "Acknowledge" isn't just a dismissal when something's still unresolved -
   // it takes the operator straight to the IT Lock card so they can actually
   // confirm it, rather than clearing the banner and leaving the flag
@@ -514,9 +541,10 @@ function acknowledgeUpdate() {
     nextTick(() => itLockCardRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
   }
 }
-function doRescheduleItLock() {
+async function doRescheduleItLock() {
   if (!ticket.value) return
-  confirmItLockScheduling(ticket.value)
+  await notifyItLock(ticket.value)
+  toast.add({ title: 'IT notified of the new date', icon: 'i-lucide-lock', color: 'success' })
 }
 // FR-003.10: the Assets Confirmed card shows the ticket's real, live status
 // (Pending Return, In Transit, Overdue Return, the post-receipt routing
@@ -612,121 +640,7 @@ const effectiveTemplate = computed(() => effectiveTemplateKey.value ? templateFo
 // ticketResolvedCodes/ticketSampleValues below, and the Placeholder Check
 // feature that reads ticketResolvedCodes to draw that same distinction for
 // the operator attaching a template).
-const ticketRealValues = computed<Partial<Record<string, string>>>(() => {
-  if (!ticket.value) return {}
-  const t = ticket.value
-  // Once Step 5 (Equipment) has a real per-case selection, ASSET_NAME/
-  // ASSET_TAG/SERIAL_NUMBER prefer that pick (first selected item, same
-  // single-row-per-token convention every template in this app already
-  // uses) over the ticket's own first asset - T22-T25/F1-F3 are the real
-  // consumers of this, since those are the only templates that print
-  // per-case equipment rather than the whole retrieval's general asset.
-  const asset = t.deductionCaseAssetSerials.length
-    ? (t.assets.find(a => a.serial === t.deductionCaseAssetSerials[0]) ?? t.assets[0])
-    : t.assets[0]
-  const courier = courierProviderById(t.courierProviderId)
-  const checkedAssets = t.assets.filter(a => a.checked)
-  return {
-    TM_FULL_NAME: t.employee.name,
-    // Case Details' own first-name override (Step 1) reaches the emails too.
-    TM_FIRST_NAME: deductionCaseFirstName.value || (t.employee.name.split(' ')[0] ?? t.employee.name),
-    // Plain number, same as Case Details shows - the "EMP-" prefix is this
-    // seed data's internal key, not what a real HRIS record prints.
-    EMPLOYEE_ID: t.employee.id.replace(/^\D+/, ''),
-    TM_EMAIL: t.employee.email,
-    TM_CONTACT_NUMBER: t.contact.number,
-    TM_PRESENT_ADDRESS: effectiveTeamMemberAddress(t),
-    CLIENT_NAME: t.employee.client,
-    LEADERSHIP_COACH: t.employee.leadershipCoach,
-    ALTERNATE_CONTACT_NAME: t.contact.altName,
-    ALTERNATE_CONTACT_NUMBER: t.contact.altNumber,
-    APR_REF: t.reference,
-    TICKET_CREATED_DATE: fmtDate(t.createdAt),
-    // Notice dates: the ticket's creation date, today (the day a notice goes
-    // out), the first send in the Activity Log, and the target date as it
-    // stood before any re-baseline.
-    NOTICE_DATE: fmtDate(t.createdAt),
-    DATE_OF_THIS_NOTICE: fmtDate(new Date().toISOString()),
-    DATE_OF_ORIGINAL_NOTICE: derivedReturnRequestedDate(t) ? fmtDate(derivedReturnRequestedDate(t)) : undefined,
-    ORIGINAL_TARGET_DATE: (t.targetDateHistory[0]?.previousDateISO ?? t.targetDateISO) ? fmtDate(t.targetDateHistory[0]?.previousDateISO ?? t.targetDateISO) : undefined,
-    // FR-003.2 path matrix. The acknowledgment is due by the path's Day-0
-    // deadline: the Last Working Day for Resignation and End of Contract,
-    // the Recall Effective Date for Recalled (it adopts the End of Contract
-    // rule), the next working day for Immediate Resignation onsite, 3
-    // calendar days from notice for Immediate Resignation remote, and the
-    // target date (clock starts at Gate 3) for Unexplained Absence.
-    ACKNOWLEDGMENT_DUE_DATE: (() => {
-      const due = acknowledgmentDueISO(t)
-      return due ? fmtDate(due) : undefined
-    })(),
-    // FR-004.2: a token-based public link, no login required. The token is a
-    // random per-ticket value, never the internal ticket id (which is guessable).
-    ACKNOWLEDGMENT_LINK: `${ACKNOWLEDGMENT_HOST}/${t.acknowledgmentToken || t.id}`,
-    // FR-003.2: Day-0 anchor of the Recalled paths, entered at creation.
-    RECALL_EFFECTIVE_DATE: t.recallEffectiveDate ? fmtDate(t.recallEffectiveDate) : undefined,
-    // Immediate Resignation caps escalation at 3 calendar days from notice
-    // (P03, P04); every other path's escalation clock hangs off the target
-    // date (FR-003.8a).
-    ESCALATION_DEADLINE: (() => {
-      const due = t.reason === 'immediate-resignation' ? addDaysISO(t.createdAt, 3) : t.targetDateISO
-      return due ? fmtDate(due) : undefined
-    })(),
-    // Entered on the Courier & Shipping card or at B11 Confirm In Transit.
-    TRACKING_NUMBER: t.trackingNumber || undefined,
-    TRACKING_LINK: t.trackingLink || undefined,
-    DAYS_OVERDUE: isOverdueReturn(t) && t.targetDateISO
-      ? String(Math.max(1, Math.round((Date.now() - new Date(`${t.targetDateISO}T00:00:00`).getTime()) / 86400000)))
-      : undefined,
-    RETRIEVAL_REASON: REASON_LABELS[t.reason],
-    RETURN_MODE: t.mode === 'onsite' ? 'Onsite' : 'Remote',
-    // An empty date stays undefined so the send guardrail flags it, instead of
-    // the text "Not set" counting as a real value.
-    TARGET_RETURN_DATE: t.targetDateISO ? fmtDate(t.targetDateISO) : undefined,
-    TARGET_DISPATCH_DATE: t.targetDateISO ? fmtDate(t.targetDateISO) : undefined,
-    LAST_WORKING_DAY: t.lwd ? fmtDate(t.lwd) : undefined,
-    SEPARATION_DATE: t.sep ? fmtDate(t.sep) : undefined,
-    // With several confirmed assets the retrieval emails and forms print one
-    // row each (expandTicketAssets), every value in its own row. These stay
-    // single values (never several joined into one token); they only mark
-    // the codes as having ticket data. Charging keeps its picked item.
-    ASSET_NAME: asset?.model,
-    ASSET_TAG: asset?.assetTag,
-    SERIAL_NUMBER: asset?.serial,
-    ASSET_QTY: String(t.assets.length),
-    ASSET_TABLE: checkedAssets.length ? `Table of ${checkedAssets.length} confirmed asset${checkedAssets.length === 1 ? '' : 's'}, one row each` : undefined,
-    ASSET_TABLE_QTY: checkedAssets.length ? `Table of ${checkedAssets.length} confirmed asset${checkedAssets.length === 1 ? '' : 's'}, name and quantity only` : undefined,
-    COURIER_NAME: courier?.name,
-    COURIER_ACCOUNT_NUMBER: courier?.accountNumber,
-    ACCOUNT_MANAGER_NAME: courier?.accountManager,
-    ACCOUNT_MANAGER_EMAIL: courier?.accountManagerEmail,
-    BRANCH_NAME: t.courierBranchName,
-    BRANCH_ADDRESS: t.courierBranchAddress,
-    // A11 Post-Retrieval Charging (T22-T25/F1-F3) - Case Details Steps 2-4's
-    // own fields, read the same "derived unless overridden" way the Case
-    // Details panel itself displays them (deductionCaseOfficer/
-    // deductionCaseReturnRequested/deductionCaseReceived below are computed
-    // fallbacks, not raw ticket fields - see their own comments above).
-    CASE_OFFICER: deductionCaseOfficer.value,
-    // Nothing in the current flow assigns an ATD number, so without this
-    // the token was always unresolved and the send guardrail blocked every
-    // Determination & Charge / Settlement send. Deterministic per ticket:
-    // ATD-<created year>-<ticket no.>.
-    ATD_REFERENCE: t.atdReference || `ATD-${new Date(t.createdAt).getFullYear()}-${String(t.ticketNumber).padStart(4, '0')}`,
-    ASSET_OWNER: assetOwnerInfo(t).name,
-    DATE_RETURN_REQUESTED: deductionCaseReturnRequested.value ? fmtDate(deductionCaseReturnRequested.value) : undefined,
-    DATE_RECEIVED: deductionCaseReceived.value ? fmtDate(deductionCaseReceived.value) : undefined,
-    DATE_ASSESSED: t.deductionCaseAssessedDate ? fmtDate(t.deductionCaseAssessedDate) : undefined,
-    DATE_BUYOUT_ELECTION: t.deductionCaseBuyoutElectionDate ? fmtDate(t.deductionCaseBuyoutElectionDate) : undefined,
-    QUOTATION_EXPECTED_BY: t.deductionCaseQuotationExpectedDate ? fmtDate(t.deductionCaseQuotationExpectedDate) : undefined,
-    HEAR_BACK_BY: t.deductionCaseHearBackByDate ? fmtDate(t.deductionCaseHearBackByDate) : undefined,
-    RESPONSE_DUE_TM: t.deductionCaseResponseDueDate ? fmtDate(t.deductionCaseResponseDueDate) : undefined,
-    AMOUNT_BASIS: t.deductionCaseAmountBasis ? DEDUCTION_AMOUNT_BASIS_LABELS[t.deductionCaseAmountBasis] : undefined,
-    // Prefer the tracked quotation reference (#30) if one was recorded; otherwise fall back to the free-text supporting doc ref the officer typed.
-    SUPPORTING_DOC_REF: t.quotationReference?.trim() || t.deductionCaseSupportingDocRef,
-    AMOUNT_FIGURES: t.deductionCaseAmountFigures,
-    AMOUNT_WORDS: t.deductionCaseAmountWords
-  }
-})
+const ticketRealValues = computed<Partial<Record<string, string>>>(() => ticket.value ? ticketTokenValues(ticket.value) : {})
 // Codes this specific ticket actually supplied a real, non-empty value for -
 // everything else in ticketSampleValues below is generic filler standing in
 // for data this ticket doesn't have (or was never modeled as a ticket field
@@ -765,8 +679,17 @@ function openFormPreview(formId: string, withCaseAssets = false) {
     if (withCaseAssets) { values.__CASE_ASSET_ROWS = JSON.stringify(caseAssetRows.value); if (ticket.value.equipmentNotReturned) values.__CASE_NOT_RETURNED = '1' }
     localStorage.setItem(`ams:formPreviewValues:${ticket.value.id}`, JSON.stringify(values))
   } catch { /* storage unavailable: lasts for this session only */ }
-  navigateTo(`/form-preview?formId=${encodeURIComponent(formId)}&ref=${encodeURIComponent(ticket.value.reference ?? '')}&mode=${ticket.value.mode}&ticket=${encodeURIComponent(ticket.value.id)}`, { open: { target: '_blank' } })
+  // Show the form in an in-app modal that embeds the real /form-preview page in
+  // an iframe (same origin, so it reads the values just written), rather than a
+  // new browser tab. A page-opened tab is silently blocked in embedded/desktop
+  // browser contexts, which left the form unviewable there; the iframe always
+  // renders, and an "Open in new tab" control inside still offers the tab where
+  // the environment allows it.
+  formPreviewUrl.value = `/form-preview?formId=${encodeURIComponent(formId)}&ref=${encodeURIComponent(ticket.value.reference ?? '')}&mode=${ticket.value.mode}&ticket=${encodeURIComponent(ticket.value.id)}`
+  formPreviewOpen.value = true
 }
+const formPreviewOpen = ref(false)
+const formPreviewUrl = ref('')
 /** Every confirmed asset on the ticket, for the retrieval emails' and forms' asset tables (before confirmation, all listed assets). */
 const ticketAssetLines = computed(() => (ticket.value?.assets ?? []).filter(a => a.checked).map(a => ({ name: a.model, tag: a.assetTag, serial: a.serial })))
 const assetHtml = (html: string, wrap?: (code: string, value: string) => string) => expandTicketAssets(html, ticketAssetLines.value, wrap)
@@ -775,6 +698,33 @@ const ASSET_ROW_CODES = new Set(['ASSET_NAME', 'ASSET_TAG', 'SERIAL_NUMBER', 'AS
 const previewOpen = ref(false)
 const previewSubject = ref('')
 const previewBody = ref('')
+// The raw (un-highlighted) subject/body of what's in the preview, kept so the
+// modal's Download EML can resolve tokens and build an inline-styled .eml the
+// same way the template editor does - a fallback for when in-system sending is
+// unavailable.
+const previewRawSubject = ref('')
+const previewRawBody = ref('')
+const previewEmlName = ref('email')
+// The template editor address for the email currently in the preview modal, so
+// the modal's own Edit button can open it. Empty when the previewed content has
+// no editable source (e.g. a Placeholder Check "where does this print" jump).
+const previewEditHref = ref('')
+/**
+ * Opens a URL in a real new tab. A programmatic `window.open` (what
+ * `navigateTo(url, { open })` does under the hood) is treated as a popup and
+ * silently blocked in some embedded/desktop browser contexts, so a form or
+ * editor "open in new tab" did nothing. A genuine anchor activation during the
+ * same click gesture is not popup-blocked, so build one and click it.
+ */
+function openInNewTab(url: string) {
+  const a = document.createElement('a')
+  a.href = url
+  a.target = '_blank'
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
 // Same highlight/tooltip/click-to-sync mechanism the Templates > Email
 // editor's own PreviewPane.vue already uses (wrapTokens, .tok-hl) - not a
 // separate implementation, just applied here too, with an extra per-status
@@ -839,11 +789,27 @@ onBeforeUnmount(() => {
   previewTipEl?.remove()
   previewTipEl = null
 })
-function openTemplatePreview(tpl: { subject: string, body: string } | null | undefined) {
+function openTemplatePreview(tpl: { subject: string, body: string, name?: string } | null | undefined, editKey?: string | null) {
   if (!tpl) return
   previewSubject.value = highlightForTicket(tpl.subject)
   previewBody.value = highlightForTicket(tpl.body)
+  previewRawSubject.value = tpl.subject
+  previewRawBody.value = tpl.body
+  previewEmlName.value = (tpl.name || 'email').replace(/\s+/g, '_')
+  previewEditHref.value = editKey ? `/templates/email/${editKey}/edit` : ''
   previewOpen.value = true
+}
+/**
+ * Fallback for when in-system sending is unavailable: hand the operator the
+ * email as an .eml they can send from their own client. Resolves this ticket's
+ * tokens and builds inline-styled HTML, the same path the template editor's own
+ * Download EML uses (see templates/email/[id]/edit.vue), so the file is styled.
+ */
+function downloadPreviewEml() {
+  const subject = resolveTokensForPrint(previewRawSubject.value, ticketSampleValues.value, true)
+  const html = buildEmailExportHtml(previewRawBody.value, ticketSampleValues.value)
+  downloadEmlFile(subject, html, previewEmlName.value)
+  toast.add({ title: 'Downloaded .eml file', description: 'Open it in your mail client to send.', icon: 'i-lucide-download', color: 'success' })
 }
 /**
  * What's still previewable on a closed ticket's current stage, rendered as
@@ -859,10 +825,10 @@ const readOnlyAttachPreviews = computed(() => {
   if (!ticket.value) return []
   const chips: { key: string, kind: 'attach' | 'file', name: string, subtitle: string, icon: string, previewTooltip: string, previewIcon: string, action: () => void }[] = []
   if (meta.value?.kind === 'template-send') {
-    if (effectiveTemplate.value) chips.push({ key: 'email', kind: 'attach', name: effectiveTemplate.value.name, subtitle: effectiveTemplate.value.description, icon: 'i-lucide-mail', previewTooltip: 'Preview email', previewIcon: 'i-lucide-eye', action: () => openTemplatePreview(effectiveTemplate.value) })
+    if (effectiveTemplate.value) chips.push({ key: 'email', kind: 'attach', name: effectiveTemplate.value.name, subtitle: effectiveTemplate.value.description, icon: 'i-lucide-mail', previewTooltip: 'Preview email', previewIcon: 'i-lucide-eye', action: () => openTemplatePreview(effectiveTemplate.value, effectiveTemplateKey.value) })
     if (stageKey.value !== 'B9' && effectiveForm.value) chips.push({ key: 'form', kind: 'attach', name: effectiveForm.value.name, subtitle: effectiveForm.value.description, icon: 'i-lucide-file-text', previewTooltip: 'Preview form in new tab', previewIcon: 'i-lucide-eye', action: () => openFormPreview(effectiveForm.value!.id) })
   } else if (meta.value?.kind === 'reminders' && effectiveReminderTemplate.value) {
-    chips.push({ key: 'email', kind: 'attach', name: effectiveReminderTemplate.value.name, subtitle: effectiveReminderTemplate.value.description, icon: 'i-lucide-mail', previewTooltip: 'Preview email', previewIcon: 'i-lucide-eye', action: () => openTemplatePreview(effectiveReminderTemplate.value) })
+    chips.push({ key: 'email', kind: 'attach', name: effectiveReminderTemplate.value.name, subtitle: effectiveReminderTemplate.value.description, icon: 'i-lucide-mail', previewTooltip: 'Preview email', previewIcon: 'i-lucide-eye', action: () => openTemplatePreview(effectiveReminderTemplate.value, effectiveReminderTemplateKey.value) })
   } else if (meta.value?.kind === 'evidence') {
     // A10 Proof-of-Receipt/Condition Photos - real uploaded files, not a
     // template/form reference, so these use FileAttachChip instead of
@@ -897,6 +863,60 @@ function locatePlaceholderInPreview(code: string) {
     document.querySelector<HTMLElement>(`.ticket-email-preview [data-token="${code}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   })
 }
+
+// --- Post-Retrieval Charging: a placeholder with no value is only an empty
+// slot in the email preview, but several charging tokens ARE a real input
+// field on the Case Details form right here on this stage. For those, pointing
+// the operator at the empty slot is a dead end - the actionable thing is the
+// field itself. CHARGING_FIELD_STEP maps each such token to the Case Details
+// step it lives on, and the matching field carries data-case-field="CODE" so
+// the jump lands on the exact input, not just the step.
+const CHARGING_FIELD_STEP: Record<string, number> = {
+  CASE_OFFICER: 1,
+  DATE_RETURN_REQUESTED: 1,
+  DATE_RECEIVED: 2,
+  DATE_ASSESSED: 2,
+  DATE_BUYOUT_ELECTION: 2,
+  QUOTATION_EXPECTED_BY: 2,
+  HEAR_BACK_BY: 2,
+  RESPONSE_DUE_TM: 2,
+  AMOUNT_BASIS: 3,
+  SUPPORTING_DOC_REF: 3,
+  AMOUNT_FIGURES: 3,
+  AMOUNT_WORDS: 3
+}
+/** True when this token is filled from a Case Details input on this stage (so a "no data" entry can jump to the field instead of the empty email slot). */
+function isChargingFieldToken(code: string): boolean {
+  return code in CHARGING_FIELD_STEP
+}
+/** Closes the Placeholder Check and takes the operator to the Case Details field that fills this token, so they can enter the missing value at its source. */
+function locateChargingField(code: string) {
+  const step = CHARGING_FIELD_STEP[code]
+  if (step === undefined) return
+  placeholderCheckOpen.value = false
+  deductionCaseStepIdx.value = step
+  nextTick(() => setTimeout(() => {
+    const el = document.querySelector<HTMLElement>(`[data-case-field="${code}"]`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // Focus the field's own control (input, or the edit pencil for a
+    // derived/overridable field) so it's ready to fill, and flag it briefly.
+    el.querySelector<HTMLElement>('input, select, textarea, button')?.focus({ preventScroll: true })
+    flashElement(el)
+  }, 60))
+}
+/** True when clicking this Placeholder Check entry should jump to its Case Details field rather than the empty slot in the email preview. */
+function entryGoesToField(entry: PlaceholderCheckEntry): boolean {
+  return entry.status === 'missing' && isChargingFieldToken(entry.code)
+}
+/** Placeholder Check entry click: take a missing charging-field token to its own input; otherwise show where it prints in the preview. */
+function onPlaceholderEntryClick(entry: PlaceholderCheckEntry) {
+  // A form attachment has no email preview to point at, but its charging tokens still have a field to go to.
+  if (entryGoesToField(entry)) return locateChargingField(entry.code)
+  if (placeholderCheckSourceEmail.value) locatePlaceholderInPreview(entry.code)
+}
+/** An entry is clickable when it can show where it prints (email checks) or go to its Case Details field (email or form checks). */
+const entryIsClickable = (entry: PlaceholderCheckEntry) => !!placeholderCheckSourceEmail.value || entryGoesToField(entry)
 
 // --- Placeholder Check - the operator's own way to catch a placeholder that
 // can't actually be filled for THIS ticket before it goes out: either a real
@@ -1041,15 +1061,68 @@ function canSendResolved(...htmls: (string | null | undefined)[]): boolean {
 }
 const tplHtml = (t: { subject: string, body: string } | null | undefined) => t ? t.subject + t.body : ''
 const formHtml = (f: { id: string } | null | undefined) => f ? (RETRIEVAL_FORM_CONTENT[f.id] ?? '') : ''
-function doSendBranchRequest() {
+/** True while a send is out. The Send buttons show it and ignore clicks until it is back. */
+const sending = ref(false)
+/** Why the last send failed, shown above the stage so the operator can fix it and press Send again. Cleared by the next send. */
+const sendError = ref('')
+/** A retry of an identical send reuses its key, so a send that actually went out is never sent twice. Any change gets a new one. */
+let lastAttempt: { fingerprint: string, key: string } | null = null
+watch(() => [ticket.value?.id, stageKey.value], () => { sendError.value = '' })
+const looksLikeEmail = (to: string) => /^\S+@\S+\.\S+$/.test(to.trim())
+
+/**
+ * Sends one stage email through the server. Returns true once it has gone out. On a refusal (the server found a placeholder
+ * it cannot fill, or the mail server failed) the ticket is unchanged, the reason is shown, and the same button sends again.
+ */
+async function sendEmail(
+  kind: EmailSendKind,
+  templateKey: string | null | undefined,
+  formId: string | null,
+  to: string,
+  extra: { outcome?: DeductionOutcome, manual?: boolean } = {}
+): Promise<boolean> {
+  const t = ticket.value
+  const stage = stageKey.value
+  if (!t || !stage || !templateKey || sending.value) return false
+  if (!looksLikeEmail(to)) {
+    toast.add({ title: 'Add a recipient first', description: 'Enter a valid email address to send to.', icon: 'i-lucide-mail-warning', color: 'warning' })
+    return false
+  }
+  const tpl = templateForKey(templateKey)
+  const request = {
+    stage, kind, templateKey, formId,
+    to: [to.trim()],
+    cc: (tpl?.cc ?? []).map(c => c.email),
+    bcc: (tpl?.bcc ?? []).map(c => c.email),
+    ...extra
+  }
+  const fingerprint = JSON.stringify([t.ticketNumber, request])
+  if (lastAttempt?.fingerprint !== fingerprint) lastAttempt = { fingerprint, key: crypto.randomUUID() }
+  sending.value = true
+  sendError.value = ''
+  try {
+    await sendTicketEmail(t, { ...request, idempotencyKey: lastAttempt.key })
+    lastAttempt = null
+    return true
+  } catch (e) {
+    sendError.value = e instanceof Error ? e.message : 'The email could not be sent.'
+    toast.add({ title: 'Email not sent', description: sendError.value, icon: 'i-lucide-mail-warning', color: 'error' })
+    return false
+  } finally {
+    sending.value = false
+  }
+}
+
+async function doSendBranchRequest() {
   if (!ticket.value) return
   if (!canSendResolved(tplHtml(effectiveBranchTemplate.value))) return
-  sendBranchRequest(ticket.value, overrideBranchTemplateKey.value)
+  const to = useManualEmailBranch.value ? manualEmailBranch.value : ticket.value.employee.email
+  if (!await sendEmail('branch-request', overrideBranchTemplateKey.value, null, to)) return
   revealSentBanner()
 }
-function doMarkBranchReplyReceived() {
+async function doMarkBranchReplyReceived() {
   if (!ticket.value) return
-  markBranchReplyReceived(ticket.value)
+  await markBranchReplyReceived(ticket.value)
 }
 const branchConfirmDisabled = computed(() => {
   if (!selectedCourierId.value || !selectedBranchId.value) return true
@@ -1066,9 +1139,9 @@ const branchConfirmDisabledReason = computed(() => {
   }
   return ''
 })
-function doConfirmBranch() {
+async function doConfirmBranch() {
   if (!ticket.value || !selectedCourierId.value || !selectedBranch.value) return
-  confirmCourierBranch(ticket.value, selectedCourierId.value, selectedBranch.value.name, selectedBranch.value.address, branchCaptureMethod.value, branchSubstituted.value)
+  await confirmCourierBranch(ticket.value, selectedCourierId.value, selectedBranch.value.name, selectedBranch.value.address, branchCaptureMethod.value, branchSubstituted.value)
   branchSubstituted.value = false
   branchCaptureMethod.value = 'call'
 }
@@ -1101,12 +1174,12 @@ function requireAttachedEmail(attached: unknown): boolean {
   toast.add({ title: 'Attach an email first', description: 'Pick the email template this send should use.', icon: 'i-lucide-mail', color: 'warning' })
   return false
 }
-function sendNotice() {
+async function sendNotice(manual = false) {
   if (!ticket.value || !meta.value) return
   if (!requireAttachedEmail(effectiveTemplate.value)) return
-  if (!canSendResolved(tplHtml(effectiveTemplate.value), stageKey.value === 'B9' ? '' : formHtml(effectiveForm.value))) return
-  const label = stageKey.value === 'B9' ? 'Courier endorsement sent' : 'Retrieval notice sent (email + SMS)'
-  pushHistory(ticket.value, label, 'send')
+  if (!manual && !canSendResolved(tplHtml(effectiveTemplate.value), stageKey.value === 'B9' ? '' : formHtml(effectiveForm.value))) return
+  const endorsement = stageKey.value === 'B9'
+  if (!await sendEmail(endorsement ? 'courier-endorsement' : 'notice', effectiveTemplateKey.value, endorsement ? null : (effectiveForm.value?.id ?? null), sendToEmail.value, { manual })) return
   useManualEmail.value = false
   // No advanceStage here: the sent banner (templateSendRecord) takes over this
   // stage's panel, and the Continue button on it moves the ticket on.
@@ -1120,9 +1193,9 @@ const gateNoteDrafts = reactive<Record<number, string>>({})
 // Collapsed by default so this advisory tracker doesn't compete for space
 // with the actual stage content below it.
 const gateBannerOpen = ref(false)
-function recordGate(n: number) {
+async function recordGate(n: number) {
   if (!ticket.value) return
-  releaseGate(ticket.value, n, gateNoteDrafts[n])
+  await releaseGate(ticket.value, n, gateNoteDrafts[n])
   gateNoteDrafts[n] = ''
 }
 /** Drops the "Gate N - " prefix for display in the Approval Gates disclosure only - GATE_STEPS' own label (used verbatim elsewhere, e.g. the overflow menu) keeps it; this is purely a per-step-title cosmetic per explicit feedback. */
@@ -1144,30 +1217,21 @@ const gateHeaderTitle = computed(() => {
   const current = GATE_STEPS.find(g => g.n === ticket.value!.gatesReleased + 1)
   return current ? stripGateLabel(current.label) : 'P&C Acknowledgement'
 })
-function sendSafekeeping() {
+async function sendSafekeeping() {
   if (!ticket.value) return
-  pushHistory(ticket.value, 'Equipment Safekeeping Request sent - no deadline, no consequence', 'send')
+  await recordSafekeepingSent(ticket.value)
   toast.add({ title: 'Safekeeping request sent', description: 'Equipment Safekeeping Request logged.', icon: 'i-lucide-shield', color: 'info' })
 }
 
 // --- A7 Call Confirmation --------------------------------------------------
 const callAtCap = computed(() => (ticket.value?.callAttempts.length ?? 0) >= 3)
 const callAnsweredYet = computed(() => !!ticket.value?.callAttempts.some(a => a.outcome === 'Answered - confirmed'))
-function logCall(outcome: 'No answer' | 'Answered - confirmed') {
+async function logCall(outcome: 'No answer' | 'Answered - confirmed') {
   if (!ticket.value) return
-  ticket.value.callAttempts.push({ when: fmtDateTime(new Date().toISOString()), outcome })
-  if (outcome === 'Answered - confirmed') {
-    ticket.value.contact.numberVerified = true
-    pushHistory(ticket.value, 'Call attempt logged: answered - contact number confirmed active', 'call')
-  } else {
-    pushHistory(ticket.value, `Call attempt logged: no answer (${ticket.value.callAttempts.length} of 3)`, 'call')
-    // The third unanswered call is where the SMS follow-up starts. The ticket has not moved on yet.
-    if (ticket.value.callAttempts.length >= 3 && !callAnsweredYet.value) pushHistory(ticket.value, 'Call confirmation attempts exhausted (3 of 3, unanswered), SMS follow-up next', 'call')
-  }
+  await recordCallAttempt(ticket.value, outcome)
 }
-function continueFromCall() {
+async function continueFromCall() {
   if (!ticket.value) return
-  if (callAtCap.value && !callAnsweredYet.value) pushHistory(ticket.value, ticket.value.smsSentAt ? 'Continued without a call confirmation, after the SMS follow-up' : 'Continued without a call confirmation', 'call')
   // The actual, real, deterministic root cause of "call attempts don't show
   // in read-only/closed mode" - reported over and over, and not a storage
   // race at all: this used to wipe the just-logged attempts (and the SMS
@@ -1178,17 +1242,16 @@ function continueFromCall() {
   // ticket.callAttempts directly (see the calllog template above), so
   // whatever was here the instant Continue was clicked is exactly what a
   // later reviewer needs to still see.
-  advanceStage(ticket.value)
+  await continueAfterCalls(ticket.value)
 }
 // FR-003.6 A7: "SMS after an unanswered attempt" - once every call attempt
 // (3 of 3) has gone unanswered, not before. FR-003.12: copy-paste only, no
 // gateway - so this is a message preview to copy out and send from the
 // operator's own phone, confirmed the same manual way an email send is.
 const smsMessage = computed(() => ticket.value ? resolveTokensForPrint(CALL_ESCALATION_SMS_TEMPLATE, ticketSampleValues.value, true) : '')
-function confirmSmsSent() {
+async function confirmSmsSent() {
   if (!ticket.value) return
-  ticket.value.smsSentAt = new Date().toISOString()
-  pushHistory(ticket.value, 'SMS follow-up sent after 3 unanswered call attempts', 'call')
+  await recordSmsFollowUpSent(ticket.value)
   toast.add({ title: 'SMS logged', description: 'Marked as sent - recorded on the Activity Log.', icon: 'i-lucide-message-square', color: 'success' })
 }
 
@@ -1240,9 +1303,9 @@ const stageSms = computed<CommSms[]>(() => {
 })
 /** The A7 follow-up text: the call-confirmation step's own SMS, shown once all 3 attempts went unanswered. */
 const callFollowUpVisible = computed(() => stageKey.value === 'A7' && callAtCap.value && !callAnsweredYet.value)
-function markSmsSent(s: CommSms) {
+async function markSmsSent(s: CommSms) {
   if (!ticket.value) return
-  confirmSmsSentFor(ticket.value, s.code, s.label)
+  await confirmSmsSentFor(ticket.value, s.code, s.label)
   toast.add({ title: 'SMS logged', description: 'Marked as sent, recorded on the Activity Log.', icon: 'i-lucide-message-square', color: 'success' })
 }
 interface CommStep { key: string, label: string, email: { when: string | null, skipped?: boolean } | null, sms: CommSms[], calls?: string }
@@ -1285,7 +1348,7 @@ function revealComms() {
       sc.scrollTo({ top: Math.max(0, top - 8), behavior: 'smooth' })
       commsFlash.value = true
       clearTimeout(commsFlashTimer)
-      commsFlashTimer = setTimeout(() => { commsFlash.value = false }, 1600)
+      commsFlashTimer = setTimeout(() => { commsFlash.value = false }, 1800)
     })
   }, 300)
 }
@@ -1319,13 +1382,11 @@ const effectiveReminderTemplate = computed(() => effectiveReminderTemplateKey.va
 const overdueTemplateKey = computed(() => ticket.value ? REMINDER_TEMPLATES.overdue[ticket.value.mode] : null)
 const effectiveOverdueTemplateKey = computed(() => overrideTemplateKey.value === undefined ? overdueTemplateKey.value : overrideTemplateKey.value)
 const effectiveOverdueTemplate = computed(() => effectiveOverdueTemplateKey.value ? templateForKey(effectiveOverdueTemplateKey.value) : null)
-function sendReminder() {
+async function sendReminder(manual = false) {
   if (!ticket.value) return
   if (!requireAttachedEmail(effectiveReminderTemplate.value)) return
-  if (!canSendResolved(tplHtml(effectiveReminderTemplate.value))) return
-  const label = ticket.value.reminderCount === 0 ? 'Midpoint reminder sent' : 'Final reminder sent'
-  pushHistory(ticket.value, label, 'send')
-  ticket.value.reminderCount = (ticket.value.reminderCount + 1) as 0 | 1 | 2
+  if (!manual && !canSendResolved(tplHtml(effectiveReminderTemplate.value))) return
+  if (!await sendEmail('reminder', effectiveReminderTemplateKey.value, null, ticket.value.employee.email, { manual })) return
   revealSentBanner()
 }
 // Skip only the reminder currently in view (mirrors sendReminder's own
@@ -1334,12 +1395,11 @@ function sendReminder() {
 // too, and "Continue" only ever appears once both have actually been
 // resolved one way or the other, so it's never ambiguous about whether it
 // just sent or skipped something.
-function skipReminder() {
+async function skipReminder() {
   if (!ticket.value) return
-  pushHistory(ticket.value, ticket.value.reminderCount === 0 ? 'Midpoint reminder skipped - not needed' : 'Final reminder skipped - not needed', 'send')
-  ticket.value.reminderCount = (ticket.value.reminderCount + 1) as 0 | 1 | 2
+  await recordReminderSkipped(ticket.value)
 }
-function continueFromReminders() {
+async function continueFromReminders() {
   if (!ticket.value) return
   // Same real bug, same fix, as continueFromCall() - this used to reset the
   // very thing (reminderCount) that records what actually happened here,
@@ -1348,7 +1408,7 @@ function continueFromReminders() {
   // whether each reminder was sent or skipped - see reminderStatus below,
   // which reads the History log rather than this counter alone, since the
   // counter alone can't distinguish "sent" from "skipped".
-  advanceStage(ticket.value)
+  await advanceStage(ticket.value)
 }
 /** Per-reminder actual outcome (sent vs skipped vs not yet reached) - read off the real History entries sendReminder()/skipReminder() already write, not just reminderCount, which only ever counts "decided", not "which way". */
 function reminderStatus(kind: 'Midpoint' | 'Final'): 'Sent' | 'Skipped' | 'Not yet' {
@@ -1396,12 +1456,12 @@ function startEditShipField(field: ShipField) {
   editingShipField.value = field
 }
 function cancelEditShipField() { editingShipField.value = null }
-function saveShipField(field: ShipField) {
+async function saveShipField(field: ShipField) {
   if (!ticket.value) return
   const t = ticket.value
   if (field === 'number') {
     const num = shipNumberDraft.value.trim()
-    saveShipmentDetails(t, num, t.trackingLink ?? '')
+    await saveShipmentDetails(t, num, t.trackingLink ?? '')
     trackingNumberDraft.value = num
   } else {
     const link = shipLinkDraft.value.trim()
@@ -1409,7 +1469,7 @@ function saveShipField(field: ShipField) {
       toast.add({ title: 'That link does not match the courier', description: `Enter the full URL from ${shipmentCourier.value?.name ?? 'the courier'}'s own tracking site.`, icon: 'i-lucide-link-2', color: 'warning' })
       return
     }
-    saveShipmentDetails(t, t.trackingNumber ?? '', link)
+    await saveShipmentDetails(t, t.trackingNumber ?? '', link)
     trackingRefDraft.value = link
   }
   editingShipField.value = null
@@ -1431,7 +1491,7 @@ const shipmentBadge = computed(() => ({
 const shipmentDaysSinceTurnover = computed(() => {
   const at = ticket.value?.transitConfirmedAt
   if (!at) return null
-  const a = new Date(at); a.setHours(0, 0, 0, 0)
+  const a = parseLocalDate(at)
   const b = new Date(); b.setHours(0, 0, 0, 0)
   return Math.max(0, Math.round((b.getTime() - a.getTime()) / 86400000))
 })
@@ -1496,21 +1556,15 @@ function reminderSentAt(kind: 'Midpoint' | 'Final'): string | null {
   return ticket.value?.history.find(h => h.action === `${kind} reminder sent`)?.when ?? null
 }
 const deductionOutcomeSentAt = computed(() => ticket.value?.history.find(h => /^Post-Retrieval Charging (resolved|outcome changed)/.test(h.action))?.when ?? null)
-function continueFromStage() {
-  if (ticket.value) advanceStage(ticket.value)
+async function continueFromStage() {
+  if (ticket.value) await advanceStage(ticket.value)
 }
 const notReturnedConfirmOpen = ref(false)
-function markEquipmentNotReturned() {
+async function markEquipmentNotReturned() {
   const t = ticket.value
   if (!t) return
-  const list = stageListFor(t.mode)
-  const target = list.indexOf('A11')
-  if (target < 0) return
-  t.equipmentNotReturned = true
-  t.deductionApplicable = true
-  pushHistory(t, 'Equipment not returned, moved to Post-Retrieval Charging', 'return')
-  t.stageIdx = target
-  t.furthestStageIdx = Math.max(t.furthestStageIdx ?? 0, target)
+  if (stageListFor(t.mode).indexOf('A11') < 0) return
+  await recordEquipmentNotReturned(t)
   notReturnedConfirmOpen.value = false
 }
 // Records the receipt but does NOT advance the stage (5 Oct 2026, 2nd pass):
@@ -1518,9 +1572,9 @@ function markEquipmentNotReturned() {
 // with a SentBanner + Continue button, so the operator sees the confirmation
 // before moving on. advanceStage runs from the Continue button via
 // `continueFromStage`.
-function confirmPhysicalReceipt() {
+async function confirmPhysicalReceipt() {
   if (!ticket.value) return
-  pushHistory(ticket.value, 'Equipment marked received - proof and condition evidence recorded next', 'return')
+  await recordEquipmentReceived(ticket.value)
 }
 
 // --- Saved checklists modal: template-path formatter (5 Oct 2026, 3rd pass) ---
@@ -1545,17 +1599,16 @@ function formatChecklistTemplatePath(defaultFor: string[]): string {
 // A11 "Not Applicable" is a classification, not a send: resetting
 // deductionApplicable to null re-shows the Not Applicable / Item Damaged
 // picker so the operator can switch to Item Damaged if they picked wrong.
-function undoNotApplicable() {
+async function undoNotApplicable() {
   if (!ticket.value) return
-  ticket.value.deductionApplicable = null
-  pushHistory(ticket.value, 'Post-Retrieval Charging classification cleared', 'return', currentUserName())
+  await clearChargingClassification(ticket.value)
   toast.add({ title: 'Classification cleared', description: 'Pick Not Applicable or Item Damaged / Not Returned again.', icon: 'i-lucide-undo-2', color: 'warning' })
 }
 
 // --- #37 Referred to Payroll handler (5 Oct 2026) ----------------------
-function doConfirmReferredToPayroll() {
+async function doConfirmReferredToPayroll() {
   if (!ticket.value) return
-  const ok = confirmReferredToPayroll(ticket.value)
+  const ok = await confirmReferredToPayroll(ticket.value)
   if (ok) toast.add({ title: 'Referred to Payroll', description: 'The Authority to Deduct is on record as handed off to HR and Payroll.', icon: 'i-lucide-check', color: 'success' })
 }
 
@@ -1591,9 +1644,9 @@ function clearQuotationFile() {
 function openQuotationFile() {
   if (quotationFile.value?.url) window.open(quotationFile.value.url, '_blank')
 }
-function saveQuotation() {
+async function saveQuotation() {
   if (!ticket.value) return
-  saveQuotationDetails(ticket.value, {
+  await saveQuotationDetails(ticket.value, {
     receivedISO: quotationReceivedDraft.value || null,
     reference: quotationReferenceDraft.value,
     fileName: quotationFile.value?.name ?? ''
@@ -1610,26 +1663,18 @@ function saveQuotation() {
 // per explicit feedback as redundant next to everything else this card
 // already says, but the reasoning is worth keeping somewhere for whoever
 // next wonders where "the escalation feature" is.
-function sendOverdueReminder() {
+async function sendOverdueReminder(manual = false) {
   if (!ticket.value) return
   if (!requireAttachedEmail(effectiveOverdueTemplate.value)) return
-  if (!canSendResolved(tplHtml(effectiveOverdueTemplate.value))) return
+  if (!manual && !canSendResolved(tplHtml(effectiveOverdueTemplate.value))) return
   // Sending a reminder is a communication action, not a resolution - Overdue
   // Return is computed live from the Target Date (isOverdueReturn), so it
   // only clears once the date is actually re-baselined forward or the
   // equipment is received, never as a side effect of this button.
-  pushHistory(ticket.value, `Overdue reminder sent (${effectiveOverdueTemplateKey.value?.toUpperCase() ?? 'no template'})`, 'send')
-  // Real bug, reported live: the toast below was the *only* feedback this
-  // action ever gave - once it faded, there was no way to tell from the
-  // page itself whether (or when) a reminder had actually been sent, so an
-  // operator could keep pressing the button with no way to tell they
-  // already had. Durable, same pattern as smsSentAt - a real ticket field,
-  // not just a transient toast, so "Sent Xm ago" stays visible on the page
-  // after the toast is gone, on a page refresh, and on a closed ticket's
-  // own read-only review of this stage.
-  ticket.value.overdueReminderSentAt = new Date().toISOString()
-  ticket.value.overdueReminderCount += 1
-  toast.add({ title: 'Overdue reminder sent', icon: 'i-lucide-mail-check', color: 'success' })
+  // The time and count are kept on the ticket (not just in a toast), so "Sent Xm ago" stays visible
+  // after the toast is gone, after a refresh, and on a closed ticket's read-only review of this stage.
+  if (!await sendEmail('overdue', effectiveOverdueTemplateKey.value, null, ticket.value.employee.email, { manual })) return
+  toast.add({ title: manual ? 'Overdue reminder marked as sent' : 'Overdue reminder sent', icon: 'i-lucide-mail-check', color: 'success' })
   revealSentBanner()
 }
 
@@ -1670,14 +1715,10 @@ function dropEvidenceFile(kind: 'proof' | 'condition', e: DragEvent) {
 function openFile(f: { name: string, url: string } | null) {
   if (f) window.open(f.url, '_blank')
 }
-function confirmEvidence() {
+async function confirmEvidence() {
   if (!ticket.value) return
-  // Promoted onto the ticket itself (not just held in these local refs) so
-  // the Artifacts Summary can actually show what was uploaded here.
-  ticket.value.evidenceProof = proofFile.value
-  ticket.value.evidenceCondition = conditionFile.value
-  pushHistory(ticket.value, 'Proof-of-Receipt + condition photos uploaded - receipt record generated, status moves to Hold Off', 'return')
-  advanceStage(ticket.value)
+  // Recorded on the ticket itself (not just held in these local refs) so the Artifacts Summary can show what was uploaded here.
+  await recordEvidence(ticket.value, proofFile.value, conditionFile.value)
 }
 
 // --- A11 Case Details (Steps 1-2 of 4; see
@@ -1710,12 +1751,37 @@ function deductionCaseStepState(i: number): 'current' | 'done' | 'future' {
 }
 
 /** Step 5 (Equipment) - which confirmed asset(s) this specific case covers, by serial. A real per-case selection (deductionCaseAssetSerials), not "every confirmed asset on the ticket" - the old "Confirmed Assets" reference disclosure this replaces implied a 1:1 relationship that isn't real (not every case charges everything the custodian had). */
-function toggleDeductionCaseAsset(serial: string) {
+// Edits to the charging case's own fields are saved to the server. A choice (a date, a basis, a ticked
+// item) is saved at once. Typed text shows as it is typed and is saved a moment after typing stops, and
+// before anything that depends on it (sending the outcome, leaving the page).
+const pendingCaseFields: EditableTicketFields = {}
+let caseFieldsTimer: ReturnType<typeof setTimeout> | undefined
+async function saveCaseFields(fields: EditableTicketFields) {
   if (!ticket.value) return
-  const list = ticket.value.deductionCaseAssetSerials
+  await updateTicketFields(ticket.value, fields)
+}
+function typeCaseField(fields: EditableTicketFields) {
+  if (!ticket.value) return
+  Object.assign(ticket.value, fields)
+  Object.assign(pendingCaseFields, fields)
+  clearTimeout(caseFieldsTimer)
+  caseFieldsTimer = setTimeout(flushCaseFields, 400)
+}
+async function flushCaseFields() {
+  clearTimeout(caseFieldsTimer)
+  const fields = { ...pendingCaseFields }
+  for (const key of Object.keys(pendingCaseFields)) delete pendingCaseFields[key as keyof EditableTicketFields]
+  if (Object.keys(fields).length) await saveCaseFields(fields)
+}
+onBeforeRouteLeave(flushCaseFields)
+
+async function toggleDeductionCaseAsset(serial: string) {
+  if (!ticket.value) return
+  const list = [...ticket.value.deductionCaseAssetSerials]
   const i = list.indexOf(serial)
   if (i === -1) list.push(serial)
   else list.splice(i, 1)
+  await saveCaseFields({ deductionCaseAssetSerials: list })
 }
 
 /** Step 1 - computed default (this app's own convenience derivation, not R24 hard-truth like `employee.name` itself - see firstNameOf's own comment), overridable per case. */
@@ -1727,10 +1793,10 @@ function startEditCaseFirstName() {
   caseFirstNameDraft.value = deductionCaseFirstName.value
   editingCaseFirstName.value = true
 }
-function saveCaseFirstNameEdit() {
+async function saveCaseFirstNameEdit() {
   if (!ticket.value) return
   const trimmed = caseFirstNameDraft.value.trim()
-  ticket.value.deductionCaseFirstNameOverride = trimmed && trimmed !== firstNameOf(ticket.value.employee.name) ? trimmed : null
+  await saveCaseFields({ deductionCaseFirstNameOverride: trimmed && trimmed !== firstNameOf(ticket.value.employee.name) ? trimmed : null })
   editingCaseFirstName.value = false
 }
 
@@ -1743,10 +1809,10 @@ function startEditCaseOfficer() {
   caseOfficerDraft.value = deductionCaseOfficer.value
   editingCaseOfficer.value = true
 }
-function saveCaseOfficerEdit() {
+async function saveCaseOfficerEdit() {
   if (!ticket.value) return
   const trimmed = caseOfficerDraft.value.trim()
-  ticket.value.deductionCaseOfficerOverride = trimmed && trimmed !== ticket.value.assignee.name ? trimmed : null
+  await saveCaseFields({ deductionCaseOfficerOverride: trimmed && trimmed !== ticket.value.assignee.name ? trimmed : null })
   editingCaseOfficer.value = false
 }
 
@@ -1760,9 +1826,9 @@ function startEditCaseReturnRequested() {
   caseReturnRequestedDraft.value = deductionCaseReturnRequested.value
   editingCaseReturnRequested.value = true
 }
-function saveCaseReturnRequestedEdit() {
+async function saveCaseReturnRequestedEdit() {
   if (!ticket.value) return
-  ticket.value.deductionCaseReturnRequestedDate = caseReturnRequestedDraft.value
+  await saveCaseFields({ deductionCaseReturnRequestedDate: caseReturnRequestedDraft.value })
   editingCaseReturnRequested.value = false
 }
 
@@ -1776,9 +1842,9 @@ function startEditCaseReceived() {
   caseReceivedDraft.value = deductionCaseReceived.value
   editingCaseReceived.value = true
 }
-function saveCaseReceivedEdit() {
+async function saveCaseReceivedEdit() {
   if (!ticket.value) return
-  ticket.value.deductionCaseReceivedDate = caseReceivedDraft.value
+  await saveCaseFields({ deductionCaseReceivedDate: caseReceivedDraft.value })
   editingCaseReceived.value = false
 }
 
@@ -1792,11 +1858,11 @@ function showDeductionDate(key: DeductionDateKey): boolean {
   return DEDUCTION_DATES_BY_OUTCOME[outcome].includes(key)
 }
 const CASE_PLAIN_DATE_FIELDS = [
-  { key: 'deductionCaseAssessedDate', label: 'Date assessed' },
-  { key: 'deductionCaseBuyoutElectionDate', label: 'Date of buy-out election' },
-  { key: 'deductionCaseQuotationExpectedDate', label: 'Quotation expected by' },
-  { key: 'deductionCaseHearBackByDate', label: 'You will hear from us by' },
-  { key: 'deductionCaseResponseDueDate', label: 'Response due from team member' }
+  { key: 'deductionCaseAssessedDate', label: 'Date assessed', token: 'DATE_ASSESSED' },
+  { key: 'deductionCaseBuyoutElectionDate', label: 'Date of buy-out election', token: 'DATE_BUYOUT_ELECTION' },
+  { key: 'deductionCaseQuotationExpectedDate', label: 'Quotation expected by', token: 'QUOTATION_EXPECTED_BY' },
+  { key: 'deductionCaseHearBackByDate', label: 'You will hear from us by', token: 'HEAR_BACK_BY' },
+  { key: 'deductionCaseResponseDueDate', label: 'Response due from team member', token: 'RESPONSE_DUE_TM' }
 ] as const
 
 /** Step 4 (Amount) - Basis is a real 5-option dropdown (DEDUCTION_AMOUNT_BASIS_LABELS, verbatim from the reference console); the other three are plain free-text fields, all bound straight to the ticket like the plain date fields above. */
@@ -1820,20 +1886,15 @@ const deductionAmountBasisOptions = computed(() => {
 // forms (templates.ts/retrievalForms.ts) - so the picker is rebuilt below,
 // same card-select pattern as A12's Return Check routing (inspectionRouting
 // further down), now wired to a real send instead of a scaffold.
-function markNotApplicable() {
+async function markNotApplicable() {
   if (!ticket.value) return
-  pushHistory(ticket.value, 'Deduction not applicable', 'return')
-  // Real bug, reproduced live: this used to reset back to `null` (the same
-  // value as "not decided yet"), so reviewing this stage again later (via
-  // Back, or a closed ticket) showed the original choice buttons again
-  // instead of a clear record of what was actually decided - `false` is a
-  // real, permanent third state distinct from "not decided yet".
-  ticket.value.deductionApplicable = false
-  advanceStage(ticket.value)
+  // Recorded as `false`, not reset to `null`: reviewing this stage later (via Back, or on a closed
+  // ticket) must show what was decided, and `null` means "not decided yet".
+  await recordDeductionNotApplicable(ticket.value)
 }
-function markDamaged() {
+async function markDamaged() {
   if (!ticket.value) return
-  ticket.value.deductionApplicable = true
+  await updateTicketFields(ticket.value, { deductionApplicable: true })
   nextTick(scrollToCaseDetails)
 }
 // Case Details sits below the stage header, so landing on this stage (or
@@ -1873,11 +1934,11 @@ const deductionAssetNotePlaceholder = computed(() => deductionAssetNoteLabel.val
 /** Every selected asset needs its note: it fills the last column of the equipment table, so a blank one would send a raw placeholder. */
 const deductionAssetNoteMissing = (serial: string) => !ticket.value?.deductionCaseAssetNotes?.[serial]?.trim()
 // Picking an outcome the saved basis doesn't apply to clears it, so a settlement can't carry a repair quotation (and a charge can't carry a program price).
-watch(deductionOutcomeSelection, (outcome) => {
+watch(deductionOutcomeSelection, async (outcome) => {
   const t = ticket.value
   const allowed = outcome ? DEDUCTION_BASES_BY_OUTCOME[outcome] : undefined
   if (!t || !allowed || outcome === t.deductionOutcome || !t.deductionCaseAmountBasis || allowed.includes(t.deductionCaseAmountBasis)) return
-  t.deductionCaseAmountBasis = null
+  await saveCaseFields({ deductionCaseAmountBasis: null })
   toast.add({ title: 'Basis of the amount cleared', description: `That basis doesn't apply to ${DEDUCTION_OUTCOME_META[outcome as DeductionOutcome].label}. Pick one in Case Details, Amount.`, icon: 'i-lucide-info', color: 'warning' })
 })
 const deductionAssetNotesMissingCount = computed(() => ticket.value?.deductionCaseAssetSerials.filter(deductionAssetNoteMissing).length ?? 0)
@@ -1930,13 +1991,14 @@ const caseSummaryRows = computed(() => {
   const dates = [
     t.deductionCaseAssessedDate && `Assessed ${fmtDate(t.deductionCaseAssessedDate)}`,
     t.deductionCaseResponseDueDate && `Response due ${fmtDate(t.deductionCaseResponseDueDate)}`
-  ].filter(Boolean).join(' · ')
+  ].filter(Boolean).join('\n')
+  // One label and one value per row; a value with several parts puts each on its own line.
   return [
-    { step: 0, label: 'Team member', value: `${t.employee.name} · ${t.employee.id.replace(/^\D+/, '')}` },
-    { step: 1, label: 'Case', value: `Case officer ${deductionCaseOfficer.value}` },
+    { step: 0, label: 'Team member', value: `${t.employee.name}\nEmployee ID ${t.employee.id.replace(/^\D+/, '')}` },
+    { step: 1, label: 'Case officer', value: deductionCaseOfficer.value },
     { step: 2, label: 'Dates', value: dates || 'No dates entered' },
-    { step: 3, label: 'Amount', value: t.deductionCaseAmountBasis ? `${DEDUCTION_AMOUNT_BASIS_LABELS[t.deductionCaseAmountBasis]}${t.deductionCaseAmountFigures ? ` · ${t.deductionCaseAmountFigures}` : ''}` : 'No amount entered' },
-    { step: 4, label: 'Equipment', value: `${items.length} item${items.length === 1 ? '' : 's'}: ${items.map(a => a.model).join(', ')}` }
+    { step: 3, label: 'Amount', value: t.deductionCaseAmountBasis ? `${DEDUCTION_AMOUNT_BASIS_LABELS[t.deductionCaseAmountBasis]}${t.deductionCaseAmountFigures ? `\n${t.deductionCaseAmountFigures}` : ''}` : 'No amount entered' },
+    { step: 4, label: 'Equipment', value: items.length ? `${items.length} item${items.length === 1 ? '' : 's'}\n${items.map(a => a.model).join('\n')}` : 'No items selected' }
   ]
 })
 /** The send button says what it will send, for example "Send No Charge notice". */
@@ -1959,19 +2021,14 @@ function scrollToDeductionOutcome() {
  * resolves later to either 'charge' or 'no-charge' - it never advances past
  * a decision that hasn't actually been made yet).
  */
-function confirmDeductionOutcome() {
+async function confirmDeductionOutcome(manual = false) {
   if (!ticket.value || !deductionSelectedMeta.value) return
   if (!ensureDeductionAssetNotes()) return
-  if (!canSendResolved(caseHtml(tplHtml(deductionEffectiveTemplate.value)), caseHtml(formHtml(deductionEffectiveForm.value)))) return
+  if (!manual && !canSendResolved(caseHtml(tplHtml(deductionEffectiveTemplate.value)), caseHtml(formHtml(deductionEffectiveForm.value)))) return
+  await flushCaseFields()
   const meta = deductionSelectedMeta.value
   const outcome = deductionOutcomeSelection.value as DeductionOutcome
-  const previous = ticket.value.deductionOutcome
-  ticket.value.deductionOutcome = outcome
-  const formNote = deductionEffectiveForm.value ? ` with ${deductionEffectiveForm.value.name} attached` : ' (no attachment)'
-  const sent = `${(deductionEffectiveTemplateKey.value ?? meta.templateKey).toUpperCase()} sent${formNote}`
-  pushHistory(ticket.value, previous && previous !== outcome
-    ? `Post-Retrieval Charging outcome changed: ${DEDUCTION_OUTCOME_META[previous].label} to ${meta.label}, ${sent}`
-    : `Post-Retrieval Charging resolved: ${meta.label}, ${sent}`, 'return')
+  if (!await sendEmail('charging', deductionEffectiveTemplateKey.value ?? meta.templateKey, deductionEffectiveForm.value?.id ?? null, ticket.value.employee.email, { outcome, manual })) return
   // No advance here: the sent banner stays in view and its Continue button
   // (continueFromCharging) moves the ticket on.
   deductionTemplateOverride.value = undefined
@@ -1985,18 +2042,10 @@ function confirmDeductionOutcome() {
  * Revisiting (the ticket is already further along) just steps forward and
  * never writes the skip entry twice.
  */
-function continueFromCharging() {
+async function continueFromCharging() {
   const t = ticket.value
   if (!t) return
-  // Step forward within what is already reached, or advance when this is the live stage.
-  const step = () => (t.stageIdx < (t.furthestStageIdx ?? 0) ? goForwardStage(t) : advanceStage(t))
-  step()
-  if (currentStageKey(t) === 'A12' && (t.equipmentNotReturned || t.deductionOutcome === 'settlement')) {
-    if (!t.history.some(h => /^Returned item check skipped/.test(h.action))) {
-      pushHistory(t, t.equipmentNotReturned ? 'Returned item check skipped, equipment was not returned' : 'Returned item check skipped, equipment kept under settlement', 'return')
-    }
-    step()
-  }
+  await continueAfterCharging(t)
 }
 
 // --- A12 -> A13 - a selectable-card choice inline in the flow, not a modal
@@ -2016,16 +2065,11 @@ const inspectionRoutingOptions = [
   { value: 'condition', label: 'Condition or Completeness Issue', description: "Damaged, incomplete, or doesn't match what was declared.", icon: 'i-lucide-search' },
   { value: 'tampering', label: 'Suspected Tampering or Loss', description: 'Signs of tampering, or unaccounted-for contents.', icon: 'i-lucide-shield-alert' }
 ]
-function confirmInspection() {
+async function confirmInspection() {
   if (!ticket.value || !inspectionRouting.value) return
-  const statusLabel = INSPECTION_ROUTE_STATUS[inspectionRouting.value]
-  // Persisted onto the ticket, not just the History line below, so
-  // ticketStatusLabel/Tone (and the Assets Confirmed card) can show this as
-  // the ticket's real status from here through closure.
-  ticket.value.inspectionRoute = inspectionRouting.value
-  pushHistory(ticket.value, `Inspection completed, routed to ${statusLabel} - inspection record generated`, 'return')
+  // Kept on the ticket, not just in the history, so the ticket's status and the Assets Confirmed card show it through closure.
+  await recordInspection(ticket.value, inspectionRouting.value)
   inspectionRouting.value = ''
-  advanceStage(ticket.value)
 }
 
 // --- Read-only / back-navigation display sync ------------------------------
@@ -2097,19 +2141,41 @@ const closureChecks = computed(() => {
       detail: `${outstandingItems.map(a => a.model).join(', ')}. ${t.status === 'closed' ? 'The ticket was closed with these still outstanding.' : 'They will stay listed as outstanding when the ticket closes.'}`
     }] : []),
     { label: 'Returned item check', ok: !!t.inspectionRoute || skippedCheck, detail: t.inspectionRoute ? `Routed to ${INSPECTION_ROUTE_STATUS[t.inspectionRoute]}.` : skippedCheck ? 'Not applicable. GoTeam does not have the equipment.' : 'Not routed yet.' },
-    { label: 'IT lock', ok: t.itLock.executedConfirmed, detail: t.itLock.executedConfirmed ? 'Executed.' : t.itLock.scheduledConfirmed ? 'Scheduled, not confirmed as executed.' : 'Not scheduled.' }
+    { label: 'IT told about the access lock', ok: true, detail: t.itLock.scheduledConfirmed ? "IT was notified. Locking access is IT's responsibility." : "IT was not notified from this ticket. Locking access is IT's responsibility." }
   ].map(c => t.status === 'closed' ? { ...c, detail: c.detail.replace(/ yet\./, '.') } : c)
 })
 
 function openClosure() {
   if (!ticket.value) return
-  assetResolutions.value = Object.fromEntries(ticket.value.assets.map((a, i) => [i, a.checked ? 'returned' : 'open']))
+  const t = ticket.value
+  // Default each item to match what already happened to it, so the operator is
+  // never silently overriding an earlier decision:
+  //  - an item covered by a Post-Retrieval Charging case (it is in
+  //    deductionCaseAssetSerials, and that case exists because an outcome was
+  //    recorded or the equipment was not returned) defaults to "charge", so the
+  //    closure reflects the charging case instead of mislabelling it "Returned";
+  //  - otherwise a confirmed (received) item is "returned", and anything else is
+  //    still outstanding, so "open".
+  const inChargingCase = new Set((t.deductionOutcome || t.equipmentNotReturned) ? t.deductionCaseAssetSerials : [])
+  assetResolutions.value = Object.fromEntries(t.assets.map((a, i) =>
+    [i, inChargingCase.has(a.serial) ? 'charge' : (a.checked ? 'returned' : 'open')]
+  ))
   closureDocumented.value = false
   closureOpen.value = true
 }
 const ASSET_RESOLUTION_LABELS: Record<'returned' | 'charge' | 'open', string> = {
-  returned: 'Returned', charge: 'Send to charging', open: 'Keep Open'
+  returned: 'Returned', charge: 'Sent to charging', open: 'Kept open'
 }
+// The closure dropdown's "charge" option reads differently once a charging case
+// already exists: picking it then means "this item is covered by that recorded
+// case", not "start a new charging case". Kept short so it never truncates in
+// the select - the exact outcome is spelled out in "What happens next" below.
+const chargeResolutionLabel = computed(() => ticket.value?.deductionOutcome ? 'In charging case' : 'Send to charging')
+const resolutionOptions = computed(() => [
+  { label: 'Returned', value: 'returned' },
+  { label: chargeResolutionLabel.value, value: 'charge' },
+  { label: 'Keep Open', value: 'open' }
+])
 /** True when confirming now would open a charging case instead of closing. */
 /** Plain-language outcome of the closure choices, shown in the modal so nobody has to guess what happens next. */
 const closureNextSteps = computed(() => {
@@ -2129,34 +2195,20 @@ const closureNextSteps = computed(() => {
   return out
 })
 const closureOpensCharge = computed(() => !!ticket.value && !ticket.value.deductionOutcome && ticket.value.assets.some((_, i) => assetResolutions.value[i] === 'charge'))
-function confirmClosure() {
+async function confirmClosure() {
   if (!ticket.value) return
-  // Real, previously-shipped bug fixed: this selector never wrote back to
-  // the ticket at all (see TicketAsset.resolution's own comment) - now it
-  // does, before anything else about closure happens.
-  ticket.value.assets.forEach((a, i) => { a.resolution = assetResolutions.value[i] ?? null })
-  // FR-003.11: items pathed to charge open a Post-Retrieval Charging case for
-  // exactly those items, instead of the ticket closing with them outstanding.
-  // Once that case has an outcome the pathing is settled and closing goes on.
-  const chargeSerials = ticket.value.assets.filter(a => a.resolution === 'charge').map(a => a.serial)
-  if (chargeSerials.length && !ticket.value.deductionOutcome) {
-    openChargeCaseForItems(ticket.value, chargeSerials)
+  // The server records what happened to each item and then either closes the ticket or, when items were
+  // sent to charging and no case has an outcome yet, opens the charging case for exactly those items
+  // instead of closing with them outstanding (FR-003.11).
+  const resolutions = ticket.value.assets.map((_, i) => assetResolutions.value[i] ?? null)
+  const outcome = await closeTicket(ticket.value, resolutions, closureDocumented.value)
+  if (!outcome.closed) {
     closureOpen.value = false
-    toast.add({ title: 'Charging case opened', description: `${chargeSerials.length} item${chargeSerials.length === 1 ? '' : 's'} moved to Post-Retrieval Charging. Close the ticket once the case is settled.`, icon: 'i-lucide-receipt-text', color: 'info' })
+    toast.add({ title: 'Charging case opened', description: `${outcome.chargeCount} item${outcome.chargeCount === 1 ? '' : 's'} moved to Post-Retrieval Charging. Close the ticket once the case is settled.`, icon: 'i-lucide-receipt-text', color: 'info' })
     return
   }
-  ticket.value.status = 'closed'
-  pushHistory(ticket.value, 'Ticket Closed', 'closure')
-  // Simulated, same as every other "send" in this app (no real backend) -
-  // closing the ticket never itself opens a print dialog (that surprised
-  // and was reported against a real close). The actual PDF is a separate,
-  // explicit action from the Artifacts Summary drawer (exportTeamMemberCopy)
-  // for whenever the operator actually wants to produce it.
-  if (closureDocumented.value) {
-    pushHistory(ticket.value, 'Detailed closure copy sent to team member (PDF)', 'closure')
-  } else {
-    pushHistory(ticket.value, 'Team member copy not sent - documentation unconfirmed', 'closure')
-  }
+  // Closing never opens a print dialog. The PDF is its own explicit action in the Artifacts Summary
+  // drawer (exportTeamMemberCopy), for when the operator actually wants it.
   closureOpen.value = false
   toast.add({
     title: 'Ticket closed',
@@ -2250,6 +2302,23 @@ const a12Pulse = useReadyPulse(
   computed(() => ticket.value ? `${ticket.value.id}:A12` : ''),
   computed(() => !!inspectionRouting.value && !a12Pristine.value)
 )
+// Steps that wait for the operator to do something, then offer the button: the final review once every
+// required task is done, the branch once it is captured, and the charging email once an outcome and a
+// template are chosen. Steps that only ask to continue (came back or charge, and similar) never pulse.
+// The key waits for the saved tickets to load (ticketsHydrated), so the data arriving after the page
+// mounts is absorbed as the starting state and does not count as the operator finishing the step.
+const a3Pulse = useReadyPulse(
+  computed(() => ticket.value && ticketsHydrated.value ? `${ticket.value.id}:A3` : ''),
+  computed(() => checklistComplete.value && !ticket.value?.checklistReview && ticket.value?.status === 'open')
+)
+const branchPulse = useReadyPulse(
+  computed(() => ticket.value && ticketsHydrated.value ? `${ticket.value.id}:branch` : ''),
+  computed(() => !branchConfirmDisabled.value && ticket.value?.status === 'open')
+)
+const chargeSendPulse = useReadyPulse(
+  computed(() => ticket.value && ticketsHydrated.value ? `${ticket.value.id}:A11-outcome` : ''),
+  computed(() => !!deductionOutcomeSelection.value && !!deductionEffectiveTemplate.value && !deductionOutcomeUnchanged.value && ticket.value?.status === 'open')
+)
 
 // --- Right-panel soft-scroll (open item #2, 5 Oct 2026, 3rd pass) --------
 // The chevron buttons are now `position: fixed` to the viewport (so they
@@ -2291,8 +2360,13 @@ let railResizeObserver: ResizeObserver | undefined
 watch(railScrollRef, (el) => {
   railResizeObserver?.disconnect()
   if (!el) return
-  nextTick(() => { updateRailTop(); updateRailScroll() })
-  if (typeof ResizeObserver === 'undefined') return
+  // No mount-time measure here: the observer below reports every observed
+  // element once, right after its first layout, and measuring earlier forces
+  // a layout in the middle of mounting. Without ResizeObserver, measure once.
+  if (typeof ResizeObserver === 'undefined') {
+    nextTick(() => { updateRailTop(); updateRailScroll() })
+    return
+  }
   railResizeObserver = new ResizeObserver(() => { updateRailTop(); updateRailScroll() })
   railResizeObserver.observe(el)
   if (stickyPageHeaderRef.value) railResizeObserver.observe(stickyPageHeaderRef.value)
@@ -2354,14 +2428,14 @@ function startEditAddress() {
   addressDraft.value = effectiveTeamMemberAddress(ticket.value)
   editingAddress.value = true
 }
-function saveAddressEdit() {
+async function saveAddressEdit() {
   if (!ticket.value) return
-  setTeamMemberAddressOverride(ticket.value, addressDraft.value)
+  await setTeamMemberAddressOverride(ticket.value, addressDraft.value)
   editingAddress.value = false
 }
-function resetAddressToFile() {
+async function resetAddressToFile() {
   if (!ticket.value) return
-  setTeamMemberAddressOverride(ticket.value, null)
+  await setTeamMemberAddressOverride(ticket.value, null)
   editingAddress.value = false
 }
 
@@ -2372,9 +2446,18 @@ function resetAddressToFile() {
 // UTooltip explaining what's missing, and route through here: ready actions
 // still fire normally, not-ready ones surface the same explanation as a
 // toast instead of a silent no-op.
+// The toast title names why the action is blocked: "Not ready yet" is only
+// true when a step is still missing, so a closed ticket, an already sent
+// message or a reached limit each get their own title.
+function guardToast(reason: string) {
+  if (ticket.value?.status === 'closed') return { title: 'Ticket is closed', icon: 'i-lucide-lock', color: 'neutral' as const }
+  if (/^Already /.test(reason)) return { title: 'Already done', icon: 'i-lucide-check', color: 'neutral' as const }
+  if (/^Maximum /.test(reason)) return { title: 'Limit reached', icon: 'i-lucide-info', color: 'neutral' as const }
+  return { title: 'Not ready yet', icon: 'i-lucide-info', color: 'warning' as const }
+}
 function guardedClick(ready: boolean, reason: string, action: () => void) {
   if (!ready) {
-    toast.add({ title: 'Not ready yet', description: reason, icon: 'i-lucide-info', color: 'warning' })
+    toast.add({ ...guardToast(reason), description: reason })
     return
   }
   action()
@@ -2476,7 +2559,7 @@ const HISTORY_DETAIL_RULES: { match: RegExp, title?: string, detail: (m: RuleMat
   { match: /^Offboarding checklist loaded from template: "(.+)" \((\d+) items\)$/, title: 'Checklist loaded', detail: m => `Started from the "${m[1]}" template with ${m[2]} tasks.` },
   { match: /^Marked In Transit - tracking number: (.+)$/, title: 'Marked in transit', detail: m => `The courier picked up the equipment. Tracking number: ${m[1]}.` },
   { match: /^Tracking details (added|updated): (.+)$/, title: 'Tracking details saved', detail: m => `Tracking details ${m[1]}. ${m[2]}.` },
-  { match: /^Offboarding checklist completed$/, title: 'Final review done', detail: () => 'Every required task is done and the checklist was signed off. Next, schedule the IT lock.' },
+  { match: /^Offboarding checklist completed$/, title: 'Final review done', detail: () => 'Every required task is done and the checklist was signed off. Next, tell IT about the access lock.' },
   { match: /^Offboarding checklist item set to (optional|required): "(.+)"$/, title: 'Checklist task changed', detail: m => `"${m[2]}" is now ${m[1]}.` },
   { match: /^Offboarding checklist item added: "(.+)"$/, title: 'Checklist item added', detail: m => `Added "${m[1]}" to the offboarding checklist.` },
   { match: /^Offboarding checklist item removed: "(.+)"$/, title: 'Checklist item removed', detail: m => `Removed "${m[1]}" from the offboarding checklist.` },
@@ -2490,6 +2573,8 @@ const HISTORY_DETAIL_RULES: { match: RegExp, title?: string, detail: (m: RuleMat
   { match: /^Retrieval notice sent$/, title: 'Retrieval notice sent', detail: () => 'Return instructions emailed to the team member.' },
   { match: /^Ticket Closed$/, title: 'Ticket closed', detail: () => 'Every stage is complete, so the case is closed.' },
   { match: /^Ticket Tracker reopened$/, title: 'Ticket reopened', detail: () => 'The ticket is open again and can be updated.' },
+  { match: /^IT notified to lock access at the end of the last shift on (.+?)( \(sent again.*\))?\. The lock is IT's responsibility$/, title: 'IT notified', detail: m => `IT was told to lock access at the end of the last shift on ${m[1]}${m[2] ? ', sent again for the updated Last Working Day' : ''}. The lock is IT's responsibility and nothing waits on it.` },
+  { match: /^Continued without notifying IT/, title: 'Continued without notifying IT', detail: () => "The ticket moved on without telling IT. The access lock is IT's responsibility." },
   { match: /^IT lock executed on schedule/, title: 'IT lock executed', detail: () => "IT confirmed the team member's access was locked on the scheduled date." },
   { match: /^IT lock scheduled for end of last shift on (.+?)( \(rescheduled.*\))? - awaiting execution confirmation$/, title: 'IT lock scheduled', detail: m => `Access lock booked for the end of the last shift on ${m[1]}${m[2] ? ', rescheduled against the updated Last Working Day' : ''}. Awaiting confirmation that it ran.` },
   { match: /^Team member email reply confirmed read$/, title: 'Branch reply reviewed', detail: () => "The team member's email reply naming their courier branch was read." },
@@ -2515,7 +2600,7 @@ const HISTORY_DETAIL_RULES: { match: RegExp, title?: string, detail: (m: RuleMat
   { match: /^Entry recorded/, title: 'Ticket details recorded', detail: () => 'Recorded the authorizing endorsement and its date, the Last Working Day and the Separation Date.' },
   { match: /^Equipment not returned, moved to Post-Retrieval Charging$/, title: 'Equipment not returned', detail: () => 'The equipment is not coming back, so the ticket moved straight to Post-Retrieval Charging.' },
   { match: /^Returned item check skipped, (.+)$/, title: 'Returned item check skipped', detail: m => /settlement/.test(m[1]) ? 'Skipped because the team member is keeping the equipment under a settlement.' : 'Skipped because the equipment was not returned.' },
-  { match: /^(?:HRIS\/R24|Employee record) update acknowledged( - IT lock still needs to be rescheduled)?$/, title: 'Record update acknowledged', detail: m => m[1] ? 'The Last Working Day change was reviewed. The IT lock still needs to be rescheduled.' : 'The Last Working Day change from HRIS was reviewed and accepted.' },
+  { match: /^(?:HRIS\/R24|Employee record) update acknowledged( - IT lock still needs to be rescheduled| - IT still needs the new date for the access lock)?$/, title: 'Record update acknowledged', detail: m => m[1] ? 'The Last Working Day change was reviewed. IT still needs the new date for the access lock.' : 'The Last Working Day change from HRIS was reviewed and accepted.' },
   { match: /^Overdue reminder sent \((.+)\)$/, title: 'Overdue reminder sent', detail: m => { const n = templateForKey(m[1].toLowerCase())?.name; return n ? `${n} emailed to the team member.` : 'Overdue notice emailed to the team member.' } },
   { match: /^(Midpoint|Final) reminder sent$/, detail: m => `${m[1]} reminder emailed to the team member.` },
   { match: /^(?:SMS(?:-\w+)?) sent to the team member \((.+)\)$/, title: 'SMS sent', detail: m => `${m[1]}, marked as sent by the operator.` },
@@ -2562,7 +2647,8 @@ function splitHistoryActionGeneric(action: string): { title: string, detail: str
   return { title: title.trim(), detail: cap(detail.trim()) }
 }
 /** Splits fmtDateTime()'s "Sep 30, 2026, 2:15 PM" into date and time so each can sit on its own line. */
-function splitWhen(when: string): { date: string, time: string } {
+function splitWhen(stored: string): { date: string, time: string } {
+  const when = formatDateTime(stored)
   const m = when.match(/^(.*?)(?:,| at)?\s+(\d{1,2}:\d{2}\s?[AP]M)$/i)
   return m ? { date: m[1]!, time: m[2]! } : { date: when, time: '' }
 }
@@ -2596,7 +2682,7 @@ const HISTORY_CATEGORY_META: Record<HistoryCategory, { label: string, icon: stri
   call: { label: 'Call', icon: 'i-lucide-phone', dot: 'bg-purple-100 text-purple-600', dotColor: 'bg-purple-600' },
   transit: { label: 'Transit', icon: 'i-lucide-truck', dot: 'bg-sky-100 text-sky-700', dotColor: 'bg-sky-600' },
   return: { label: 'Return & Evidence', icon: 'i-lucide-package-check', dot: 'bg-orange-100 text-orange-700', dotColor: 'bg-orange-600' },
-  gate: { label: 'Approval Gate', icon: 'i-lucide-shield', dot: 'bg-[rgb(0,127,69)]/10 text-[rgb(0,127,69)]', dotColor: 'bg-[rgb(0,127,69)]' },
+  gate: { label: 'Approval Gate', icon: 'i-lucide-shield', dot: 'bg-[rgb(0,127,69)]/10 text-ams-success', dotColor: 'bg-[rgb(0,127,69)]' },
   gatepass: { label: 'Gate Pass', icon: 'i-lucide-key-round', dot: 'bg-yellow-100 text-yellow-700', dotColor: 'bg-yellow-600' },
   rebaseline: { label: 'Target Date', icon: 'i-lucide-calendar-clock', dot: 'bg-amber-100 text-amber-700', dotColor: 'bg-amber-600' },
   hris: { label: 'Record updates', icon: 'i-lucide-refresh-cw', dot: 'bg-primary/10 text-primary', dotColor: 'bg-primary' },
@@ -2638,7 +2724,7 @@ const historySections = computed(() => {
   const order = ['Today', 'Yesterday', 'This Week', 'Last Month', 'Older'] as const
   const buckets = new Map<string, { h: TicketHistoryEntry, timeOnly: boolean }[]>()
   for (const h of filteredHistory.value) {
-    const t = new Date(h.when.replace(' at ', ', ')).getTime()
+    const t = instantMs(h.when)
     const day = Number.isNaN(t) ? null : startOfDay(new Date(t))
     const label = day === null ? 'Older' : day >= today ? 'Today' : day >= yesterday ? 'Yesterday' : day >= weekStart ? 'This Week' : day >= monthStart ? 'Last Month' : 'Older'
     if (!buckets.has(label)) buckets.set(label, [])
@@ -2716,7 +2802,7 @@ const railSummary = computed<Record<RailKey, string>>(() => {
     target: t.targetDateISO ? fmtDate(t.targetDateISO) : 'Not set',
     comms: `${smsTotals.value.sent} of ${smsTotals.value.total} texts sent`,
     shipping: `${shipCourier?.name ?? 'No courier yet'} · ${shipmentBadge.value.label}`,
-    itlock: t.itLock.executedConfirmed ? 'Executed' : t.itLock.scheduledConfirmed ? 'Scheduled' : 'Not scheduled'
+    itlock: t.itLockNeedsReschedule ? 'IT needs the new date' : t.itLock.scheduledConfirmed ? 'IT notified' : 'IT not notified'
   }
 })
 
@@ -2754,9 +2840,9 @@ const pathPreview = computed(() => {
   const target = computeTargetDateForPath({ reason: pathReason.value, mode: pathMode.value, lwd: t.lwd, createdAt: t.createdAt, recallEffectiveDate: pathReason.value === 'recalled' ? pathRecallDate.value : undefined })
   return { path, template: templateForKey(path.templateKey)?.name ?? path.templateKey, target }
 })
-function doChangePath() {
+async function doChangePath() {
   if (!ticket.value) return
-  const res = changeReasonAndMode(ticket.value, pathReason.value, pathMode.value, pathNote.value, pathRecallDate.value)
+  const res = await changeReasonAndMode(ticket.value, pathReason.value, pathMode.value, pathNote.value, pathRecallDate.value)
   if (!res.ok) { pathError.value = res.error; return }
   pathChangeOpen.value = false
   toast.add({ title: 'Reason and Mode updated', description: 'The notice, deadline and stages now follow the new path.', icon: 'i-lucide-route', color: 'success' })
@@ -2765,14 +2851,23 @@ function doChangePath() {
 const takeoverOpen = ref(false)
 const takeoverNote = ref('')
 const takeoverError = ref('')
+// Taking over makes no sense for the person who already owns the ticket, so the menu item is disabled for
+// them (a tooltip says why and clicking it explains with a toast) instead of letting them fill in a handover
+// note and only learn at the end that they already own it. The server still refuses it too.
+const viewerOwnsTicket = computed(() => ticket.value?.assignee.name === currentUserName())
+const TAKEOVER_OWNER_TEXT = 'You are already the assignee of this ticket.'
 function openTakeover() {
+  if (viewerOwnsTicket.value) {
+    toast.add({ title: 'Already your ticket', description: TAKEOVER_OWNER_TEXT, icon: 'i-lucide-user-round-check', color: 'neutral' })
+    return
+  }
   takeoverNote.value = ''
   takeoverError.value = ''
   takeoverOpen.value = true
 }
-function doTakeover() {
+async function doTakeover() {
   if (!ticket.value) return
-  const res = takeOverTicket(ticket.value, takeoverNote.value)
+  const res = await takeOverTicket(ticket.value, takeoverNote.value)
   if (!res.ok) { takeoverError.value = res.error; return }
   takeoverOpen.value = false
   toast.add({ title: 'Ticket taken over', description: 'The handover is recorded in the Activity Log.', icon: 'i-lucide-user-round-check', color: 'success' })
@@ -2789,9 +2884,9 @@ function openCancel() {
   cancelError.value = ''
   cancelOpen.value = true
 }
-function doCancel() {
+async function doCancel() {
   if (!ticket.value) return
-  const res = cancelRetrieval(ticket.value, cancelReason.value, cancelNote.value)
+  const res = await cancelRetrieval(ticket.value, cancelReason.value, cancelNote.value)
   if (!res.ok) { cancelError.value = res.error; return }
   cancelOpen.value = false
   toast.add({ title: 'Retrieval cancelled', description: 'The case is closed with no retrieval and the assets are no longer pending return.', icon: 'i-lucide-ban', color: 'success' })
@@ -2803,7 +2898,7 @@ const ticketOverflowMenuItems = computed(() => [[
   { label: 'Activity Log', icon: 'i-lucide-history', onSelect: openActivityLog }
 ], ...(ticket.value?.status === 'open' ? [[
   { label: 'Change reason or mode', icon: pathLocks.value.length ? 'i-lucide-lock' : 'i-lucide-route', onSelect: openPathChange },
-  { label: 'Take over ticket', icon: 'i-lucide-user-round-check', onSelect: openTakeover },
+  { label: 'Take over ticket', icon: 'i-lucide-user-round-check', onSelect: openTakeover, ...(viewerOwnsTicket.value ? { slot: 'takeover', class: disabledLook, 'aria-disabled': true } : {}) },
   { label: 'Cancel retrieval', icon: 'i-lucide-ban', color: 'error' as const, onSelect: openCancel }
 ]] : [])])
 // Opening a Slideover from inside a DropdownMenu item's onSelect can still
@@ -2865,7 +2960,7 @@ const artifactGroups = computed(() => {
       { label: 'Created By', value: t.createdBy || t.assignee.name },
       { label: 'Last Updated', value: t.lastUpdatedAt ? fmtDateTime(t.lastUpdatedAt) : fmtDate(t.createdAt) },
       { label: 'Last Updated By', value: t.lastUpdatedBy || t.createdBy || t.assignee.name },
-      { label: 'Audit Trail ID', value: t.auditTrailId || `AUD-${new Date(t.createdAt).getFullYear()}-${String(t.ticketNumber).padStart(5, '0')}` }
+      { label: 'Audit Trail ID', value: t.auditTrailId || `AUD-${new Date(`${t.createdAt}T00:00:00`).getFullYear()}-${String(t.ticketNumber).padStart(5, '0')}` }
     ]
   })
 
@@ -2905,9 +3000,8 @@ const artifactGroups = computed(() => {
       icon: 'i-lucide-list-checks',
       items: [
         ...t.checklistItems.map((text, i) => ({ label: text, value: `${t.checklistDone[i] ? `Done${t.checklistDoneBy?.[i] ? ` by ${t.checklistDoneBy[i]}` : ''}` : 'Not done'} · ${t.checklistOptional?.[i] ? 'Optional' : 'Required'}` })),
-        ...(due ? [{ label: 'Final review due', value: fmtDate(due) }] : []),
-        { label: 'Final review', value: t.checklistReview ? `Signed off by ${actorFullName(t.checklistReview.by)} on ${fmtDateTime(t.checklistReview.at)}` : 'Not done yet' },
-        ...(t.checklistReview?.note ? [{ label: 'Reviewer note', value: t.checklistReview.note }] : [])
+        ...(due ? [{ label: 'Checklist due', value: fmtDate(due) }] : []),
+        { label: 'Checklist status', value: t.checklistReview ? `Completed by ${actorFullName(t.checklistReview.by)} on ${fmtDateTime(t.checklistReview.at)}` : 'Not done yet' }
       ]
     })
   }
@@ -2925,11 +3019,11 @@ const artifactGroups = computed(() => {
 
   if (t.itLock.scheduledConfirmed) {
     groups.push({
-      title: 'IT Lock',
+      title: 'IT Access Lock',
       icon: 'i-lucide-lock',
       items: [
-        { label: 'Scheduled for', value: fmtDate(t.itLock.scheduledFor) },
-        { label: 'Executed', value: t.itLock.executedConfirmed ? 'Yes' : 'Not yet' }
+        { label: 'IT told to lock access on', value: fmtDate(t.itLock.scheduledFor) },
+        { label: 'Owner', value: 'IT' }
       ]
     })
   }
@@ -3047,7 +3141,7 @@ const artifactGroups = computed(() => {
         // The detail is a few short sentences. The first is the point, the rest support it.
         const sentences = (detail || '').split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean)
         return {
-          label: h.when,
+          label: formatDateTime(h.when),
           value: detail ? `${title}. ${detail}` : title,
           event: {
             title,
@@ -3134,7 +3228,7 @@ function buildTicketRecordHtml(t: Ticket): string {
   // label/value table, the assets as a proper table, and a boxed
   // certification - built from the same tools the email editor offers
   // (headings, tables, dividers), not loose bullet lists.
-  const esc = (s: string) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const esc = escapeText
   const C = { ink: '#0f172a', text: '#334155', muted: '#64748b', dim: '#94a3b8', line: '#e2e8f0', soft: '#f8fafc', blue: '#386BE6', green: '#00A155', red: '#dc2626' }
   const label = (s: string) => `<div style="font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:${C.dim};margin:0 0 2px">${s}</div>`
   const heading = (s: string) => `<h2 style="font-size:13px;font-weight:700;color:${C.ink};margin:22px 0 8px;padding:0 0 6px;border-bottom:2px solid ${C.blue};display:block">${esc(s)}</h2>`
@@ -3169,8 +3263,8 @@ function buildTicketRecordHtml(t: Ticket): string {
     }
     return `${heading(group.title)}${kvTable(group.items)}`
   }).join('')
-  const generatedISO = new Date().toISOString()
-  const docRef = `GT-ERC-${esc(String(t.ticketNumber))}-${generatedISO.slice(0, 10).replace(/-/g, '')}`
+  const generatedISO = localISO(new Date())
+  const docRef = `GT-ERC-${esc(String(t.ticketNumber))}-${generatedISO.replace(/-/g, '')}`
   const meta = (l: string, v: string) => `<td style="width:25%;padding:10px 12px 10px 0;vertical-align:top;border:0">${label(l)}<div style="font-size:11.5px;font-weight:600;color:${C.ink}">${v}</div></td>`
   return `
     <div style="font-family:'Inter',sans-serif;color:${C.text};font-size:11.5px;line-height:1.6">
@@ -3203,6 +3297,32 @@ const closureSentWhen = computed(() => latestHistory(/^Detailed closure copy sen
 async function exportTeamMemberCopy() {
   if (!ticket.value) return
   await printDocument('Equipment Return & Closure Record', buildTicketRecordHtml(ticket.value))
+}
+// Copy / Download EML for the closure "contents to be sent" modal, matching the
+// email preview modal. The message is the closure notification; the closure
+// record PDF stays a separate download (the attachment button in the modal).
+const closureEmailSubject = computed(() => ticket.value ? `Your equipment return is complete, Ticket ${ticket.value.ticketNumber}` : '')
+function closureEmailBodyText() {
+  const t = ticket.value; if (!t) return ''
+  const first = t.employee.name.split(' ')[0]
+  return `Hi ${first},\n\nYour equipment return is complete and this ticket is now closed. Your closure record is attached for your reference. Please keep a copy for your files.\n\nIf anything in the record looks wrong, reply to this email or contact us at ${SAMPLE_VALUES.ASSET_TEAM_EMAIL}.\n\nThank you,\nAsset Management Team`
+}
+function closureEmailBodyHtml() {
+  const t = ticket.value; if (!t) return ''
+  // Escape the interpolated name/email before putting them in HTML (the .eml is
+  // opened in a mail client): a name or address is data, never markup.
+  const first = escapeText(t.employee.name.split(' ')[0] ?? t.employee.name)
+  const team = escapeText(SAMPLE_VALUES.ASSET_TEAM_EMAIL)
+  return `<p>Hi ${first},</p><p>Your equipment return is complete and this ticket is now closed. Your closure record is attached for your reference. Please keep a copy for your files.</p><p>If anything in the record looks wrong, reply to this email or contact us at ${team}.</p><p>Thank you,<br>Asset Management Team</p>`
+}
+function copyClosureContents() {
+  return copyFlash.copy('closure', `${closureEmailSubject.value}\n\n${closureEmailBodyText()}`)
+}
+function downloadClosureEml() {
+  if (!ticket.value) return
+  const html = `<html><body style="font-family:Inter,sans-serif;font-size:14px;color:#1f2937">${closureEmailBodyHtml()}</body></html>`
+  downloadEmlFile(closureEmailSubject.value, html, `Closure-Notice-${ticket.value.ticketNumber}`)
+  toast.add({ title: 'Downloaded .eml file', description: 'Open it in your mail client to send. The PDF record downloads separately.', icon: 'i-lucide-download', color: 'success' })
 }
 function handleArtifactsAfterPrint() {
   artifactsPrinting.value = false
@@ -3280,12 +3400,9 @@ function contactNumberOf(t: { contact: { number?: string | null } }): string {
 }
 const contactNumber = computed(() => ticket.value ? contactNumberOf(ticket.value) : '')
 
-function reopenTicket() {
+async function reopenTicket() {
   if (!ticket.value) return
-  ticket.value.status = 'open'
-  // Reopening a cancelled retrieval lifts the cancellation. The record stays in the Activity Log.
-  ticket.value.cancellation = null
-  pushHistory(ticket.value, 'Ticket Tracker reopened', 'closure')
+  await reopenClosedTicket(ticket.value)
   toast.add({ title: 'Ticket reopened', icon: 'i-lucide-rotate-ccw', color: 'success' })
 }
 </script>
@@ -3294,28 +3411,7 @@ function reopenTicket() {
   <!-- Loading: saved tickets hydrate just after the page's first render, so a
        ticket that exists only in storage is not "missing" yet. A skeleton of the
        real layout (header, stepper, step card, rail) holds the space instead. -->
-  <div v-if="(!ticket && !ticketsHydrated) || simState === 'loading'" class="bg-gray-50 min-h-[calc(100vh-4rem)]" role="status" aria-live="polite" aria-label="Loading ticket">
-    <div class="bg-white border-b border-default px-4 sm:px-8 py-5 flex flex-col gap-4">
-      <div class="flex items-center gap-3">
-        <SharedSkeleton width="w-8" height="h-8" circle />
-        <SharedSkeleton width="w-24" height="h-7" />
-        <SharedSkeleton width="w-14" height="h-5" />
-      </div>
-      <SharedSkeleton width="w-2/3 max-w-md" height="h-4" />
-      <SharedSkeleton height="h-6" />
-    </div>
-    <div class="px-4 sm:px-8 py-5 flex flex-col lg:flex-row gap-5 items-start">
-      <div class="w-full flex-1 min-w-0 rounded-lg border border-default bg-white p-6 flex flex-col gap-4">
-        <SharedSkeleton width="w-1/3" height="h-5" />
-        <SharedSkeleton :lines="3" />
-        <SharedSkeleton width="w-40" height="h-9" />
-      </div>
-      <div class="w-full lg:w-[300px] rounded-lg border border-default bg-white p-4 flex flex-col gap-3">
-        <SharedSkeleton width="w-1/2" height="h-4" />
-        <SharedSkeleton :lines="4" />
-      </div>
-    </div>
-  </div>
+  <SharedPageSkeleton v-if="(!ticket && !ticketsHydrated) || simState === 'loading'" kind="workspace" />
 
   <!-- Not found: only after loading has finished. Says what to do next. -->
   <div v-else-if="!ticket || simState === 'notfound'" class="flex flex-col items-center justify-center gap-3 h-[calc(100vh-4rem)] px-6 text-center">
@@ -3325,13 +3421,13 @@ function reopenTicket() {
     <UButton to="/ticket-tracker" color="primary" variant="outline">Back to Ticket Tracker</UButton>
   </div>
 
-  <div v-else class="bg-gray-50 min-h-[calc(100vh-4rem)]">
+  <div v-else class="bg-gray-50 min-h-[calc(100vh-4rem)] stage-enter">
     <!-- Header - sticky at top-16 (right below the app's own sticky top nav,
          see TopNavbar.vue), same technique as the Templates editor and the
          reference Asset Detail Page: the page scrolls normally, but the
          header (and the left rail below, via its own sticky offset) never
          moves once stuck - no scroll-driven layout recalculation needed. -->
-    <div ref="stickyPageHeaderRef" class="lg:sticky lg:top-16 z-10 bg-white border-b border-default px-4 sm:px-8 pt-5 pb-5">
+    <div ref="stickyPageHeaderRef" class="lg:sticky lg:top-16 z-10 bg-card border-b border-default px-4 sm:px-8 pt-5 pb-5">
       <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-1">
         <div class="flex items-start gap-2 min-w-0 flex-1">
           <UTooltip text="Back to Ticket Tracker">
@@ -3345,7 +3441,7 @@ function reopenTicket() {
               </h1>
               <span
                 class="font-medium inline-flex items-center text-xs px-1.5 py-0.5 gap-1 rounded-sm shrink-0"
-                :class="ticket.status === 'open' ? 'bg-success/10 text-[rgb(0,127,69)]' : 'bg-elevated text-slate-600'"
+                :class="ticket.status === 'open' ? 'bg-success/10 text-ams-success' : 'bg-elevated text-slate-600'"
               >{{ ticket.status === 'open' ? 'Open' : 'Closed' }}</span>
             </div>
             <div class="flex items-center gap-x-2 gap-y-1 flex-wrap text-xs text-muted pt-2.5">
@@ -3395,9 +3491,9 @@ function reopenTicket() {
                         <span class="text-xs text-muted">{{ row.movementLabel }}</span>
                         <span class="text-xs text-muted">&middot;</span>
                         <span v-if="row.expired" class="text-xs font-medium text-amber-700">Expired {{ Math.abs(row.daysLeft!) }}d ago</span>
-                        <span v-else class="text-xs font-medium" :class="row.daysLeft !== null && row.daysLeft <= 2 ? 'text-amber-700' : 'text-[rgb(0,127,69)]'">{{ row.daysLeft }}d left</span>
+                        <span v-else class="text-xs font-medium" :class="row.daysLeft !== null && row.daysLeft <= 2 ? 'text-amber-700' : 'text-ams-success'">{{ row.daysLeft }}d left</span>
                       </div>
-                      <p v-else class="text-xs text-muted mt-0.5">{{ ticket.status === 'closed' ? 'No gate pass issued' : 'Not yet issued' }}</p>
+                      <p v-else class="text-xs text-helper mt-0.5">{{ ticket.status === 'closed' ? 'No gate pass issued' : 'Not yet issued' }}</p>
                     </div>
                   </button>
                   <UButton v-if="!row.issued && ticket.status !== 'closed'" size="xs" color="primary" variant="soft" class="mr-1.5 shrink-0" @click="requestGatePassCreate(row.kind)">Create Now</UButton>
@@ -3442,6 +3538,9 @@ function reopenTicket() {
           </UTooltip>
           <UDropdownMenu :items="ticketOverflowMenuItems">
             <UButton color="neutral" variant="ghost" size="sm" square icon="i-lucide-ellipsis" aria-label="More options" />
+            <template #takeover-label>
+              <UTooltip :text="TAKEOVER_OWNER_TEXT" :content="{ side: 'left' }"><span class="truncate">Take over ticket</span></UTooltip>
+            </template>
           </UDropdownMenu>
         </div>
       </div>
@@ -3536,7 +3635,7 @@ function reopenTicket() {
               <span
                 class="w-20 flex items-center justify-center gap-0.5 text-xs text-center leading-tight transition-colors duration-500"
                 :class="{
-                  'text-[rgb(0,127,69)] font-medium': node.state === 'done',
+                  'text-ams-success font-medium': node.state === 'done',
                   'text-primary font-semibold': node.state === 'current',
                   'text-red-600 font-medium': node.state === 'blocked',
                   'text-muted font-medium': node.state === 'future'
@@ -3642,13 +3741,13 @@ function reopenTicket() {
            cursor crossed that boundary. -->
       <div
         class="relative order-2 shrink-0 transition-[margin-left] duration-300 ease-in-out lg:sticky lg:top-52 w-full lg:w-auto"
-        :style="isLgUp ? { marginLeft: railCollapsed ? '0px' : '16px', ...(railTop ? { top: `${railTop}px` } : {}) } : {}"
+        :style="isLgUp ? { marginLeft: railCollapsed ? '0px' : '2px', ...(railTop ? { top: `${railTop}px` } : {}) } : {}"
       >
         <div
           id="ticket-details-panel"
           :inert="isLgUp && railCollapsed"
           class="overflow-hidden transition-[width] duration-300 ease-in-out"
-          :style="isLgUp ? { width: railCollapsed ? '0px' : '300px' } : {}"
+          :style="isLgUp ? { width: railCollapsed ? '0px' : '388px' } : {}"
         >
         <!-- Right-panel scroll (open item #2 + 5 Oct 2026 revision):
              * Details label + Expand all stay fixed above the scroll area.
@@ -3666,7 +3765,7 @@ function reopenTicket() {
              triggers for every row of content (user feedback 5 Oct 2026,
              6th pass: scroll stopped at the Target Date card and the page
              scroll had to take over for the rest). -->
-        <div class="relative w-full lg:w-[300px] max-w-full min-w-0">
+        <div class="relative w-full lg:w-[388px] max-w-full min-w-0">
         <!-- Chevrons: plain absolute children of this box. The scroller's
              max-height (railMaxHeight) always ends at the viewport bottom, so
              this box is fully on screen and the buttons are always visible
@@ -3674,7 +3773,7 @@ function reopenTicket() {
         <button
           v-if="railCanScrollUp && isLgUp"
           type="button"
-          class="hidden lg:flex absolute z-20 items-center justify-center size-8 rounded-full bg-white border border-default shadow-md text-muted hover:text-primary hover:border-primary/40 transition-colors top-3 left-1/2 -translate-x-1/2"
+          class="hidden lg:flex absolute z-20 items-center justify-center size-8 rounded-full bg-card border border-default shadow-md text-muted hover:text-primary hover:border-primary/40 transition-colors top-3 left-1/2 -translate-x-1/2"
           aria-label="Scroll panel up"
           @click="scrollRail(-220)"
         >
@@ -3683,7 +3782,7 @@ function reopenTicket() {
         <button
           v-if="railCanScrollDown && isLgUp"
           type="button"
-          class="hidden lg:flex absolute z-20 items-center justify-center size-8 rounded-full bg-white border border-default shadow-md text-muted hover:text-primary hover:border-primary/40 transition-colors bottom-3 left-1/2 -translate-x-1/2"
+          class="hidden lg:flex absolute z-20 items-center justify-center size-8 rounded-full bg-card border border-default shadow-md text-muted hover:text-primary hover:border-primary/40 transition-colors bottom-3 left-1/2 -translate-x-1/2"
           aria-label="Scroll panel down"
           @click="scrollRail(220)"
         >
@@ -3696,7 +3795,7 @@ function reopenTicket() {
           @scroll="updateRailScroll"
         >
           <!-- Top fade, only when content is scrolled off above. -->
-          <div v-show="railCanScrollUp" class="pointer-events-none sticky top-0 h-6 -mb-6 bg-gradient-to-b from-white to-transparent z-[2]" aria-hidden="true" />
+          <div v-show="railCanScrollUp" class="pointer-events-none sticky top-0 h-6 -mb-6 bg-gradient-to-b from-card to-transparent z-[2]" aria-hidden="true" />
           <!-- Up / Down chevrons now live outside the scroll flow (see bottom
                of panel) as position: fixed buttons so they stay on the
                viewport while the user scrolls the page. -->
@@ -3721,80 +3820,96 @@ function reopenTicket() {
              and a white content card underneath it. The content card has no
              top radius (it sits flush under its header) and rounds only at
              the bottom. Type rules for this panel: field labels are 12px
-             uppercase in text-dimmed, values are 14px medium in text-default,
+             sentence case in text-dimmed (section labels stay uppercase), values are 14px medium in text-default,
              label always on its own line above the value, 24px between field
              groups. rounded-tl-none stays - the collapse tab's flat edge sits
              flush against this corner (see the tab's own comment above). -->
-        <div class="flex flex-col gap-3 pt-1 pb-1">
+        <div class="flex flex-col gap-3 px-[14px] py-[10px]">
 
         <!-- Custodian -->
-        <section class="rounded-lg border border-default bg-slate-50 dark:bg-gray-800/60 overflow-hidden">
+        <div ref="custodianCardRef" class="rounded-lg">
+        <section class="rounded-lg border overflow-hidden transition-shadow" :class="custodianCue ? 'border-primary/60 bg-slate-50 dark:bg-gray-800/60' : 'border-default bg-slate-50 dark:bg-gray-800/60'">
           <div class="px-4 py-2.5 flex items-center gap-2 cursor-pointer select-none" role="button" tabindex="0" :aria-expanded="railIsOpen('custodian')" @click="onRailHeader('custodian', $event)" @keydown.enter.prevent="toggleRailCard('custodian')" @keydown.space.prevent="toggleRailCard('custodian')">
             <h2 class="mr-auto whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-default">Custodian</h2>
             <span v-if="!railIsOpen('custodian')" class="text-xs text-muted truncate min-w-0">{{ railSummary.custodian }}</span>
             
             <UIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-muted transition-transform duration-200" :class="{ '-rotate-90': !railIsOpen('custodian') }" />
           </div>
-          <div v-show="railIsOpen('custodian')" class="rounded-b-lg bg-white dark:bg-gray-900">
+          <div v-show="railIsOpen('custodian')" class="rounded-b-lg bg-card dark:bg-gray-900">
             <div class="p-4 flex flex-col gap-6">
               <div class="flex items-center gap-3">
                 <span class="inline-flex items-center justify-center shrink-0 rounded-full bg-primary/10 text-primary ring-1 ring-inset ring-primary/20 size-10 text-sm font-bold">
                   {{ ticket.employee.name.split(' ').map(n => n[0]).join('').slice(0, 2) }}
                 </span>
                 <div class="min-w-0 flex-1">
-                  <div class="text-sm font-medium text-default truncate">{{ ticket.employee.name }}</div>
+                  <div class="text-sm text-highlighted truncate">{{ ticket.employee.name }}</div>
                   <div class="flex items-center gap-1 min-w-0">
                     <span class="text-xs text-muted truncate">{{ ticket.employee.email }}</span>
                     <UTooltip text="Copy email address">
-                      <UTooltip :text="copyFlash.isCopied('email-work') ? 'Copied' : 'Copy email address'"><UButton :class="['shrink-0 -my-1', { 'copy-flash': copyFlash.isCopied('email-work') }]" size="xs" :color="copyFlash.isCopied('email-work') ? 'success' : 'neutral'" variant="ghost" square :icon="copyFlash.icon('email-work')" :aria-label="copyFlash.label('email-work', 'Copy email address')" @click="copyWithFlash('email-work', ticket.employee.email)" /></UTooltip>
+                      <UTooltip :text="copyFlash.isCopied('email-work') ? 'Copied' : 'Copy email address'"><UButton :class="['shrink-0 -my-1', { 'copy-flash': copyFlash.isCopied('email-work') }]" size="xs" :color="copyFlash.isCopied('email-work') ? 'success' : 'primary'" variant="ghost" square :icon="copyFlash.icon('email-work')" :aria-label="copyFlash.label('email-work', 'Copy email address')" @click="copyWithFlash('email-work', ticket.employee.email)" /></UTooltip>
                     </UTooltip>
                   </div>
                 </div>
               </div>
               <div class="flex flex-col gap-6">
                 <div class="min-w-0">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Last Working Day</div>
-                  <div class="text-sm font-medium text-default mt-0.5">{{ fmtDate(ticket.lwd) }}</div>
+                  <div class="text-xs font-normal text-default">Last Working Day</div>
+                  <div class="text-sm text-highlighted mt-1">{{ fmtDate(ticket.lwd) }}</div>
                 </div>
                 <div class="min-w-0">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Shift</div>
-                  <div v-if="custodianShift" class="text-sm font-medium text-default mt-0.5">{{ shiftLabel(custodianShift) }}</div>
-                  <div v-else class="text-sm text-muted mt-0.5">Not on file</div>
+                  <div class="text-xs font-normal text-default">Shift</div>
+                  <div v-if="custodianShift" class="text-sm text-highlighted mt-1">{{ shiftLabel(custodianShift) }}</div>
+                  <div v-else class="text-sm text-placeholder mt-1">Not on file</div>
                 </div>
                 <div class="min-w-0">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Client</div>
-                  <div class="text-sm font-medium text-default mt-0.5 truncate">{{ assetOwnerInfo(ticket).name }}</div>
+                  <div class="text-xs font-normal text-default">Client</div>
+                  <div class="text-sm text-highlighted mt-1 truncate">{{ assetOwnerInfo(ticket).name }}</div>
                 </div>
               </div>
             </div>
 
             <div class="px-4 pb-4 pt-2 flex flex-col gap-6">
-              <div v-if="!contactNumber" class="min-w-0">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Contact Number</div>
-                <div class="text-sm text-muted mt-0.5">Not on file. It comes from the employee record.</div>
-              </div>
-              <div v-if="contactNumber" class="min-w-0">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Contact Number</div>
-                <div class="text-sm font-medium text-default mt-0.5">{{ contactNumber }}</div>
-                <div class="flex items-center gap-1.5 mt-2">
-                  <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 border" :class="ticket.contact.numberVerified ? 'text-[rgb(0,127,69)] bg-success/5 border-success/25' : 'text-[#894b00] bg-warning/5 border-warning/40'">
-                    <span class="size-1.5 rounded-full" :class="ticket.contact.numberVerified ? 'bg-success' : 'bg-warning'" />
-                    {{ ticket.contact.numberVerified ? 'Confirmed active' : 'Not yet confirmed' }}
-                  </span>
-                  <UButton v-if="!ticket.contact.numberVerified && ticket.status === 'open'" size="xs" color="primary" variant="soft" @click="onVerifyContact('number')">Verify</UButton>
+              <div class="min-w-0">
+                <div class="text-xs font-normal text-default">Contact Number</div>
+                <!-- Editing: correct or add the number for this ticket. -->
+                <div v-if="editingContactNumber" class="flex items-center gap-1.5 mt-1">
+                  <UInput ref="contactNumberInputEl" :model-value="contactNumberDraft" type="tel" inputmode="tel" size="xs" placeholder="+63 9XX XXX XXXX" class="flex-1 min-w-0" @update:model-value="onContactNumberInput" @keydown.enter="saveContactNumber" @keydown.esc="cancelEditContactNumber" />
+                  <UButton size="xs" color="primary" variant="soft" square icon="i-lucide-check" aria-label="Save contact number" @click="saveContactNumber" />
+                  <UButton size="xs" color="neutral" variant="ghost" square icon="i-lucide-x" aria-label="Cancel editing contact number" @click="cancelEditContactNumber" />
                 </div>
+                <!-- Has a number on file. -->
+                <template v-else-if="contactNumber">
+                  <div class="flex items-center gap-1 mt-1">
+                    <span class="text-sm text-highlighted truncate">{{ contactNumber }}</span>
+                    <UTooltip v-if="ticket.status === 'open'" text="Edit contact number">
+                      <UButton class="shrink-0 -my-1" size="xs" color="primary" variant="ghost" square icon="i-lucide-pencil" aria-label="Edit contact number" @click="startEditContactNumber" />
+                    </UTooltip>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 border" :class="ticket.contact.numberVerified ? 'text-ams-success bg-success/5 border-success/25' : 'text-ams-warning bg-warning/5 border-warning/40'">
+                      <span class="size-1.5 shrink-0 rounded-full" :class="ticket.contact.numberVerified ? 'bg-success' : 'bg-warning'" />
+                      {{ ticket.contact.numberVerified ? 'Confirmed active' : 'Not yet confirmed' }}
+                    </span>
+                    <UButton v-if="!ticket.contact.numberVerified && ticket.status === 'open'" size="xs" color="primary" variant="soft" @click="onVerifyContact('number')">Verify</UButton>
+                  </div>
+                </template>
+                <!-- Nothing on file - the operator can add it. -->
+                <template v-else>
+                  <div class="text-sm text-placeholder mt-1">Not on file. It comes from the employee record.</div>
+                  <UButton v-if="ticket.status === 'open'" size="xs" color="primary" variant="soft" icon="i-lucide-plus" class="mt-2" @click="startEditContactNumber">Add contact number</UButton>
+                </template>
               </div>
               <div v-if="ticket.contact.email" class="min-w-0">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Personal Email</div>
-                <div class="flex items-center gap-1 min-w-0 mt-0.5">
-                  <span class="text-sm font-medium text-default truncate">{{ ticket.contact.email }}</span>
+                <div class="text-xs font-normal text-default">Personal Email</div>
+                <div class="flex items-center gap-1 min-w-0 mt-1">
+                  <span class="text-sm text-highlighted truncate">{{ ticket.contact.email }}</span>
                   <UTooltip text="Copy personal email address">
-                    <UTooltip :text="copyFlash.isCopied('email-personal') ? 'Copied' : 'Copy personal email address'"><UButton :class="['shrink-0 -my-1', { 'copy-flash': copyFlash.isCopied('email-personal') }]" size="xs" :color="copyFlash.isCopied('email-personal') ? 'success' : 'neutral'" variant="ghost" square :icon="copyFlash.icon('email-personal')" :aria-label="copyFlash.label('email-personal', 'Copy personal email address')" @click="copyWithFlash('email-personal', ticket.contact.email)" /></UTooltip>
+                    <UTooltip :text="copyFlash.isCopied('email-personal') ? 'Copied' : 'Copy personal email address'"><UButton :class="['shrink-0 -my-1', { 'copy-flash': copyFlash.isCopied('email-personal') }]" size="xs" :color="copyFlash.isCopied('email-personal') ? 'success' : 'primary'" variant="ghost" square :icon="copyFlash.icon('email-personal')" :aria-label="copyFlash.label('email-personal', 'Copy personal email address')" @click="copyWithFlash('email-personal', ticket.contact.email)" /></UTooltip>
                   </UTooltip>
                 </div>
                 <div class="flex items-center gap-1.5 mt-2">
-                  <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 border" :class="ticket.contact.emailVerified ? 'text-[rgb(0,127,69)] bg-success/5 border-success/25' : 'text-[#894b00] bg-warning/5 border-warning/40'">
-                    <span class="size-1.5 rounded-full" :class="ticket.contact.emailVerified ? 'bg-success' : 'bg-warning'" />
+                  <span class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 border" :class="ticket.contact.emailVerified ? 'text-ams-success bg-success/5 border-success/25' : 'text-ams-warning bg-warning/5 border-warning/40'">
+                    <span class="size-1.5 shrink-0 rounded-full" :class="ticket.contact.emailVerified ? 'bg-success' : 'bg-warning'" />
                     {{ ticket.contact.emailVerified ? 'Confirmed active' : 'Not yet confirmed' }}
                   </span>
                   <UButton v-if="!ticket.contact.emailVerified && ticket.status === 'open'" size="xs" color="primary" variant="soft" @click="onVerifyContact('email')">Verify</UButton>
@@ -3808,27 +3923,27 @@ function reopenTicket() {
                  Owned" badge beside a person read as the person being owned. -->
             <div v-if="showMoreDetails" class="border-t border-default p-4 flex flex-col gap-6">
               <div class="min-w-0">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Client</div>
-                <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
-                  <span class="text-sm font-medium text-default">{{ assetOwnerInfo(ticket).name }}</span>
+                <div class="text-xs font-normal text-default">Client</div>
+                <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                  <span class="text-sm text-highlighted">{{ assetOwnerInfo(ticket).name }}</span>
                   <UBadge v-if="ticket.employee.client === 'Internal'" color="primary" variant="subtle" size="sm">{{ assetOwnerInfo(ticket).badge }}</UBadge>
                 </div>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Department</div>
-                <div class="text-sm font-medium text-default mt-0.5">{{ ticket.employee.dept }}</div>
+                <div class="text-xs font-normal text-default">Department</div>
+                <div class="text-sm text-highlighted mt-1">{{ ticket.employee.dept }}</div>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Leadership Coach</div>
-                <div v-if="ticket.employee.leadershipCoach" class="flex items-center gap-1.5 flex-wrap mt-0.5">
-                  <span class="text-sm font-medium text-default">{{ splitCoachLabel(ticket.employee.leadershipCoach).name }}</span>
+                <div class="text-xs font-normal text-default">Leadership Coach</div>
+                <div v-if="ticket.employee.leadershipCoach" class="flex items-center gap-1.5 flex-wrap mt-1">
+                  <span class="text-sm text-highlighted">{{ splitCoachLabel(ticket.employee.leadershipCoach).name }}</span>
                   <UBadge v-if="splitCoachLabel(ticket.employee.leadershipCoach).role" color="primary" variant="subtle" size="sm">{{ splitCoachLabel(ticket.employee.leadershipCoach).role }}</UBadge>
                 </div>
-                <div v-else class="text-sm font-medium text-dimmed mt-0.5">Not on file</div>
+                <div v-else class="text-sm font-medium text-placeholder mt-1">Not on file</div>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Alt. Contact</div>
-                <div class="text-sm font-medium mt-0.5" :class="ticket.contact.altNumber ? 'text-default' : 'text-dimmed'">{{ ticket.contact.altNumber || 'Not on file' }}</div>
+                <div class="text-xs font-normal text-default">Alt. Contact</div>
+                <div class="text-sm mt-1" :class="ticket.contact.altNumber ? 'text-highlighted' : 'text-placeholder'">{{ ticket.contact.altNumber || 'Not on file' }}</div>
               </div>
             </div>
             <button type="button" class="w-full border-t border-default px-4 py-3 flex items-center justify-between text-xs font-semibold text-primary hover:bg-gray-50 dark:hover:bg-gray-800 rounded-b-lg transition-colors" @click="showMoreDetails = !showMoreDetails">
@@ -3837,6 +3952,7 @@ function reopenTicket() {
             </button>
           </div>
         </section>
+        </div>
 
         <!-- Assets Confirmed - always present; empty state until confirmed. -->
         <section class="rounded-lg border border-default bg-slate-50 dark:bg-gray-800/60 overflow-hidden">
@@ -3846,14 +3962,14 @@ function reopenTicket() {
             <span v-if="ticket.assetsLocked && railIsOpen('assets')" class="text-xs font-bold rounded border px-1.5 py-0.5 text-center leading-tight whitespace-nowrap shrink-0" :class="ASSET_STATUS_BADGE_CLASS[assetsStatusTone]">{{ assetsStatusLabel }}</span>
             <UIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-muted transition-transform duration-200" :class="{ '-rotate-90': !railIsOpen('assets') }" />
           </div>
-          <div v-show="railIsOpen('assets')" class="rounded-b-lg bg-white dark:bg-gray-900">
+          <div v-show="railIsOpen('assets')" class="rounded-b-lg bg-card dark:bg-gray-900">
             <template v-if="ticket.assetsLocked">
               <div class="divide-y divide-default">
                 <button v-for="a in ticket.assets" :key="a.serial" type="button" class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" @click="openAssetDetail(a)">
                   <UIcon :name="assetIcon(a.name)" class="size-4 text-muted shrink-0" />
                   <span class="min-w-0 flex-1">
                     <span class="text-sm font-medium text-default block truncate">{{ a.model }}</span>
-                    <span class="text-xs text-muted block truncate mt-0.5">{{ a.assetTag }}</span>
+                    <span class="text-xs text-muted block truncate mt-1">{{ a.assetTag }}</span>
                   </span>
                   <UIcon v-if="a.checked" name="i-lucide-circle-check" class="size-4 text-success shrink-0" />
                   <span v-else class="text-xs font-medium text-dimmed shrink-0">Not returned</span>
@@ -3861,8 +3977,8 @@ function reopenTicket() {
                 </button>
               </div>
               <div class="border-t border-default p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Confirmed</div>
-                <div class="text-sm font-medium text-default mt-0.5">{{ ticket.assets.filter(a => a.checked).length }} of {{ ticket.assets.length }}</div>
+                <div class="text-xs font-normal text-default">Confirmed</div>
+                <div class="text-sm text-highlighted mt-1">{{ ticket.assets.filter(a => a.checked).length }} of {{ ticket.assets.length }}</div>
                 <div class="mt-2.5 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                   <div class="h-full rounded-full bg-success transition-[width] duration-500 ease-out" :style="{ width: `${ticket.assets.length ? (ticket.assets.filter(a => a.checked).length / ticket.assets.length) * 100 : 0}%` }" />
                 </div>
@@ -3885,11 +4001,11 @@ function reopenTicket() {
             <button v-if="railIsOpen('target') && ticket.status === 'open' && ticket.targetDateISO && !editingTargetDate" type="button" class="inline-flex items-center gap-1 min-h-6 px-1.5 -mx-1.5 rounded-md text-primary text-xs font-semibold hover:bg-primary/10" @click="startEditTargetDate"><UIcon name="i-lucide-pencil" class="size-3" />Edit</button>
             <UIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-muted transition-transform duration-200" :class="{ '-rotate-90': !railIsOpen('target') }" />
           </div>
-          <div v-show="railIsOpen('target')" class="rounded-b-lg bg-white dark:bg-gray-900 p-4">
+          <div v-show="railIsOpen('target')" class="rounded-b-lg bg-card dark:bg-gray-900 p-4">
             <template v-if="ticket.targetDateISO || editingTargetDate">
               <div v-if="!editingTargetDate">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Return Deadline</div>
-                <div class="text-sm font-medium text-default mt-0.5">{{ fmtDate(ticket.targetDateISO) }}</div>
+                <div class="text-xs font-normal text-default">Return Deadline</div>
+                <div class="text-sm text-highlighted mt-1">{{ fmtDate(ticket.targetDateISO) }}</div>
               </div>
               <div v-else class="flex flex-col gap-3">
                 <SharedDatePicker v-model="targetDateDraft" size="sm" />
@@ -3918,8 +4034,8 @@ function reopenTicket() {
                   <div class="text-sm font-medium text-default flex items-center gap-1">
                     {{ fmtDate(h.previousDateISO) }} <UIcon name="i-lucide-arrow-right" class="size-3 text-dimmed shrink-0" /> {{ fmtDate(h.newDateISO) }}
                   </div>
-                  <div class="text-xs text-muted mt-0.5">{{ h.reason }}</div>
-                  <div class="text-xs text-dimmed mt-0.5">{{ actorFullName(h.actor) }} &middot; {{ fmtDateTime(h.when) }}</div>
+                  <div class="text-xs text-helper mt-1">{{ h.reason }}</div>
+                  <div class="text-xs text-dimmed mt-1">{{ actorFullName(h.actor) }} &middot; {{ fmtDateTime(h.when) }}</div>
                 </div>
               </div>
               <UButton
@@ -3947,12 +4063,12 @@ function reopenTicket() {
             <span v-if="!railIsOpen('comms')" class="text-xs text-muted truncate min-w-0">{{ railSummary.comms }}</span>
             <UIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-muted transition-transform duration-200" :class="{ '-rotate-90': !railIsOpen('comms') }" />
           </div>
-          <div v-show="railIsOpen('comms')" class="rounded-b-lg bg-white dark:bg-gray-900 p-4 flex flex-col gap-6">
+          <div v-show="railIsOpen('comms')" class="rounded-b-lg bg-card dark:bg-gray-900 p-4 flex flex-col gap-6">
             <!-- The text for the stage you are on. -->
             <div v-if="stageSms.length || callFollowUpVisible" class="flex flex-col gap-4">
               <span class="text-xs font-semibold uppercase tracking-wide text-dimmed">Text for this stage</span>
 
-              <div v-for="s in stageSms" :key="s.code" class="rounded-lg border border-indigo-200 bg-white overflow-hidden">
+              <div v-for="s in stageSms" :key="s.code" class="rounded-lg border border-indigo-200 bg-card overflow-hidden">
                 <div class="flex items-center gap-2 px-3 py-2 border-b border-indigo-100 bg-indigo-50">
                   <UIcon name="i-lucide-message-square-text" class="size-4 text-indigo-700 shrink-0" aria-hidden="true" />
                   <div class="min-w-0 mr-auto">
@@ -3977,7 +4093,7 @@ function reopenTicket() {
                   <p v-if="s.blockedReason && !s.sent" class="text-xs text-muted">{{ s.blockedReason }}</p>
                   <div class="flex gap-2 justify-end">
                     <UTooltip :text="ticket.status === 'closed' ? 'This ticket is closed.' : 'Copy this text'">
-                      <UButton :aria-disabled="ticket.status === 'closed' || undefined" :class="{ 'copy-flash': copyFlash.isCopied(`sms-${s.code}`), [disabledLook]: ticket.status === 'closed' }" size="xs" :color="copyFlash.isCopied(`sms-${s.code}`) ? 'success' : 'neutral'" variant="outline" :icon="copyFlash.icon(`sms-${s.code}`)" @click="guardedClick(ticket.status !== 'closed', 'This ticket is closed.', () => copyWithFlash(`sms-${s.code}`, s.text))">{{ copyFlash.label(`sms-${s.code}`) }}</UButton>
+                      <UButton :aria-disabled="ticket.status === 'closed' || undefined" :class="{ 'copy-flash': copyFlash.isCopied(`sms-${s.code}`), [disabledLook]: ticket.status === 'closed' }" size="xs" :color="copyFlash.isCopied(`sms-${s.code}`) ? 'success' : 'primary'" variant="outline" :icon="copyFlash.icon(`sms-${s.code}`)" @click="guardedClick(ticket.status !== 'closed', 'This ticket is closed.', () => copyWithFlash(`sms-${s.code}`, s.text))">{{ copyFlash.label(`sms-${s.code}`) }}</UButton>
                     </UTooltip>
                     <UTooltip :text="s.sent ? 'Already confirmed sent' : s.blockedReason ?? 'Mark this SMS as sent once it has actually gone out'">
                       <UButton color="primary" size="xs" icon="i-lucide-check" :aria-disabled="(!!s.sent || !!s.blockedReason) || undefined" :class="{ [disabledLook]: !!s.sent || !!s.blockedReason }" @click="guardedClick(!s.sent && !s.blockedReason, s.sent ? 'Already confirmed sent.' : (s.blockedReason ?? ''), () => markSmsSent(s))">Mark SMS sent</UButton>
@@ -3987,7 +4103,7 @@ function reopenTicket() {
               </div>
 
               <!-- A7: "SMS after an unanswered attempt". The spec supplies no text for it, so this is the call-follow-up message the module already carried. -->
-              <div v-if="callFollowUpVisible" class="rounded-lg border border-indigo-200 bg-white overflow-hidden">
+              <div v-if="callFollowUpVisible" class="rounded-lg border border-indigo-200 bg-card overflow-hidden">
                 <div class="flex items-center gap-2 px-3 py-2 border-b border-indigo-100 bg-indigo-50">
                   <UIcon name="i-lucide-message-square-text" class="size-4 text-indigo-700 shrink-0" aria-hidden="true" />
                   <div class="min-w-0 mr-auto">
@@ -4007,7 +4123,7 @@ function reopenTicket() {
                   <div class="text-xs text-dimmed text-right">{{ smsMessage.length }} characters</div>
                   <div class="flex gap-2 justify-end">
                     <UTooltip :text="ticket.status === 'closed' ? 'This ticket is closed.' : 'Copy this text'">
-                      <UButton :aria-disabled="ticket.status === 'closed' || undefined" :class="{ 'copy-flash': copyFlash.isCopied('sms-call-follow-up'), [disabledLook]: ticket.status === 'closed' }" size="xs" :color="copyFlash.isCopied('sms-call-follow-up') ? 'success' : 'neutral'" variant="outline" :icon="copyFlash.icon('sms-call-follow-up')" @click="guardedClick(ticket.status !== 'closed', 'This ticket is closed.', () => copyWithFlash('sms-call-follow-up', smsMessage))">{{ copyFlash.label('sms-call-follow-up') }}</UButton>
+                      <UButton :aria-disabled="ticket.status === 'closed' || undefined" :class="{ 'copy-flash': copyFlash.isCopied('sms-call-follow-up'), [disabledLook]: ticket.status === 'closed' }" size="xs" :color="copyFlash.isCopied('sms-call-follow-up') ? 'success' : 'primary'" variant="outline" :icon="copyFlash.icon('sms-call-follow-up')" @click="guardedClick(ticket.status !== 'closed', 'This ticket is closed.', () => copyWithFlash('sms-call-follow-up', smsMessage))">{{ copyFlash.label('sms-call-follow-up') }}</UButton>
                     </UTooltip>
                     <UTooltip :text="ticket.status === 'closed' ? 'This ticket is closed.' : ticket.smsSentAt ? 'Already confirmed sent' : !contactNumber ? 'No contact number on file. It comes from the employee record, so update it there first.' : 'Mark this SMS as sent once it has actually gone out'">
                       <UButton color="primary" size="xs" icon="i-lucide-check" :aria-disabled="(ticket.status === 'closed' || !!ticket.smsSentAt || !contactNumber) || undefined" :class="{ [disabledLook]: ticket.status === 'closed' || !!ticket.smsSentAt || !contactNumber }" @click="guardedClick(ticket.status !== 'closed' && !ticket.smsSentAt && !!contactNumber, ticket.status === 'closed' ? 'This ticket is closed.' : ticket.smsSentAt ? 'Already confirmed sent.' : 'No contact number on file. It comes from the employee record, so update it there first.', confirmSmsSent)">Mark SMS sent</UButton>
@@ -4024,13 +4140,13 @@ function reopenTicket() {
                 <li v-for="step in commSteps" :key="step.key" class="flex flex-col gap-1">
                   <div class="text-sm font-medium text-default">{{ step.label }}</div>
                   <div class="flex flex-wrap gap-1.5">
-                    <span v-if="step.email" class="inline-flex items-center gap-1 text-xs font-medium rounded-sm px-1.5 py-0.5 ring-1 ring-inset" :class="step.email.when ? 'text-green-700 bg-green-50 ring-green-600/20' : step.email.skipped ? 'text-muted bg-gray-50 ring-gray-300' : 'text-muted bg-white ring-gray-300'">
+                    <span v-if="step.email" class="inline-flex items-center gap-1 text-xs font-medium rounded-sm px-1.5 py-0.5 ring-1 ring-inset" :class="step.email.when ? 'text-green-700 bg-green-50 ring-green-600/20' : step.email.skipped ? 'text-muted bg-gray-50 ring-gray-300' : 'text-muted bg-card ring-gray-300'">
                       <UIcon :name="step.email.when ? 'i-lucide-check' : 'i-lucide-mail'" class="size-3" aria-hidden="true" />Email{{ step.email.when ? ' sent' : step.email.skipped ? ' skipped' : ' not sent' }}
                     </span>
-                    <span v-for="s in step.sms" :key="s.code" class="inline-flex items-center gap-1 text-xs font-medium rounded-sm px-1.5 py-0.5 ring-1 ring-inset" :class="s.sent ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-muted bg-white ring-gray-300'">
+                    <span v-for="s in step.sms" :key="s.code" class="inline-flex items-center gap-1 text-xs font-medium rounded-sm px-1.5 py-0.5 ring-1 ring-inset" :class="s.sent ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-muted bg-card ring-gray-300'">
                       <UIcon :name="s.sent ? 'i-lucide-check' : 'i-lucide-message-square-text'" class="size-3" aria-hidden="true" />SMS{{ s.sent ? ' sent' : ' not sent' }}
                     </span>
-                    <span v-if="step.calls" class="inline-flex items-center gap-1 text-xs font-medium rounded-sm px-1.5 py-0.5 ring-1 ring-inset text-muted bg-white ring-gray-300">
+                    <span v-if="step.calls" class="inline-flex items-center gap-1 text-xs font-medium rounded-sm px-1.5 py-0.5 ring-1 ring-inset text-muted bg-card ring-gray-300">
                       <UIcon name="i-lucide-phone" class="size-3" aria-hidden="true" />{{ step.calls }}
                     </span>
                   </div>
@@ -4051,44 +4167,44 @@ function reopenTicket() {
             <span v-if="railIsOpen('shipping')" class="text-xs font-semibold border rounded px-1.5 py-0.5 whitespace-nowrap" :class="shipmentBadge.cls">{{ shipmentBadge.label }}</span>
             <UIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-muted transition-transform duration-200" :class="{ '-rotate-90': !railIsOpen('shipping') }" />
           </div>
-          <div v-show="railIsOpen('shipping')" class="rounded-b-lg bg-white dark:bg-gray-900 p-4 flex flex-col gap-6">
+          <div v-show="railIsOpen('shipping')" class="rounded-b-lg bg-card dark:bg-gray-900 p-4 flex flex-col gap-6">
             <div>
-              <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Courier</div>
-              <div v-if="shipmentCourier" class="mt-0.5">
-                <div class="text-sm font-medium text-default">{{ shipmentCourier.name }}</div>
-                <div class="text-xs text-muted">Account manager {{ shipmentCourier.accountManager }}</div>
+              <div class="text-xs font-normal text-default">Courier</div>
+              <div v-if="shipmentCourier" class="mt-1">
+                <div class="text-sm text-highlighted">{{ shipmentCourier.name }}</div>
+                <div class="text-xs mt-1"><span class="text-muted">Account manager</span> <span class="text-highlighted">{{ shipmentCourier.accountManager }}</span></div>
               </div>
-              <div v-else class="text-sm text-dimmed mt-0.5">Not selected yet</div>
+              <div v-else class="text-sm text-placeholder mt-1">Not selected yet</div>
             </div>
             <div v-if="ticket.courierBranchName">
-              <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Drop-off Branch</div>
-              <div class="text-sm font-medium text-default mt-0.5">{{ ticket.courierBranchName }}</div>
-              <div v-if="ticket.courierBranchAddress" class="text-xs text-muted">{{ ticket.courierBranchAddress }}</div>
+              <div class="text-xs font-normal text-default">Drop-off Branch</div>
+              <div class="text-sm text-highlighted mt-1">{{ ticket.courierBranchName }}</div>
+              <div v-if="ticket.courierBranchAddress" class="text-xs text-toned mt-1">{{ ticket.courierBranchAddress }}</div>
             </div>
             <div>
-              <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Turned Over To Courier</div>
-              <div v-if="ticket.transitConfirmedAt" class="text-sm font-medium text-default mt-0.5">
+              <div class="text-xs font-normal text-default">Turned Over To Courier</div>
+              <div v-if="ticket.transitConfirmedAt" class="text-sm text-highlighted mt-1">
                 {{ fmtDate(ticket.transitConfirmedAt) }}
                 <span v-if="shipmentState === 'in-transit' || shipmentState === 'delayed'" class="text-xs font-normal text-muted">&middot; day {{ shipmentDaysSinceTurnover }}</span>
               </div>
-              <div v-else class="text-sm text-dimmed mt-0.5">Not yet</div>
+              <div v-else class="text-sm text-placeholder mt-1">Not yet</div>
             </div>
             <!-- Tracking Number: edited in place by its own pencil. -->
             <div>
               <div class="flex items-center justify-between gap-2">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Tracking Number</div>
+                <div class="text-xs font-normal text-default">Tracking Number</div>
                 <UTooltip v-if="editingShipField !== 'number' && shipmentHandedOver && ticket.status === 'open' && shipmentState !== 'received'" :text="ticket.trackingNumber ? 'Edit tracking number' : 'Add tracking number'">
                   <UButton size="xs" color="primary" variant="ghost" square :icon="ticket.trackingNumber ? 'i-lucide-pencil' : 'i-lucide-plus'" :aria-label="ticket.trackingNumber ? 'Edit tracking number' : 'Add tracking number'" @click="startEditShipField('number')" />
                 </UTooltip>
               </div>
               <template v-if="editingShipField !== 'number'">
-                <div v-if="ticket.trackingNumber" class="flex items-center gap-1.5 mt-0.5">
-                  <span class="text-sm font-medium text-default break-all">{{ ticket.trackingNumber }}</span>
+                <div v-if="ticket.trackingNumber" class="flex items-center gap-1.5 mt-1">
+                  <span class="text-sm text-highlighted break-all">{{ ticket.trackingNumber }}</span>
                   <UTooltip :text="copyFlash.isCopied('tracking-number') ? 'Copied' : 'Copy tracking number'">
-                    <UButton :class="{ 'copy-flash': copyFlash.isCopied('tracking-number') }" size="xs" :color="copyFlash.isCopied('tracking-number') ? 'success' : 'neutral'" variant="ghost" square :icon="copyFlash.icon('tracking-number')" :aria-label="copyFlash.label('tracking-number', 'Copy tracking number')" @click="copyWithFlash('tracking-number', ticket.trackingNumber!)" />
+                    <UButton :class="{ 'copy-flash': copyFlash.isCopied('tracking-number') }" size="xs" :color="copyFlash.isCopied('tracking-number') ? 'success' : 'primary'" variant="ghost" square :icon="copyFlash.icon('tracking-number')" :aria-label="copyFlash.label('tracking-number', 'Copy tracking number')" @click="copyWithFlash('tracking-number', ticket.trackingNumber!)" />
                   </UTooltip>
                 </div>
-                <div v-else class="text-sm text-dimmed mt-0.5">{{ shipmentHandedOver ? 'Not added yet' : 'Added at the Transit step' }}</div>
+                <div v-else class="text-sm text-placeholder mt-1">{{ shipmentHandedOver ? 'Not added yet' : 'Added at the Transit step' }}</div>
               </template>
               <div v-else class="mt-1.5 flex items-center gap-1.5">
                 <UInput v-model="shipNumberDraft" placeholder="e.g. JRS-0048213377" size="sm" class="flex-1" autofocus @keyup.enter="saveShipField('number')" @keyup.esc="cancelEditShipField" />
@@ -4099,20 +4215,20 @@ function reopenTicket() {
             <!-- Tracking Link: edited in place by its own pencil. The Open and Copy actions stay as separate buttons below the value. -->
             <div>
               <div class="flex items-center justify-between gap-2">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Tracking Link</div>
+                <div class="text-xs font-normal text-default">Tracking Link</div>
                 <UTooltip v-if="editingShipField !== 'link' && shipmentHandedOver && ticket.status === 'open' && shipmentState !== 'received'" :text="shipmentLink ? 'Edit tracking link' : 'Add tracking link'">
                   <UButton size="xs" color="primary" variant="ghost" square :icon="shipmentLink ? 'i-lucide-pencil' : 'i-lucide-plus'" :aria-label="shipmentLink ? 'Edit tracking link' : 'Add tracking link'" @click="startEditShipField('link')" />
                 </UTooltip>
               </div>
               <template v-if="editingShipField !== 'link'">
-                <div v-if="shipmentLink" class="mt-0.5">
-                  <div class="text-sm font-medium text-default break-all">{{ shipmentLink }}</div>
+                <div v-if="shipmentLink" class="mt-1">
+                  <div class="text-sm text-highlighted break-all">{{ shipmentLink }}</div>
                   <div class="flex gap-2 mt-1.5">
                     <UButton size="xs" color="primary" variant="soft" icon="i-lucide-external-link" :to="shipmentLink" target="_blank">Open tracking</UButton>
-                    <UButton :class="{ 'copy-flash': copyFlash.isCopied('tracking-link') }" size="xs" :color="copyFlash.isCopied('tracking-link') ? 'success' : 'neutral'" variant="outline" :icon="copyFlash.icon('tracking-link')" @click="copyWithFlash('tracking-link', shipmentLink)">{{ copyFlash.label('tracking-link', 'Copy link') }}</UButton>
+                    <UButton :class="{ 'copy-flash': copyFlash.isCopied('tracking-link') }" size="xs" :color="copyFlash.isCopied('tracking-link') ? 'success' : 'primary'" variant="outline" :icon="copyFlash.icon('tracking-link')" @click="copyWithFlash('tracking-link', shipmentLink)">{{ copyFlash.label('tracking-link', 'Copy link') }}</UButton>
                   </div>
                 </div>
-                <div v-else class="text-sm text-dimmed mt-0.5">{{ shipmentHandedOver ? 'Not added yet' : 'Added at the Transit step' }}</div>
+                <div v-else class="text-sm text-placeholder mt-1">{{ shipmentHandedOver ? 'Not added yet' : 'Added at the Transit step' }}</div>
               </template>
               <div v-else class="mt-1.5 flex flex-col gap-1.5">
                 <div class="flex items-center gap-1.5">
@@ -4131,36 +4247,37 @@ function reopenTicket() {
              two values share a row, split by a vertical divider. -->
         <section ref="itLockCardRef" class="rounded-lg border overflow-hidden" :class="ticket.itLockNeedsReschedule ? 'border-red-200 bg-red-50' : 'border-default bg-slate-50 dark:bg-gray-800/60'">
           <div class="px-4 py-2.5 flex items-center gap-2 cursor-pointer select-none" role="button" tabindex="0" :aria-expanded="railIsOpen('itlock')" @click="onRailHeader('itlock', $event)" @keydown.enter.prevent="toggleRailCard('itlock')" @keydown.space.prevent="toggleRailCard('itlock')">
-            <h2 class="mr-auto whitespace-nowrap text-xs font-semibold uppercase tracking-wide" :class="ticket.itLockNeedsReschedule ? 'text-red-700' : 'text-default'">IT Lock</h2>
+            <h2 class="mr-auto whitespace-nowrap text-xs font-semibold uppercase tracking-wide" :class="ticket.itLockNeedsReschedule ? 'text-red-700' : 'text-default'">IT Access Lock</h2>
             <span v-if="!railIsOpen('itlock')" class="text-xs text-muted truncate min-w-0">{{ railSummary.itlock }}</span>
-            <span v-if="ticket.itLockNeedsReschedule" class="text-xs font-bold text-red-700 bg-red-100 border border-red-200 rounded px-1.5 py-0.5">Needs reschedule</span>
+            <span v-if="ticket.itLockNeedsReschedule" class="text-xs font-bold text-red-700 bg-red-100 border border-red-200 rounded px-1.5 py-0.5">IT needs the new date</span>
             <UIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-muted transition-transform duration-200" :class="{ '-rotate-90': !railIsOpen('itlock') }" />
           </div>
-          <div v-show="railIsOpen('itlock')" class="rounded-b-lg bg-white dark:bg-gray-900 p-4">
+          <div v-show="railIsOpen('itlock')" class="rounded-b-lg bg-card dark:bg-gray-900 p-4">
             <template v-if="ticket.itLock.scheduledConfirmed">
               <div class="grid grid-cols-2 divide-x divide-default">
                 <div class="min-w-0 pr-4">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Scheduled For</div>
-                  <div class="text-sm font-medium text-default mt-0.5">{{ lockRun ? fmtDate(lockRun.dateISO) : fmtDate(ticket.itLock.scheduledFor) }}</div>
-                  <div v-if="lockRun" class="text-xs text-muted mt-0.5">{{ lockRun.clock }}</div>
+                  <div class="text-xs font-normal text-default">Lock requested for</div>
+                  <div class="text-sm text-highlighted mt-1">{{ lockRun ? fmtDate(lockRun.dateISO) : fmtDate(ticket.itLock.scheduledFor) }}</div>
+                  <div v-if="lockRun" class="text-xs text-helper mt-1">{{ lockRun.clock }}</div>
                 </div>
                 <div class="min-w-0 pl-4">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Executed</div>
-                  <div class="text-sm font-medium mt-0.5" :class="ticket.itLock.executedConfirmed ? 'text-success' : 'text-default'">{{ ticket.itLock.executedConfirmed ? 'Yes' : 'Not yet' }}</div>
+                  <div class="text-xs font-normal text-default">Responsible team</div>
+                  <div class="text-sm text-highlighted mt-1">IT</div>
                 </div>
               </div>
-              <p v-if="ticket.itLockNeedsReschedule" class="text-xs text-red-700 mt-4">The Last Working Day changed after this lock was scheduled. Reschedule it against the current date to resolve.</p>
-              <UButton v-if="ticket.itLockNeedsReschedule && ticket.status === 'open'" color="error" size="sm" class="mt-3" @click="doRescheduleItLock">Reschedule Now</UButton>
+              <p class="text-xs text-helper mt-4">Locking access is IT's responsibility. The retrieval does not depend on it.</p>
+              <p v-if="ticket.itLockNeedsReschedule" class="text-xs text-red-700 mt-3">The Last Working Day changed after IT was notified. Send IT the updated date so the lock is applied on the correct day.</p>
+              <UButton v-if="ticket.itLockNeedsReschedule && ticket.status === 'open'" color="error" size="sm" class="mt-3" @click="doRescheduleItLock">Notify IT of the new date</UButton>
             </template>
             <div v-else class="flex flex-col items-center text-center gap-1.5 py-2 text-dimmed">
               <UIcon name="i-lucide-lock" class="size-5" />
-              <p class="text-xs">Not yet scheduled. This populates once IT lock scheduling is confirmed.</p>
+              <p class="text-xs">IT has not been notified from this ticket. Locking access is IT's responsibility.</p>
             </div>
           </div>
         </section>
         </div>
           <!-- Bottom fade, only when content runs past the bottom edge. -->
-          <div v-show="railCanScrollDown" class="pointer-events-none sticky bottom-0 h-6 -mt-6 bg-gradient-to-t from-white to-transparent z-[2]" aria-hidden="true" />
+          <div v-show="railCanScrollDown" class="pointer-events-none sticky bottom-0 h-6 -mt-6 bg-gradient-to-t from-card to-transparent z-[2]" aria-hidden="true" />
         </div>
         </div>
         </div>
@@ -4187,7 +4304,7 @@ function reopenTicket() {
              Explain" once Gate 1 clears) and only falls back to the generic
              "P&C Acknowledgement" once every applicable gate is released.
              overflow-hidden matters here - without it, the header button's
-             own flat bg-white rectangle doesn't follow the container's
+             own flat bg-card rectangle doesn't follow the container's
              rounded top corners, a real rendered glitch (reported live as
              "the stroke looks disconnected at the top corners"). Header is
              always plain white (no gray/green fill at all); the only signal
@@ -4224,7 +4341,7 @@ function reopenTicket() {
         >
           <button
             type="button"
-            class="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm text-left bg-white outline-none"
+            class="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm text-left bg-card outline-none"
             :class="[gateBannerOpen ? 'border-b' : '', ticket.gatesReleased >= ticket.gateCount ? 'border-[rgb(0,127,69)]/25' : 'border-default']"
             @click="gateBannerOpen = !gateBannerOpen"
           >
@@ -4232,15 +4349,15 @@ function reopenTicket() {
               <UIcon
                 :name="ticket.gatesReleased >= ticket.gateCount ? 'i-lucide-shield-check' : 'i-lucide-shield'"
                 class="size-4 shrink-0"
-                :class="ticket.gatesReleased >= ticket.gateCount ? 'text-[rgb(0,127,69)]' : 'text-muted'"
+                :class="ticket.gatesReleased >= ticket.gateCount ? 'text-ams-success' : 'text-muted'"
               />
-              <span class="font-semibold" :class="ticket.gatesReleased >= ticket.gateCount ? 'text-[rgb(0,127,69)]' : 'text-default'">{{ gateHeaderTitle }}</span>
+              <span class="font-semibold" :class="ticket.gatesReleased >= ticket.gateCount ? 'text-ams-success' : 'text-default'">{{ gateHeaderTitle }}</span>
               <UBadge color="neutral" variant="outline" size="sm">Optional</UBadge>
             </div>
             <UIcon
               name="i-lucide-chevron-down"
               class="size-3.5 shrink-0 transition-transform duration-200"
-              :class="[gateBannerOpen ? 'rotate-180' : '', ticket.gatesReleased >= ticket.gateCount ? 'text-[rgb(0,127,69)]' : 'text-default']"
+              :class="[gateBannerOpen ? 'rotate-180' : '', ticket.gatesReleased >= ticket.gateCount ? 'text-ams-success' : 'text-default']"
             />
           </button>
           <div v-if="gateBannerOpen" class="flex flex-col gap-1.5">
@@ -4265,7 +4382,7 @@ function reopenTicket() {
             <div
               v-for="step in GATE_STEPS.slice(0, ticket.gateCount)"
               :key="step.n"
-              class="rounded-md px-4 py-4 text-sm bg-white text-muted"
+              class="rounded-md px-4 py-4 text-sm bg-card text-muted"
             >
               <!-- Title keeps its own text-highlighted color (per explicit
                    feedback - only the description was ever meant to change).
@@ -4275,7 +4392,7 @@ function reopenTicket() {
                    semantic muted token directly. -->
               <div class="flex items-center gap-1.5">
                 <div class="text-highlighted" :class="ticket.gatesReleased >= step.n ? 'font-semibold' : 'font-medium'">{{ stripGateLabel(step.label) }}</div>
-                <UIcon v-if="ticket.gatesReleased >= step.n" name="i-lucide-check" class="size-4 shrink-0 text-[rgb(0,127,69)]" />
+                <UIcon v-if="ticket.gatesReleased >= step.n" name="i-lucide-check" class="size-4 shrink-0 text-ams-success" />
               </div>
               <div class="text-xs mt-0.5 text-muted">{{ step.unlocks }}</div>
               <div v-if="ticket.gatesReleased < step.n && (step.n === 1 || ticket.gatesReleased === step.n - 1)" class="flex items-center gap-2 mt-2">
@@ -4294,7 +4411,7 @@ function reopenTicket() {
                    the caption, matching the "only the input is green" ask. -->
               <div v-if="ticket.gateNotes[step.n]" class="mt-2 flex flex-col gap-0.5">
                 <span class="text-xs text-muted">Note</span>
-                <span class="text-sm text-[rgb(0,127,69)]">{{ ticket.gateNotes[step.n] }}</span>
+                <span class="text-sm text-ams-success">{{ ticket.gateNotes[step.n] }}</span>
               </div>
             </div>
             <!-- T19 (Equipment Safekeeping Request) genuinely has no drafted
@@ -4320,7 +4437,7 @@ function reopenTicket() {
           <template v-if="ticket.hrisUpdateChangedAt" #aside>{{ fmtDateTime(ticket.hrisUpdateChangedAt) }}</template>
           The Last Working Day is now {{ fmtDate(ticket.lwd) }}. The Target Date was reviewed and updated, and the assignee has been emailed.
           <template v-if="ticket.itLockNeedsReschedule" #body>
-            <p class="text-xs font-medium text-red-700 flex items-start gap-1.5"><UIcon name="i-lucide-circle-alert" class="size-3.5 shrink-0 mt-px" aria-hidden="true" />The IT lock was scheduled against the old date. Reschedule it below before this is considered resolved.</p>
+            <p class="text-xs font-medium text-red-700 flex items-start gap-1.5"><UIcon name="i-lucide-circle-alert" class="size-3.5 shrink-0 mt-px" aria-hidden="true" />IT was given the previous date for the access lock. Send the updated date from the IT Access Lock card. The retrieval can continue in the meantime.</p>
           </template>
           <template #actions>
             <UButton size="sm" color="neutral" variant="outline" @click="acknowledgeUpdate">Acknowledge</UButton>
@@ -4353,7 +4470,7 @@ function reopenTicket() {
              body wrapper's own classes below strip out every interactive
              control rather than gating each one individually across a dozen
              different stage-kind branches. -->
-        <div v-else-if="meta" ref="whatsNextCardRef" class="rounded-lg border border-primary/30 bg-white overflow-hidden">
+        <div v-else-if="meta" ref="whatsNextCardRef" class="rounded-lg border border-primary/30 bg-card overflow-hidden">
           <!-- Header bar - ported off the reference Asset Detail Page's own
                "editing asset details" header shape: a soft-blue fill
                continuing all the way to the container edges. The stage name
@@ -4385,7 +4502,7 @@ function reopenTicket() {
                 </button>
               </UTooltip>
               <span class="text-xs font-semibold uppercase tracking-wide truncate text-primary">Step {{ stepProgress.index }} of {{ stepProgress.total }}</span>
-              <span v-if="ticket.status === 'closed'" class="text-xs font-bold text-muted bg-white border border-primary/15 rounded-full px-2 py-0.5 shrink-0">Read only</span>
+              <span v-if="ticket.status === 'closed'" class="text-xs font-bold text-muted bg-card border border-primary/15 rounded-full px-2 py-0.5 shrink-0">Read only</span>
             </div>
             <div class="flex items-center gap-1 shrink-0">
               <UTooltip v-if="canGoForward" text="Forward to next step">
@@ -4436,6 +4553,9 @@ function reopenTicket() {
           <h2 class="text-base font-semibold text-highlighted mb-0.5">{{ meta.title }}</h2>
           <p class="text-sm text-muted mb-6">{{ meta.kind === 'closure' && ticket.status === 'closed' ? 'This ticket is closed. Here is its final state.' : meta.desc }}</p>
           <p v-if="meta.systemNote" class="text-sm text-muted bg-gray-50 border border-dashed border-default rounded-md px-3 py-2 mb-6">{{ meta.systemNote }}</p>
+          <SharedBanner v-if="sendError" tone="danger" icon="i-lucide-mail-warning" title="Email not sent" role="alert" class="mb-6">
+            {{ sendError }} Press Send again to retry.
+          </SharedBanner>
           </div>
           <!-- Read-only recipient context - reproduces exactly what sat
                between the title and the attach chip when this ticket was
@@ -4537,15 +4657,14 @@ function reopenTicket() {
                 </UDropdownMenu>
               </div>
             </div>
-            <SharedBanner v-if="ticket.checklistReview" tone="success" icon="i-lucide-clipboard-check" class="mb-3" title="Final review done">
+            <SharedBanner v-if="ticket.checklistReview" tone="success" icon="i-lucide-clipboard-check" class="mb-3" title="Checklist completed">
               <template #aside>{{ fmtDateTime(ticket.checklistReview.at) }}</template>
-              Signed off by {{ actorFullName(ticket.checklistReview.by) }}.
-              <template v-if="checklistDoneBy.length || ticket.checklistReview.note" #body>
-                <p v-if="checklistDoneBy.length" class="text-xs text-muted">Tasks done by {{ checklistDoneBy.map(d => `${d.name} (${d.count})`).join(', ') }}.</p>
-                <p v-if="ticket.checklistReview.note" class="text-xs text-muted mt-1"><span class="font-medium text-default">Reviewer note:</span> {{ ticket.checklistReview.note }}</p>
+              Completed by {{ actorFullName(ticket.checklistReview.by) }}.
+              <template v-if="checklistDoneBy.length" #body>
+                <p class="text-xs text-muted">Tasks done by {{ checklistDoneBy.map(d => `${d.name} (${d.count})`).join(', ') }}.</p>
               </template>
             </SharedBanner>
-            <SharedBanner v-else-if="checklistDueInfo?.tone === 'overdue'" tone="danger" class="mb-3" title="The final review is overdue" role="status">
+            <SharedBanner v-else-if="checklistDueInfo?.tone === 'overdue'" tone="danger" class="mb-3" title="The checklist is overdue" role="status">
               It was due {{ fmtDate(checklistDue) }}, three business days before the Last Working Day.
             </SharedBanner>
             <!-- Nudge toward reuse, only for a list that matches no saved template and only until saved or dismissed. -->
@@ -4553,7 +4672,7 @@ function reopenTicket() {
               Save this checklist as a template and reuse it in one click.
               <template #actions>
                 <UButton size="xs" color="primary" @click="openSaveTemplate">Save as template</UButton>
-                <UButton size="xs" color="neutral" variant="ghost" @click="ticket.checklistNudgeDismissed = true">Not now</UButton>
+                <UButton size="xs" color="neutral" variant="ghost" @click="updateTicketFields(ticket, { checklistNudgeDismissed: true })">Not now</UButton>
               </template>
             </SharedBanner>
             <!-- Empty state (open item #23, 5 Oct 2026, 5th pass): no checklist on
@@ -4561,12 +4680,12 @@ function reopenTicket() {
                  path" case and the ordinary "cleared out" case. Prompts the
                  user to add tasks or pick a saved checklist. -->
             <div v-if="!checklistReadOnly && !ticket.checklistItems.length" class="mb-3 rounded-lg border border-dashed border-default bg-gray-50/60 p-5 flex flex-col items-center text-center gap-3">
-              <div class="rounded-full bg-white border border-default p-2.5">
+              <div class="rounded-full bg-card border border-default p-2.5">
                 <UIcon name="i-lucide-list-plus" class="size-5 text-muted" />
               </div>
               <div>
                 <p class="text-sm font-semibold text-default">No checklist on this ticket</p>
-                <p class="text-xs text-muted mt-0.5 max-w-xs">No saved checklist is set up for {{ REASON_LABELS[ticket.reason] }} ({{ ticket.mode === 'remote' ? 'Remote' : 'Onsite' }}). Add tasks below or start from one of your saved checklists.</p>
+                <p class="text-xs text-helper mt-0.5 max-w-xs">No saved checklist is set up for {{ REASON_LABELS[ticket.reason] }} ({{ ticket.mode === 'remote' ? 'Remote' : 'Onsite' }}). Add tasks below or start from one of your saved checklists.</p>
               </div>
               <div class="flex items-center gap-2 pt-1">
                 <UButton size="sm" color="primary" icon="i-lucide-plus" @click="newChecklistItemInputFocus()">Add a task</UButton>
@@ -4580,7 +4699,7 @@ function reopenTicket() {
                 v-for="t in checklistTemplates.slice(0, 3)"
                 :key="t.id"
                 type="button"
-                class="text-left rounded-lg border border-default bg-white px-3.5 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                class="text-left rounded-lg border border-default bg-card px-3.5 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition-colors"
                 @click="chooseChecklistTemplate(t)"
               >
                 <div class="text-sm font-medium text-default">{{ t.name }}</div>
@@ -4630,7 +4749,7 @@ function reopenTicket() {
                     />
                   </UTooltip>
                 </UDropdownMenu>
-                <UCheckbox :model-value="ticket.checklistDone[i]" :disabled="!!ticket.checklistReview" class="mt-0.5" @update:model-value="(v) => toggleChecklistItem(i, !!v)" />
+                <UCheckbox :model-value="ticket.checklistDone[i]" :disabled="!!ticket.checklistReview" :aria-label="`Mark done: ${item}`" class="mt-0.5" @update:model-value="(v) => toggleChecklistItem(i, !!v)" />
                 <span class="flex-1" :class="{ 'text-muted line-through': ticket.checklistDone[i] }">{{ item }}<span v-if="ticket.checklistDone[i] && ticket.checklistDoneBy?.[i]" class="ml-2 text-xs font-normal text-muted no-underline">Done by {{ ticket.checklistDoneBy[i] }}</span></span>
                 <!-- Required or Optional: one tap switches it. -->
                 <button
@@ -4672,61 +4791,41 @@ function reopenTicket() {
                 <UButton size="sm" color="neutral" variant="outline" icon="i-lucide-plus" :aria-disabled="(!newChecklistItemText.trim()) || undefined" :class="{ [disabledLook]: !newChecklistItemText.trim() }" @click="guardedClick(!!newChecklistItemText.trim(), 'Type an item to add first.', addChecklistItemFromInput)">Add</UButton>
               </UTooltip>
             </div>
-            <p v-if="!ticket.checklistReview" class="text-xs text-muted mb-4">Required tasks must be done before the final review. Optional tasks never block it. Tap a badge to switch a task.</p>
-            <!-- Final review: anyone on the Asset Team can sign off. The signer
-                 is recorded; "Done by" is shown per task; an optional note is
-                 kept with the sign-off (open items #11, #34). -->
-            <template v-if="!ticket.checklistReview && ticket.status === 'open' && checklistComplete">
-              <div class="mb-3">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted block mb-1.5" for="reviewer-note">Reviewer note <span class="font-normal normal-case text-dimmed">(optional)</span></label>
-                <UTextarea
-                  id="reviewer-note"
-                  v-model="reviewerNoteDraft"
-                  size="sm"
-                  :rows="2"
-                  placeholder="Anything to leave on the record (a waiver, a reference, context for the sign-off)."
-                  class="w-full"
-                  :maxlength="400"
-                />
-                <p class="text-xs text-muted mt-1 flex items-start gap-1.5"><UIcon name="i-lucide-user-check" class="size-3.5 shrink-0 mt-px text-muted" aria-hidden="true" />Signing as {{ actorFullName(currentUserName()) }}.</p>
-              </div>
-            </template>
-            <UTooltip v-if="!ticket.checklistReview && ticket.status === 'open'" :text="!checklistComplete ? 'Do every required task first' : 'Sign off the final review'">
-              <UButton color="primary" size="sm" :aria-disabled="(!checklistComplete) || undefined" :class="{ [disabledLook]: !checklistComplete }" @click="guardedClick(checklistComplete, 'Do every required task first.', finishChecklist)">Complete final review</UButton>
+            <p v-if="!ticket.checklistReview" class="text-xs text-helper mb-6">Required tasks must be done before the checklist can be completed. Optional tasks never block it. Tap a badge to switch a task.</p>
+            <UTooltip v-if="!ticket.checklistReview && ticket.status === 'open'" :text="!checklistComplete ? 'Do every required task first' : 'Complete the checklist and continue'">
+              <UButton color="primary" size="sm" :aria-disabled="(!checklistComplete) || undefined" :class="{ [disabledLook]: !checklistComplete, 'btn-ready-pulse': a3Pulse.active.value }" @click="guardedClick(checklistComplete, 'Do every required task first.', finishChecklist)">Complete checklist</UButton>
             </UTooltip>
-            <!-- Revisit: the sign-off is on record, so the stage ends with the same Continue button every other finished stage has. -->
+            <!-- Revisit: the checklist is on record, so the stage ends with the same Continue button every other finished stage has. -->
             <UButton v-else-if="ticket.checklistReview && ticket.status === 'open'" color="primary" size="sm" trailing-icon="i-lucide-chevron-right" @click="continueFromStage">{{ continueLabel }}</UButton>
             <!-- v-if above uses `checklistComplete` as both a reactive gate and as the first arg to guardedClick (which expects a boolean). The ref is unwrapped here already. -->
 
           </template>
 
-          <!-- A4 IT lock scheduling - confirmed twice: on scheduling and
-               separately on execution, per FR-003.6, not one bare click. -->
+          <!-- A4 IT access lock. Locking access is IT's job, not the Asset
+               Team's, so this stage is a notice to IT and never a gate. The
+               first banner says so in plain words so the Asset Team is not
+               held to account for what IT does or does not do. -->
           <template v-else-if="meta.kind === 'itlock'">
+            <SharedBanner tone="info" icon="i-lucide-shield-alert" title="IT handles the access lock" class="mb-4">
+              Send IT the date below. They lock access at the end of the last shift; the retrieval does not wait for it.
+            </SharedBanner>
             <div class="rounded-md border border-default bg-gray-50 p-3 mb-4 flex flex-col gap-1.5 text-sm">
-              <div class="flex justify-between"><span class="text-muted">Schedule deadline</span><span class="font-medium text-default text-right">Within 1 business day of the Notice Endorsement</span></div>
-              <div class="flex justify-between gap-4"><span class="text-muted">Last working day</span><span class="font-medium text-default text-right">{{ fmtDate(ticket.lwd) }}</span></div>
-              <div class="flex justify-between gap-4"><span class="text-muted">Their shift</span><span class="font-medium text-default text-right">{{ custodianShift ? shiftLabel(custodianShift) : 'Not on file' }}</span></div>
-              <div class="flex justify-between gap-4"><span class="text-muted">The lock runs</span><span class="font-medium text-default text-right">{{ lockRun ? `${fmtDate(lockRun.dateISO)} at ${lockRun.clock}` : 'When their last shift ends' }}</span></div>
-              <div class="flex justify-between"><span class="text-muted">Confirmation</span><span class="font-medium text-default">Scheduled, then Executed</span></div>
+              <div class="flex justify-between gap-4"><span class="text-muted">Last Working Day</span><span class="font-medium text-default text-right">{{ fmtDate(ticket.lwd) }}</span></div>
+              <div class="flex justify-between gap-4"><span class="text-muted">Shift</span><span class="font-medium text-default text-right">{{ custodianShift ? shiftLabel(custodianShift) : 'Not on file' }}</span></div>
+              <div class="flex justify-between gap-4"><span class="text-muted">Lock date sent to IT</span><span class="font-medium text-default text-right">{{ lockRun ? `${fmtDate(lockRun.dateISO)} at ${lockRun.clock}` : 'End of the last shift' }}</span></div>
             </div>
+            <p v-if="lockRun?.overnight" class="text-xs text-muted mb-4 flex items-start gap-1.5"><UIcon name="i-lucide-moon" class="size-3.5 shrink-0 mt-0.5" aria-hidden="true" /><span>Overnight shift, so the lock date is the morning after the last working day.</span></p>
             <template v-if="!ticket.itLock.scheduledConfirmed">
-              <p v-if="lockRun?.overnight" class="text-sm text-muted mb-4 flex items-start gap-2"><UIcon name="i-lucide-moon" class="size-4 shrink-0 mt-0.5" aria-hidden="true" /><span>Their last shift starts on {{ fmtDate(ticket.lwd) }} and ends the next morning, so the lock runs on {{ fmtDate(lockRun.dateISO) }}.</span></p>
-              <p v-else-if="!custodianShift" class="text-sm text-default mb-4 flex items-start gap-2"><UIcon name="i-lucide-circle-alert" class="size-4 shrink-0 mt-0.5 text-orange-700" aria-hidden="true" /><span>No shift is on file for this team member. Confirm when their last shift ends before scheduling.</span></p>
-              <UButton color="primary" size="sm" @click="doConfirmItLockScheduling">Confirm Scheduling</UButton>
+              <div class="flex items-center gap-2 flex-wrap">
+                <UButton color="primary" size="sm" trailing-icon="i-lucide-chevron-right" @click="doNotifyIt">{{ meta.actionLabel }}</UButton>
+                <UButton color="neutral" variant="outline" size="sm" @click="doSkipItNotice">Continue without notifying IT</UButton>
+              </div>
             </template>
             <template v-else>
-              <!-- Scheduled - awaiting execution. SharedBanner (success tone) so
-                   it gets the standard banner-enter + light fill. -->
-              <SharedBanner v-if="!ticket.itLock.executedConfirmed" tone="warning" icon="i-lucide-lock" title="IT lock scheduled" role="status" class="mb-4">
-                {{ lockRun ? `Set to run on ${fmtDate(lockRun.dateISO)} at ${lockRun.clock}, when their last shift ends.` : `Set to run at the end of their last shift on ${fmtDate(ticket.itLock.scheduledFor)}.` }} Awaiting confirmation that it actually ran.
-              </SharedBanner>
-              <!-- Executed - success record. Matches every other completed stage's SentBanner. -->
-              <SentBanner v-else title="IT lock executed" icon="i-lucide-shield-check" :when="latestHistory(/^IT lock executed on schedule/)?.when" class="mb-4">
-                IT confirmed the team member's access was locked on the scheduled date.
+              <SentBanner title="IT notified" icon="i-lucide-send" :when="latestHistory(/^IT notified to lock access/)?.when" class="mb-4">
+                IT has been asked to lock access at the end of the last shift. The lock is IT's responsibility, and the retrieval does not depend on it.
               </SentBanner>
-              <UButton v-if="ticket.status === 'open' && !ticket.itLock.executedConfirmed" color="primary" size="sm" @click="doConfirmItLockExecution">Confirm Execution</UButton>
-              <UButton v-else-if="ticket.status === 'open'" color="primary" size="sm" trailing-icon="i-lucide-chevron-right" @click="continueFromStage">{{ continueLabel }}</UButton>
+              <UButton v-if="ticket.status === 'open'" color="primary" size="sm" trailing-icon="i-lucide-chevron-right" @click="continueFromStage">{{ continueLabel }}</UButton>
             </template>
           </template>
           <!-- B11 Confirm In Transit - captures the tracking/reference
@@ -4742,13 +4841,13 @@ function reopenTicket() {
             <template v-if="b11Pristine">
               <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <div class="text-xs font-semibold uppercase tracking-wide text-dimmed mb-0.5">Tracking Number</div>
-                  <div class="text-sm font-medium text-default break-all">{{ ticket.trackingNumber || 'Not added' }}</div>
+                  <div class="text-xs font-normal text-default mb-1">Tracking Number</div>
+                  <div class="text-sm text-highlighted break-all">{{ ticket.trackingNumber || 'Not added' }}</div>
                 </div>
                 <div>
-                  <div class="text-xs font-semibold uppercase tracking-wide text-dimmed mb-0.5">Tracking Link</div>
-                  <div v-if="ticket.trackingLink" class="text-sm font-medium text-default break-all">{{ ticket.trackingLink }}</div>
-                  <div v-else class="text-sm text-dimmed">Not added</div>
+                  <div class="text-xs font-normal text-default mb-1">Tracking Link</div>
+                  <div v-if="ticket.trackingLink" class="text-sm text-highlighted break-all">{{ ticket.trackingLink }}</div>
+                  <div v-else class="text-sm text-placeholder">Not added</div>
                 </div>
               </div>
               <p class="text-xs text-muted mb-6 flex items-start gap-1.5"><UIcon name="i-lucide-info" class="size-3.5 mt-px text-muted shrink-0" aria-hidden="true" />Tracking details can still be edited from the Courier &amp; Shipping card while the ticket is open.</p>
@@ -4757,11 +4856,11 @@ function reopenTicket() {
             <template v-else>
               <div class="grid grid-cols-2 gap-3 mb-1">
                 <div>
-                  <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Tracking Number</label>
+                  <label class="text-xs font-normal text-default block mb-2">Tracking Number</label>
                   <UInput v-model="trackingNumberDraft" placeholder="e.g. JRS-0048213377" size="md" class="w-full" />
                 </div>
                 <div>
-                  <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Tracking Link <span class="normal-case font-normal">(optional)</span></label>
+                  <label class="text-xs font-normal text-default block mb-2">Tracking Link <UBadge color="neutral" variant="outline" size="sm" class="ml-1.5">Optional</UBadge></label>
                   <UInput v-model="trackingRefDraft" placeholder="https://jrs-express.com/track/..." size="md" class="w-full" />
                 </div>
               </div>
@@ -4789,11 +4888,11 @@ function reopenTicket() {
             </SentBanner>
             <!-- The branch itself, attached directly under the banner (shared
                  border, no gap) so it reads as part of the same record. -->
-            <div class="mb-6 -mt-px rounded-b-lg border border-success/25 bg-white px-4 py-3 flex items-start gap-2.5">
+            <div class="mb-6 -mt-px rounded-b-lg border border-success/25 bg-card px-4 py-3 flex items-start gap-2.5">
               <UIcon name="i-lucide-map-pin" class="size-4.5 mt-0.5 shrink-0 text-muted" />
               <div class="min-w-0">
-                <div class="text-sm font-medium text-default">{{ ticket.courierBranchName.startsWith(courierProviderById(ticket.courierProviderId)?.name ?? '@@') ? ticket.courierBranchName.replace(/\s+-\s+/, ', ') : `${courierProviderById(ticket.courierProviderId)?.name ?? 'Courier'}, ${ticket.courierBranchName}` }}</div>
-                <div class="text-xs text-muted mt-0.5">{{ ticket.courierBranchAddress }}</div>
+                <div class="text-sm text-highlighted">{{ ticket.courierBranchName.startsWith(courierProviderById(ticket.courierProviderId)?.name ?? '@@') ? ticket.courierBranchName.replace(/\s+-\s+/, ', ') : `${courierProviderById(ticket.courierProviderId)?.name ?? 'Courier'}, ${ticket.courierBranchName}` }}</div>
+                <div class="text-xs text-toned mt-1">{{ ticket.courierBranchAddress }}</div>
               </div>
             </div>
             <!-- Captured via email: the branch reminder that went out, with
@@ -4808,7 +4907,7 @@ function reopenTicket() {
                 class="mb-6"
               />
               <div class="mb-6">
-                <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template</label>
+                <label class="text-xs font-normal text-default block mb-2">Email Template</label>
                 <EmailAttachSection
                   v-if="branchSentTemplate"
                   :name="branchSentTemplate.name"
@@ -4861,7 +4960,7 @@ function reopenTicket() {
 
               <!-- Courier Provider field - the selected courier's own recipient chip is content that belongs to this field (who the dropdown resolved to), not a separate field of its own, so it stays tightly grouped under it rather than getting its own 16px gap. -->
               <div>
-                <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Courier Provider</label>
+                <label class="text-xs font-normal text-default block mb-2">Courier Provider</label>
                 <USelectMenu
                   v-model="selectedCourierId"
                   :items="courierOptions"
@@ -4893,7 +4992,7 @@ function reopenTicket() {
 
               <!-- Branch Name field - selected from the branch directory (as-is, see COURIER_BRANCHES), not typed freehand. The auto-selected cue/reset link describes this same field's own state, so it stays grouped with it. -->
               <div>
-                <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Branch Name</label>
+                <label class="text-xs font-normal text-default block mb-2">Branch Name</label>
                 <UTooltip :text="selectedCourierId ? 'Choose the branch' : 'Select a courier provider first'">
                   <USelectMenu
                     :model-value="selectedBranchId ?? undefined"
@@ -4916,13 +5015,13 @@ function reopenTicket() {
 
               <!-- Branch Address field - auto-populates from the branch selected above, a distinct field in its own right (a different piece of data than the branch name), so it gets its own gap rather than folding into the field above. -->
               <div>
-                <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Branch Address</label>
+                <label class="text-xs font-normal text-default block mb-2">Branch Address</label>
                 <div v-if="selectedBranch" class="text-sm text-default bg-gray-50 border border-default rounded-md px-2.5 py-1.5">{{ selectedBranch.address }}</div>
-                <div v-else class="text-sm text-dimmed bg-gray-50 border border-dashed border-default rounded-md px-2.5 py-1.5">Not set yet - select a branch above.</div>
+                <div v-else class="text-sm text-placeholder bg-gray-50 border border-dashed border-default rounded-md px-2.5 py-1.5">Not set yet - select a branch above.</div>
               </div>
 
               <div>
-                <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Captured via</label>
+                <label class="text-xs font-normal text-default block mb-2">Captured via</label>
                 <!-- One Nuxt UI card size step up from Inspection Routing
                      below (size="md" instead of "sm") - reported live as
                      "too small" - using the theme's own size-driven padding
@@ -4969,9 +5068,9 @@ function reopenTicket() {
                   <SentBanner v-else title="Reminder sent" :when="fmtDateTime(ticket.branchRequestSentAt)">
                     Waiting for {{ ticket.employee.name }} to reply.
                   </SentBanner>
-                  <div class="flex items-center gap-4 flex-wrap">
+                  <div class="flex items-center gap-2 flex-wrap">
                     <UButton size="sm" color="primary" @click="doMarkBranchReplyReceived">Mark Reply as Received</UButton>
-                    <button type="button" class="text-xs font-semibold text-muted hover:text-default" @click="useAddressOnFile">No reply? Use the branch on file</button>
+                    <UButton size="sm" color="neutral" variant="outline" @click="useAddressOnFile">No reply? Use the branch on file</UButton>
                   </div>
                 </template>
 
@@ -4991,7 +5090,7 @@ function reopenTicket() {
                     </template>
                   </RecipientChip>
                   <div>
-                    <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template</label>
+                    <label class="text-xs font-normal text-default block mb-2">Email Template</label>
                     <EmailAttachSection
                       v-if="effectiveBranchTemplate"
                       :name="effectiveBranchTemplate.name"
@@ -5002,8 +5101,8 @@ function reopenTicket() {
                       preview-icon="i-lucide-eye"
                       :form-options="activeTemplateOptions.map(o => ({ id: o.value, name: o.label }))"
                       :current-form-id="overrideBranchTemplateKey ?? undefined"
-                      @preview="() => openTemplatePreview(effectiveBranchTemplate)"
-                      @edit="() => navigateTo(`/templates/email/${overrideBranchTemplateKey}/edit`, { open: { target: '_blank' } })"
+                      @preview="() => openTemplatePreview(effectiveBranchTemplate, overrideBranchTemplateKey)"
+                      @edit="() => openInNewTab(`/templates/email/${overrideBranchTemplateKey}/edit`)"
                       @replace="(key) => overrideBranchTemplateKey = key"
                       @remove="() => overrideBranchTemplateKey = null"
                     />
@@ -5014,12 +5113,12 @@ function reopenTicket() {
                       :options="activeTemplateOptions.map(o => ({ id: o.value, name: o.label }))"
                       @select="(key) => overrideBranchTemplateKey = key"
                     />
-                    <p class="text-xs text-muted mt-1.5">Send only if they haven't replied to the original notice.</p>
+                    <p class="text-xs text-helper mt-1.5">Send only if they haven't replied to the original notice.</p>
                   </div>
                   <div>
                     <div class="flex items-center gap-4 flex-wrap">
                       <UTooltip :text="effectiveBranchTemplate ? 'Send the reminder email' : 'Attach an email template first'">
-                        <UButton size="sm" color="primary" icon="i-lucide-send" :aria-disabled="(!effectiveBranchTemplate) || undefined" :class="{ [disabledLook]: !effectiveBranchTemplate }" @click="guardedClick(!!effectiveBranchTemplate, 'Attach an email template first.', doSendBranchRequest)">Send Reminder</UButton>
+                        <UButton size="sm" color="primary" icon="i-lucide-send" :aria-disabled="(!effectiveBranchTemplate) || undefined" :class="{ [disabledLook]: !effectiveBranchTemplate }" :loading="sending" @click="guardedClick(!!effectiveBranchTemplate, 'Attach an email template first.', doSendBranchRequest)">Send Reminder</UButton>
                       </UTooltip>
                     </div>
                   </div>
@@ -5030,7 +5129,7 @@ function reopenTicket() {
                    disabled reason); on the email path only once there's a
                    reply or a substitution to confirm. -->
               <UTooltip v-if="branchCaptureMethod !== 'email' || branchSubstituted || ticket.branchRequestReplyReceived" :text="branchConfirmDisabled ? branchConfirmDisabledReason : meta.actionLabel">
-                <UButton color="primary" size="sm" class="self-start" :aria-disabled="(branchConfirmDisabled) || undefined" :class="{ [disabledLook]: branchConfirmDisabled }" @click="guardedClick(!branchConfirmDisabled, branchConfirmDisabledReason, doConfirmBranch)">{{ meta.actionLabel }}</UButton>
+                <UButton color="primary" size="sm" class="self-start" :aria-disabled="(branchConfirmDisabled) || undefined" :class="{ [disabledLook]: branchConfirmDisabled, 'btn-ready-pulse': branchPulse.active.value }" @click="guardedClick(!branchConfirmDisabled, branchConfirmDisabledReason, doConfirmBranch)">{{ meta.actionLabel }}</UButton>
               </UTooltip>
             </div>
           </template>
@@ -5040,13 +5139,13 @@ function reopenTicket() {
             <!-- Closed ticket: show the chosen route as read-only text instead of the picker + Confirm button. -->
             <template v-if="ticket.status !== 'open'">
               <div class="rounded-lg border border-default bg-gray-50/60 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-dimmed">Routed to</div>
-                <div class="text-sm font-medium text-default mt-1">{{ ticket.inspectionRoute ? INSPECTION_ROUTE_STATUS[ticket.inspectionRoute] : 'Not routed' }}</div>
-                <div v-if="latestHistory(/^Inspection routed/)?.when" class="text-xs text-muted mt-1">{{ fmtDateTime(latestHistory(/^Inspection routed/)!.when) }}</div>
+                <div class="text-xs font-normal text-default">Routed to</div>
+                <div class="text-sm text-highlighted mt-1">{{ ticket.inspectionRoute ? INSPECTION_ROUTE_STATUS[ticket.inspectionRoute] : 'Not routed' }}</div>
+                <div v-if="latestHistory(/^Inspection routed/)?.when" class="text-xs text-helper mt-1">{{ fmtDateTime(latestHistory(/^Inspection routed/)!.when) }}</div>
               </div>
             </template>
             <template v-else>
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-2">Where is the equipment going next?</label>
+              <label class="text-xs font-normal text-default block mb-2">Where is the equipment going next?</label>
               <URadioGroup
                 v-model="inspectionRouting"
                 :items="inspectionRoutingOptions"
@@ -5071,6 +5170,16 @@ function reopenTicket() {
                as a real record, not a table row with two of its three real
                identifiers (Asset Tag wasn't shown at all here before). -->
           <template v-else-if="meta.kind === 'assets'">
+            <!-- The Custodian card sits in the right panel; this names it and
+                 repeats the contact details the retrieval will use. -->
+            <div v-if="custodianCue" class="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4 flex items-start gap-3">
+              <UIcon name="i-lucide-user-round-check" class="size-5 shrink-0 text-primary mt-0.5" aria-hidden="true" />
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-highlighted">Review the custodian's contact details</p>
+                <p class="text-xs text-muted mt-0.5">The Custodian card in the right panel holds the details used to reach {{ ticket.employee.name }} about this retrieval.</p>
+              </div>
+              <UButton color="primary" variant="soft" size="xs" trailing-icon="i-lucide-arrow-right" class="shrink-0" @click="showCustodianCard">Show Custodian card</UButton>
+            </div>
             <!-- Same "Asset Items" card shape as the real Gate Pass create
                  form (icon-badge header + count chip + subtitle, a column
                  header row, then one dense row per asset) - kept cohesive
@@ -5105,7 +5214,7 @@ function reopenTicket() {
                 class="grid grid-cols-[2rem_1fr_1fr] md:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-x-2 gap-y-1 items-center px-4 py-2.5 cursor-pointer hover:bg-gray-50 focus-visible:outline focus-visible:outline-primary"
                 @click="openAssetDetail(a)" @keydown.enter="openAssetDetail(a)" @keydown.space.prevent="openAssetDetail(a)"
               >
-                <span @click.stop><UCheckbox :model-value="a.checked" @update:model-value="(v) => toggleAsset(i, !!v)" /></span>
+                <span @click.stop><UCheckbox :model-value="a.checked" :aria-label="`Confirm ${a.model} (${a.assetTag})`" @update:model-value="(v) => toggleAsset(i, !!v)" /></span>
                 <span class="text-sm text-primary">{{ a.assetTag }}</span>
                 <span class="text-sm text-muted">{{ a.serial }}</span>
                 <span class="flex items-center gap-1.5 min-w-0 col-span-2 md:col-span-1">
@@ -5170,7 +5279,7 @@ function reopenTicket() {
               class="mb-6"
             />
             <div v-if="effectiveTemplate" class="mb-6">
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template</label>
+              <label class="text-xs font-normal text-default block mb-2">Email Template</label>
               <EmailAttachSection
                 :name="effectiveTemplate.name"
                 :subtitle="effectiveTemplate.description"
@@ -5178,11 +5287,11 @@ function reopenTicket() {
                 preview-tooltip="Preview email"
                 preview-icon="i-lucide-eye"
                 read-only
-                @preview="() => openTemplatePreview(effectiveTemplate)"
+                @preview="() => openTemplatePreview(effectiveTemplate, effectiveTemplateKey)"
               />
             </div>
             <div v-if="stageKey !== 'B9' && effectiveForm" class="mb-6">
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Attached Form</label>
+              <label class="text-xs font-normal text-default block mb-2">Attached Form</label>
               <EmailAttachSection
                 :name="effectiveForm.name"
                 :subtitle="effectiveForm.description"
@@ -5240,7 +5349,7 @@ function reopenTicket() {
                  buttons non-functional once closed anyway, so hiding it
                  entirely then is no loss. -->
             <div v-if="ticket.status === 'open'" class="mb-6">
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template</label>
+              <label class="text-xs font-normal text-default block mb-2">Email Template</label>
               <SharedBanner v-if="effectiveTemplate && effectiveTemplate.status !== 'active'" tone="warning" compact class="mb-2" :title="`This template is marked ${effectiveTemplate.status}`">Review or reactivate it in Templates before sending.</SharedBanner>
               <EmailAttachSection
                 v-if="effectiveTemplate"
@@ -5253,8 +5362,8 @@ function reopenTicket() {
                 :form-options="activeTemplateOptions.map(o => ({ id: o.value, name: o.label }))"
                 :current-form-id="effectiveTemplateKey ?? undefined"
                 :placeholder-issue-count="placeholderIssueCount(effectiveTemplate.subject + effectiveTemplate.body)"
-                @preview="() => openTemplatePreview(effectiveTemplate)"
-                @edit="() => navigateTo(`/templates/email/${effectiveTemplateKey}/edit`, { open: { target: '_blank' } })"
+                @preview="() => openTemplatePreview(effectiveTemplate, effectiveTemplateKey)"
+                @edit="() => openInNewTab(`/templates/email/${effectiveTemplateKey}/edit`)"
                 @replace="(key) => overrideTemplateKey = key"
                 @remove="() => overrideTemplateKey = null"
                 @check-placeholders="openPlaceholderCheck(effectiveTemplate.name, effectiveTemplate.subject + effectiveTemplate.body, 'i-lucide-mail', effectiveTemplate)"
@@ -5276,7 +5385,7 @@ function reopenTicket() {
                  without this guard B9 would manufacture a form attachment
                  that has no reason to be there. -->
             <div v-if="stageKey !== 'B9' && ticket.status === 'open'" class="mb-6">
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Attached Form</label>
+              <label class="text-xs font-normal text-default block mb-2">Attached Form</label>
               <EmailAttachSection
                 v-if="effectiveForm"
                 :name="effectiveForm.name"
@@ -5285,7 +5394,7 @@ function reopenTicket() {
                 :current-form-id="effectiveForm.id"
                 :placeholder-issue-count="placeholderIssueCount(RETRIEVAL_FORM_CONTENT[effectiveForm.id] ?? '')"
                 @preview="() => openFormPreview(effectiveForm!.id)"
-                @edit="() => navigateTo(`/templates/forms/${effectiveForm!.id}/edit`, { open: { target: '_blank' } })"
+                @edit="() => openInNewTab(`/templates/forms/${effectiveForm!.id}/edit`)"
                 @replace="(id) => overrideFormId = id"
                 @remove="() => overrideFormId = null"
                 @check-placeholders="openPlaceholderCheck(effectiveForm!.name, RETRIEVAL_FORM_CONTENT[effectiveForm!.id] ?? '', 'i-lucide-file-text')"
@@ -5298,9 +5407,12 @@ function reopenTicket() {
               />
             </div>
 
-            <UTooltip :text="useManualEmail && !manualEmail.trim() ? 'Enter the manual email address first' : meta.actionLabel">
-              <UButton color="primary" size="sm" :aria-disabled="(useManualEmail && !manualEmail.trim()) || undefined" :class="{ [disabledLook]: useManualEmail && !manualEmail.trim() }" @click="guardedClick(!(useManualEmail && !manualEmail.trim()), 'Enter the manual email address first.', sendNotice)">{{ meta.actionLabel }}</UButton>
-            </UTooltip>
+            <div class="flex items-center gap-2 flex-wrap">
+              <UTooltip :text="useManualEmail && !manualEmail.trim() ? 'Enter the manual email address first' : meta.actionLabel">
+                <UButton color="primary" size="sm" :aria-disabled="(useManualEmail && !manualEmail.trim()) || undefined" :class="{ [disabledLook]: useManualEmail && !manualEmail.trim() }" :loading="sending" @click="guardedClick(!(useManualEmail && !manualEmail.trim()), 'Enter the manual email address first.', sendNotice)">{{ meta.actionLabel }}</UButton>
+              </UTooltip>
+              <EmailMarkSentExternally :loading="sending" @confirm="guardedClick(!(useManualEmail && !manualEmail.trim()), 'Enter the manual email address first.', () => sendNotice(true))" />
+            </div>
           </template>
 
           <!-- A7 Call Confirmation -->
@@ -5318,7 +5430,7 @@ function reopenTicket() {
               <div v-for="(a, i) in ticket.callAttempts" :key="i" class="flex items-center gap-2.5 px-3 py-2">
                 <div
                   class="flex items-center justify-center size-7 rounded-full shrink-0"
-                  :class="a.outcome === 'Answered - confirmed' ? 'bg-[rgb(0,127,69)]/10 text-[rgb(0,127,69)]' : 'bg-red-100 text-red-600'"
+                  :class="a.outcome === 'Answered - confirmed' ? 'bg-[rgb(0,127,69)]/10 text-ams-success' : 'bg-red-100 text-red-600'"
                 >
                   <UIcon :name="a.outcome === 'Answered - confirmed' ? 'i-lucide-phone-incoming' : 'i-lucide-phone-missed'" class="size-3.5" />
                 </div>
@@ -5326,7 +5438,7 @@ function reopenTicket() {
                   <div class="text-sm font-medium text-default">{{ a.outcome === 'Answered - confirmed' ? 'Answered' : 'No answer' }}</div>
                   <div class="text-xs text-dimmed">Attempt {{ i + 1 }} of 3</div>
                 </div>
-                <span class="text-xs text-muted shrink-0">{{ a.when }}</span>
+                <span class="text-xs text-muted shrink-0">{{ fmtDateTime(a.when) }}</span>
               </div>
             </div>
             <!-- Once one call is actually answered, the goal this stage
@@ -5385,7 +5497,7 @@ function reopenTicket() {
             <!-- The templates of the reminders already sent, read-only and
                  previewable, under one label like the other stages. -->
             <div v-if="sentReminderKinds.length" class="mb-6">
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">{{ sentReminderKinds.length > 1 ? 'Email Templates' : 'Email Template' }}</label>
+              <label class="text-xs font-normal text-default block mb-2">{{ sentReminderKinds.length > 1 ? 'Email Templates' : 'Email Template' }}</label>
               <div class="flex flex-col gap-2">
               <template v-for="kind in sentReminderKinds" :key="kind">
                   <EmailAttachSection
@@ -5403,7 +5515,7 @@ function reopenTicket() {
             </div>
             </template>
             <div v-if="ticket.reminderCount < 2 && ticket.status === 'open'" class="mb-6">
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template ({{ ticket.reminderCount === 0 ? 'Midpoint' : 'Final' }})</label>
+              <label class="text-xs font-normal text-default block mb-2">Email Template ({{ ticket.reminderCount === 0 ? 'Midpoint' : 'Final' }})</label>
               <SharedBanner v-if="effectiveReminderTemplate && effectiveReminderTemplate.status !== 'active'" tone="warning" compact class="mb-2" :title="`This template is marked ${effectiveReminderTemplate.status}`">Review or reactivate it in Templates before sending.</SharedBanner>
               <EmailAttachSection
                 v-if="effectiveReminderTemplate"
@@ -5416,8 +5528,8 @@ function reopenTicket() {
                 :form-options="activeTemplateOptions.map(o => ({ id: o.value, name: o.label }))"
                 :current-form-id="effectiveReminderTemplateKey ?? undefined"
                 :placeholder-issue-count="placeholderIssueCount(effectiveReminderTemplate.subject + effectiveReminderTemplate.body)"
-                @preview="() => openTemplatePreview(effectiveReminderTemplate)"
-                @edit="() => navigateTo(`/templates/email/${effectiveReminderTemplateKey}/edit`, { open: { target: '_blank' } })"
+                @preview="() => openTemplatePreview(effectiveReminderTemplate, effectiveReminderTemplateKey)"
+                @edit="() => openInNewTab(`/templates/email/${effectiveReminderTemplateKey}/edit`)"
                 @replace="(key) => overrideTemplateKey = key"
                 @remove="() => overrideTemplateKey = null"
                 @check-placeholders="openPlaceholderCheck(effectiveReminderTemplate.name, effectiveReminderTemplate.subject + effectiveReminderTemplate.body, 'i-lucide-mail', effectiveReminderTemplate)"
@@ -5430,10 +5542,19 @@ function reopenTicket() {
                 @select="(key) => overrideTemplateKey = key"
               />
             </div>
-            <div v-if="ticket.reminderCount < 2" class="flex gap-2">
-              <UButton color="primary" size="sm" @click="sendReminder">Send {{ ticket.reminderCount === 0 ? 'Midpoint' : 'Final' }} Reminder</UButton>
-              <UButton color="neutral" variant="outline" size="sm" @click="skipReminder">Skip {{ ticket.reminderCount === 0 ? 'Midpoint' : 'Final' }} Reminder</UButton>
-            </div>
+            <!-- Three actions in a clear hierarchy: the primary (Send) and the
+                 secondary (Skip) sit together, and the tertiary fallback (sent
+                 it yourself) is set apart below a divider at a lower weight. -->
+            <template v-if="ticket.reminderCount < 2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <UButton color="primary" size="sm" :loading="sending" @click="sendReminder()">Send {{ ticket.reminderCount === 0 ? 'Midpoint' : 'Final' }} Reminder</UButton>
+                <UButton color="neutral" variant="outline" size="sm" @click="skipReminder">Skip {{ ticket.reminderCount === 0 ? 'Midpoint' : 'Final' }} Reminder</UButton>
+              </div>
+              <div class="mt-3 pt-3 border-t border-default flex items-center gap-2 flex-wrap">
+                <span class="text-xs text-muted">Already sent it from your own mail client?</span>
+                <EmailMarkSentExternally variant="ghost" :loading="sending" @confirm="sendReminder(true)" />
+              </div>
+            </template>
             <UButton v-else color="primary" size="sm" @click="continueFromReminders">Continue</UButton>
           </template>
 
@@ -5497,10 +5618,10 @@ function reopenTicket() {
                     <span v-if="ticketOverdue" class="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5 shrink-0">{{ daysLeftLabel(ticket) }}</span>
                   </div>
                   <div class="mt-2">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-muted">Target Date</div>
-                    <div class="text-sm font-medium text-default mt-0.5">{{ fmtDate(ticket.targetDateISO) }}</div>
+                    <div class="text-xs font-normal text-default">Target Date</div>
+                    <div class="text-sm text-highlighted mt-1">{{ fmtDate(ticket.targetDateISO) }}</div>
                   </div>
-                  <p v-if="!ticketOverdue" class="text-xs text-muted mt-3">
+                  <p v-if="!ticketOverdue" class="text-xs text-helper mt-3">
                     If the equipment isn't confirmed received by this date, the ticket automatically becomes Overdue Return. No operator action triggers it.
                   </p>
                 </div>
@@ -5523,7 +5644,7 @@ function reopenTicket() {
                 class="mb-6"
               />
               <div v-if="overdueSentTemplate" class="mb-6">
-                <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template</label>
+                <label class="text-xs font-normal text-default block mb-2">Email Template</label>
                 <EmailAttachSection
                   :name="overdueSentTemplate.name"
                   :subtitle="overdueSentTemplate.description"
@@ -5535,7 +5656,7 @@ function reopenTicket() {
                 />
               </div>
             </template>
-            <div v-else-if="ticketOverdue" class="banner-enter rounded-lg rounded-l-none border border-l-4 border-red-200 border-l-red-600 bg-white p-4 mb-6">
+            <div v-else-if="ticketOverdue" class="banner-enter rounded-lg rounded-l-none border border-l-4 border-red-200 border-l-red-600 bg-card p-4 mb-6">
               <h3 class="text-sm font-semibold text-default mb-3">Send Overdue Reminder</h3>
               <EmailRecipientsSummary :to="ticket.employee.email" :cc="[]" :bcc="[]" class="mb-6" />
               <RecipientChip label="Send To"
@@ -5545,7 +5666,7 @@ function reopenTicket() {
                 class="mb-6"
               />
               <div class="mb-6">
-                <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template</label>
+                <label class="text-xs font-normal text-default block mb-2">Email Template</label>
                 <SharedBanner v-if="effectiveOverdueTemplate && effectiveOverdueTemplate.status !== 'active'" tone="warning" compact class="mb-2" :title="`This template is marked ${effectiveOverdueTemplate.status}`">Review or reactivate it in Templates before sending.</SharedBanner>
                 <EmailAttachSection
                   v-if="effectiveOverdueTemplate"
@@ -5558,8 +5679,8 @@ function reopenTicket() {
                   :form-options="activeTemplateOptions.map(o => ({ id: o.value, name: o.label }))"
                   :current-form-id="effectiveOverdueTemplateKey ?? undefined"
                   :placeholder-issue-count="placeholderIssueCount(effectiveOverdueTemplate.subject + effectiveOverdueTemplate.body)"
-                  @preview="() => openTemplatePreview(effectiveOverdueTemplate)"
-                  @edit="() => navigateTo(`/templates/email/${effectiveOverdueTemplateKey}/edit`, { open: { target: '_blank' } })"
+                  @preview="() => openTemplatePreview(effectiveOverdueTemplate, effectiveOverdueTemplateKey)"
+                  @edit="() => openInNewTab(`/templates/email/${effectiveOverdueTemplateKey}/edit`)"
                   @replace="(key) => overrideTemplateKey = key"
                   @remove="() => overrideTemplateKey = null"
                   @check-placeholders="openPlaceholderCheck(effectiveOverdueTemplate.name, effectiveOverdueTemplate.subject + effectiveOverdueTemplate.body, 'i-lucide-mail', effectiveOverdueTemplate)"
@@ -5572,7 +5693,10 @@ function reopenTicket() {
                   @select="(key) => overrideTemplateKey = key"
                 />
               </div>
-              <UButton color="error" size="sm" @click="sendOverdueReminder">Send Overdue Reminder</UButton>
+              <div class="flex items-center gap-2 flex-wrap">
+                <UButton color="error" size="sm" :loading="sending" @click="sendOverdueReminder()">Send Overdue Reminder</UButton>
+                <EmailMarkSentExternally :loading="sending" @confirm="sendOverdueReminder(true)" />
+              </div>
             </div>
 
             <template v-if="ticket.status === 'open'">
@@ -5581,8 +5705,9 @@ function reopenTicket() {
                 <UButton color="primary" size="sm" @click="confirmPhysicalReceipt">{{ meta.actionLabel }}</UButton>
                 <!-- The team member says the equipment won't come back (lost, or
                      electing to settle) - straight to Post-Retrieval Charging,
-                     with no receipt or evidence step to fill. -->
-                <button type="button" class="text-xs font-semibold text-muted hover:text-default" @click="notReturnedConfirmOpen = true">Equipment won't be returned?</button>
+                     with no receipt or evidence step to fill. Secondary action,
+                     so the same neutral outline as every other secondary button. -->
+                <UButton color="neutral" variant="outline" size="sm" @click="notReturnedConfirmOpen = true">Equipment won't be returned?</UButton>
               </div>
             </template>
             <UModal v-model:open="notReturnedConfirmOpen" :ui="{ content: 'max-w-md' }">
@@ -5595,8 +5720,8 @@ function reopenTicket() {
               </template>
               <template #footer>
                 <div class="flex justify-end gap-2 w-full">
-                  <UButton color="neutral" variant="outline" @click="notReturnedConfirmOpen = false">Cancel</UButton>
-                  <UButton color="primary" @click="markEquipmentNotReturned">Move to Post-Retrieval Charging</UButton>
+                  <UButton color="neutral" variant="outline" @click="notReturnedConfirmOpen = false">Not yet</UButton>
+                  <UButton color="primary" @click="markEquipmentNotReturned">Open charging case</UButton>
                 </div>
               </template>
             </UModal>
@@ -5618,12 +5743,12 @@ function reopenTicket() {
               <div>
                 <div class="text-xs text-muted mb-1.5">Proof-of-Receipt</div>
                 <FileAttachChip v-if="ticket.evidenceProof" :name="ticket.evidenceProof.name" subtitle="Proof-of-Receipt" read-only @preview="openFile(ticket.evidenceProof!)" />
-                <p v-else class="text-sm text-dimmed">Not uploaded</p>
+                <p v-else class="text-sm text-placeholder">Not uploaded</p>
               </div>
               <div>
                 <div class="text-xs text-muted mb-1.5">Condition Photos</div>
                 <FileAttachChip v-if="ticket.evidenceCondition" :name="ticket.evidenceCondition.name" subtitle="Condition Photos" read-only @preview="openFile(ticket.evidenceCondition!)" />
-                <p v-else class="text-sm text-dimmed">Not uploaded</p>
+                <p v-else class="text-sm text-placeholder">Not uploaded</p>
               </div>
             </div>
             <div v-if="ticket.status === 'open'" class="grid grid-cols-2 gap-3 mb-6">
@@ -5693,7 +5818,7 @@ function reopenTicket() {
                   <UIcon name="i-lucide-circle-slash" class="size-4.5 mt-0.5 shrink-0 text-dimmed" />
                   <div class="min-w-0 flex-1">
                     <span class="text-sm font-semibold text-default">Not Applicable</span>
-                    <p class="text-xs text-muted mt-1">No item was confirmed damaged or unreturned at Receipt &amp; Evidence.</p>
+                    <p class="text-xs text-helper mt-1">No item was confirmed damaged or unreturned at Receipt &amp; Evidence.</p>
                   </div>
                 </div>
               </div>
@@ -5735,7 +5860,7 @@ function reopenTicket() {
                 <div class="px-5 pt-4 pb-3 border-b border-default flex items-start justify-between gap-3">
                   <div>
                     <h3 class="text-sm font-semibold text-highlighted">Case Details</h3>
-                    <p class="text-xs text-muted mt-0.5">Fill this once. Every form and email for this case reads from it.</p>
+                    <p class="text-xs text-helper mt-1">Fill this once. Every form and email for this case reads from it.</p>
                   </div>
                   <!-- One legend, not a repeated badge on every field below -
                        reported live as "from ticket, from ticket, from
@@ -5782,11 +5907,11 @@ function reopenTicket() {
                   <!-- Step 1: Team member -->
                   <div v-if="deductionCaseStepIdx === 0" class="grid grid-cols-2 gap-6 stage-enter">
                     <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Full name</span>
-                      <p class="text-sm font-medium text-default">{{ ticket.employee.name }}</p>
+                      <span class="text-xs font-normal text-default block mb-1">Full name</span>
+                      <p class="text-sm text-highlighted">{{ ticket.employee.name }}</p>
                     </div>
                     <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Employee ID</span>
+                      <span class="text-xs font-normal text-default block mb-1">Employee ID</span>
                       <!-- The real value is a plain number, no "EMP-" prefix
                            - that prefix is this seed data's own internal id
                            format (also used as a lookup key elsewhere in the
@@ -5794,10 +5919,10 @@ function reopenTicket() {
                            real HRIS record. Stripped for display only here;
                            the underlying id is left alone since other code
                            keys off it as-is. -->
-                      <p class="text-sm font-medium text-default">{{ ticket.employee.id.replace(/^\D+/, '') }}</p>
+                      <p class="text-sm text-highlighted">{{ ticket.employee.id.replace(/^\D+/, '') }}</p>
                     </div>
                     <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">First name</span>
+                      <span class="text-xs font-normal text-default block mb-1">First name</span>
                       <template v-if="editingCaseFirstName">
                         <UInput v-model="caseFirstNameDraft" size="md" class="w-full mt-1" autofocus @keyup.enter="saveCaseFirstNameEdit" />
                         <div class="flex items-center gap-2 mt-1.5">
@@ -5807,28 +5932,28 @@ function reopenTicket() {
                       </template>
                       <template v-else>
                         <span class="inline-flex items-start gap-1.5">
-                          <span class="text-sm font-medium text-default">{{ deductionCaseFirstName }}</span>
+                          <span class="text-sm text-highlighted">{{ deductionCaseFirstName }}</span>
                           <UTooltip text="Edit for this case">
                             <UButton size="xs" color="primary" variant="ghost" square icon="i-lucide-pencil" aria-label="Edit for this case" @click="startEditCaseFirstName" />
                           </UTooltip>
                         </span>
-                        <span class="text-xs text-dimmed block mt-0.5">{{ ticket.deductionCaseFirstNameOverride ? 'Corrected for this case' : 'Taken from the full name unless you type over it' }}</span>
+                        <span class="text-xs text-helper block mt-1">{{ ticket.deductionCaseFirstNameOverride ? 'Corrected for this case' : 'Taken from the full name unless you type over it' }}</span>
                       </template>
                     </div>
                     <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Client or account</span>
-                      <p class="text-sm font-medium text-default">{{ ticket.employee.client || 'Not set' }}</p>
+                      <span class="text-xs font-normal text-default block mb-1">Client or account</span>
+                      <p class="text-sm text-highlighted">{{ ticket.employee.client || 'Not set' }}</p>
                     </div>
                     <div class="col-span-2">
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Leadership Coach or HRBP</span>
-                      <p class="text-sm font-medium text-default">{{ ticket.employee.leadershipCoach || 'Not set' }}</p>
+                      <span class="text-xs font-normal text-default block mb-1">Leadership Coach or HRBP</span>
+                      <p class="text-sm text-highlighted">{{ ticket.employee.leadershipCoach || 'Not set' }}</p>
                     </div>
                   </div>
 
                   <!-- Step 2: Case -->
                   <div v-else-if="deductionCaseStepIdx === 1" class="grid grid-cols-2 gap-6 stage-enter">
-                    <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Asset Team officer <span class="text-red-600">*</span></span>
+                    <div data-case-field="CASE_OFFICER" class="scroll-mt-24 rounded-lg -m-2 p-2">
+                      <span class="text-xs font-normal text-default block mb-2">Asset Team officer <span class="text-red-600">*</span></span>
                       <template v-if="editingCaseOfficer">
                         <UInput v-model="caseOfficerDraft" size="md" class="w-full mt-1" autofocus @keyup.enter="saveCaseOfficerEdit" />
                         <div class="flex items-center gap-2 mt-1.5">
@@ -5838,12 +5963,12 @@ function reopenTicket() {
                       </template>
                       <template v-else>
                         <span class="inline-flex items-start gap-1.5">
-                          <span class="text-sm font-medium text-default">{{ deductionCaseOfficer }}</span>
+                          <span class="text-sm text-highlighted">{{ deductionCaseOfficer }}</span>
                           <UTooltip text="Edit for this case">
                             <UButton size="xs" color="primary" variant="ghost" square icon="i-lucide-pencil" aria-label="Edit for this case" @click="startEditCaseOfficer" />
                           </UTooltip>
                         </span>
-                        <span class="text-xs text-dimmed block mt-0.5">{{ ticket.deductionCaseOfficerOverride ? 'Corrected for this case' : "Defaults to this ticket's assignee" }}</span>
+                        <span class="text-xs text-helper block mt-1">{{ ticket.deductionCaseOfficerOverride ? 'Corrected for this case' : "Defaults to this ticket's assignee" }}</span>
                       </template>
                     </div>
                     <!-- APR reference removed per explicit feedback - the
@@ -5858,8 +5983,8 @@ function reopenTicket() {
                          exists on the ticket - re-add this field once the
                          email template header is actually built to carry
                          it, not before. -->
-                    <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Date the return was requested</span>
+                    <div data-case-field="DATE_RETURN_REQUESTED" class="scroll-mt-24 rounded-lg -m-2 p-2">
+                      <span class="text-xs font-normal text-default block mb-1">Date the return was requested</span>
                       <template v-if="editingCaseReturnRequested">
                         <SharedDatePicker v-model="caseReturnRequestedDraft" size="md" @enter="saveCaseReturnRequestedEdit" />
                         <div class="flex items-center gap-2 mt-1.5">
@@ -5874,14 +5999,14 @@ function reopenTicket() {
                             <UButton size="xs" color="primary" variant="ghost" square icon="i-lucide-pencil" aria-label="Edit for this case" @click="startEditCaseReturnRequested" />
                           </UTooltip>
                         </span>
-                        <span class="text-xs text-dimmed block mt-0.5">
+                        <span class="text-xs text-helper block mt-1">
                           {{ ticket.deductionCaseReturnRequestedDate ? 'Corrected for this case' : (deductionCaseReturnRequestedDerived ? "Derived from this ticket's own Activity Log (earliest notice sent)" : 'No notice sent yet to derive this from') }}
                         </span>
                       </template>
                     </div>
                     <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Return date that was set</span>
-                      <p class="text-sm font-medium text-default">{{ ticket.targetDateISO ? fmtDate(ticket.targetDateISO) : 'Not set' }}</p>
+                      <span class="text-xs font-normal text-default block mb-1">Return date that was set</span>
+                      <p class="text-sm text-highlighted">{{ ticket.targetDateISO ? fmtDate(ticket.targetDateISO) : 'Not set' }}</p>
                     </div>
                   </div>
 
@@ -5896,9 +6021,9 @@ function reopenTicket() {
                        heavier draft/save/cancel machinery the derived fields
                        need would just be extra clicks for nothing here. -->
                   <div v-else-if="deductionCaseStepIdx === 2" class="grid grid-cols-2 gap-6 stage-enter">
-                    <p class="col-span-2 text-xs text-dimmed -mb-2">{{ deductionDatesOutcome ? `Showing the dates used for ${DEDUCTION_OUTCOME_META[deductionDatesOutcome].label}.` : 'Once you pick an outcome in the last step, this list narrows to the dates it uses.' }}</p>
-                    <div v-if="showDeductionDate('received')">
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-0.5">Date received</span>
+                    <SharedBanner class="col-span-2" tone="info" compact :title="deductionDatesOutcome ? 'Dates for this outcome' : 'Dates narrow to the outcome'">{{ deductionDatesOutcome ? `Showing the dates used for ${DEDUCTION_OUTCOME_META[deductionDatesOutcome].label}.` : 'Once you pick an outcome in the last step, this list narrows to the dates it uses.' }}</SharedBanner>
+                    <div v-if="showDeductionDate('received')" data-case-field="DATE_RECEIVED" class="scroll-mt-24 rounded-lg -m-2 p-2">
+                      <span class="text-xs font-normal text-default block mb-1">Date received</span>
                       <template v-if="editingCaseReceived">
                         <SharedDatePicker v-model="caseReceivedDraft" size="md" @enter="saveCaseReceivedEdit" />
                         <div class="flex items-center gap-2 mt-1.5">
@@ -5913,14 +6038,14 @@ function reopenTicket() {
                             <UButton size="xs" color="primary" variant="ghost" square icon="i-lucide-pencil" aria-label="Edit for this case" @click="startEditCaseReceived" />
                           </UTooltip>
                         </span>
-                        <span class="text-xs text-dimmed block mt-0.5">
+                        <span class="text-xs text-helper block mt-1">
                           {{ ticket.deductionCaseReceivedDate ? 'Corrected for this case' : (deductionCaseReceivedDerived ? "Derived from this ticket's own Activity Log (Proof-of-Receipt uploaded)" : 'Evidence not confirmed yet to derive this from') }}
                         </span>
                       </template>
                     </div>
-                    <div v-for="f in CASE_PLAIN_DATE_FIELDS.filter(f => showDeductionDate(f.key))" :key="f.key">
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">{{ f.label }}</span>
-                      <SharedDatePicker v-model="ticket[f.key]" size="md" />
+                    <div v-for="f in CASE_PLAIN_DATE_FIELDS.filter(f => showDeductionDate(f.key))" :key="f.key" :data-case-field="f.token" class="scroll-mt-24 rounded-lg -m-2 p-2">
+                      <span class="text-xs font-normal text-default block mb-2">{{ f.label }}</span>
+                      <SharedDatePicker :model-value="ticket[f.key]" size="md" @update:model-value="(v: string) => saveCaseFields({ [f.key]: v })" />
                     </div>
                   </div>
 
@@ -5936,23 +6061,23 @@ function reopenTicket() {
                        job once that's rebuilt on top of these two steps, not
                        Case Details' own concern. -->
                   <div v-else-if="deductionCaseStepIdx === 3" class="grid grid-cols-2 gap-6 stage-enter">
-                    <div class="col-span-2">
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Basis of the amount</span>
-                      <USelect :model-value="ticket.deductionCaseAmountBasis ?? undefined" :items="deductionAmountBasisOptions" @update:model-value="(v: unknown) => { if (ticket) ticket.deductionCaseAmountBasis = (v as DeductionAmountBasis | undefined) ?? null }" value-key="value" placeholder="Select a basis" size="md" class="w-full" />
+                    <div class="col-span-2 scroll-mt-24 rounded-lg -m-2 p-2" data-case-field="AMOUNT_BASIS">
+                      <span class="text-xs font-normal text-default block mb-2">Basis of the amount</span>
+                      <USelect :model-value="ticket.deductionCaseAmountBasis ?? undefined" :items="deductionAmountBasisOptions" @update:model-value="(v: unknown) => saveCaseFields({ deductionCaseAmountBasis: (v as DeductionAmountBasis | undefined) ?? null })" value-key="value" placeholder="Select a basis" size="md" class="w-full" />
                       <p v-if="deductionOutcomeSelection && DEDUCTION_BASES_BY_OUTCOME[deductionOutcomeSelection]" class="text-xs text-dimmed mt-2">Showing the bases that apply to {{ DEDUCTION_OUTCOME_META[deductionOutcomeSelection].label }}.</p>
                     </div>
-                    <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Supporting document reference</span>
-                      <UInput v-model="ticket.deductionCaseSupportingDocRef" size="md" class="w-full" placeholder="e.g. quotation or invoice reference" />
-                      <p v-if="ticket.quotationReference" class="text-xs text-muted mt-1 flex items-start gap-1.5"><UIcon name="i-lucide-info" class="size-3 mt-px text-muted shrink-0" />Overridden by the tracked quotation reference {{ ticket.quotationReference }} below. Clear it in Quotation to use this field.</p>
+                    <div data-case-field="SUPPORTING_DOC_REF" class="scroll-mt-24 rounded-lg -m-2 p-2">
+                      <span class="text-xs font-normal text-default block mb-2">Supporting document reference</span>
+                      <UInput :model-value="ticket.deductionCaseSupportingDocRef" size="md" @update:model-value="(v) => typeCaseField({ deductionCaseSupportingDocRef: String(v) })" class="w-full" placeholder="e.g. quotation or invoice reference" />
+                      <p v-if="ticket.quotationReference" class="text-xs text-helper mt-1 flex items-start gap-1.5"><UIcon name="i-lucide-info" class="size-3 mt-px text-muted shrink-0" />Overridden by the tracked quotation reference {{ ticket.quotationReference }} below. Clear it in Quotation to use this field.</p>
                     </div>
-                    <div>
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Amount in figures</span>
-                      <UInput v-model="ticket.deductionCaseAmountFigures" size="md" class="w-full" placeholder="e.g. 5,000.00" />
+                    <div data-case-field="AMOUNT_FIGURES" class="scroll-mt-24 rounded-lg -m-2 p-2">
+                      <span class="text-xs font-normal text-default block mb-2">Amount in figures</span>
+                      <UInput :model-value="ticket.deductionCaseAmountFigures" size="md" @update:model-value="(v) => typeCaseField({ deductionCaseAmountFigures: String(v) })" class="w-full" placeholder="e.g. 5,000.00" />
                     </div>
-                    <div class="col-span-2">
-                      <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Amount in words</span>
-                      <UInput v-model="ticket.deductionCaseAmountWords" size="md" class="w-full" placeholder="e.g. Five Thousand Pesos Only" />
+                    <div class="col-span-2 scroll-mt-24 rounded-lg -m-2 p-2" data-case-field="AMOUNT_WORDS">
+                      <span class="text-xs font-normal text-default block mb-2">Amount in words</span>
+                      <UInput :model-value="ticket.deductionCaseAmountWords" size="md" @update:model-value="(v) => typeCaseField({ deductionCaseAmountWords: String(v) })" class="w-full" placeholder="e.g. Five Thousand Pesos Only" />
                     </div>
                     <!-- #30 Quotation tracking (added 5 Oct 2026). Shown
                          for every outcome; the fields are optional but the
@@ -5960,33 +6085,35 @@ function reopenTicket() {
                          Activity Log line. The reference, if set, is what
                          SUPPORTING_DOC_REF prints in F1/F3. -->
                     <div class="col-span-2 rounded-lg border border-default bg-gray-50/60 p-4 flex flex-col gap-3">
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-lucide-file-text" class="size-4 text-muted" />
-                        <span class="text-sm font-semibold text-default">Quotation</span>
-                        <span class="text-xs text-muted">The repair quotation from the service provider.</span>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <UIcon name="i-lucide-file-text" class="size-4 text-muted" />
+                          <span class="text-sm font-semibold text-default">Quotation</span>
+                        </div>
+                        <p class="text-xs text-helper mt-1 pl-6">The repair quotation from the service provider.</p>
                       </div>
                       <div class="grid grid-cols-2 gap-4">
                         <div>
-                          <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Received on</span>
+                          <span class="text-xs font-normal text-default block mb-2">Received on</span>
                           <SharedDatePicker v-model="quotationReceivedDraft" size="md" />
                         </div>
                         <div>
-                          <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Reference</span>
+                          <span class="text-xs font-normal text-default block mb-2">Reference</span>
                           <UInput v-model="quotationReferenceDraft" size="md" class="w-full" placeholder="e.g. QT-2026-00412" />
                         </div>
                       </div>
                       <div>
-                        <span class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Quotation file</span>
+                        <span class="text-xs font-normal text-default block mb-2">Quotation file</span>
                         <FileAttachChip v-if="quotationFile" :name="quotationFile.name" subtitle="Repair quotation" :read-only="ticket.status !== 'open'" @preview="openQuotationFile" @replace="quotationFileInputRef?.click()" @remove="clearQuotationFile" />
                         <label
                           v-else-if="ticket.status === 'open'"
-                          class="flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-default bg-white p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                          class="flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-default bg-card p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
                           @click="quotationFileInputRef?.click()"
                         >
                           <UIcon name="i-lucide-upload" class="size-4 text-dimmed" />
                           <span class="text-xs text-dimmed">Drag or click to attach the quotation (image or PDF)</span>
                         </label>
-                        <p v-else class="text-sm text-dimmed">No file uploaded</p>
+                        <p v-else class="text-sm text-placeholder">No file uploaded</p>
                         <input ref="quotationFileInputRef" type="file" class="hidden" accept="image/*,.pdf" @change="pickQuotationFile" />
                       </div>
                       <div v-if="ticket.status === 'open'" class="flex items-center justify-end">
@@ -6014,11 +6141,11 @@ function reopenTicket() {
                     <div
                       v-for="a in ticket.assets"
                       :key="a.serial"
-                      class="rounded-lg border bg-white"
+                      class="rounded-lg border bg-card"
                       :class="ticket.deductionCaseAssetSerials.includes(a.serial) ? 'border-primary' : 'border-default'"
                     >
                       <label class="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-gray-50">
-                        <UCheckbox :model-value="ticket.deductionCaseAssetSerials.includes(a.serial)" @update:model-value="toggleDeductionCaseAsset(a.serial)" />
+                        <UCheckbox :model-value="ticket.deductionCaseAssetSerials.includes(a.serial)" :aria-label="`Include ${a.model} in this case`" @update:model-value="toggleDeductionCaseAsset(a.serial)" />
                         <UIcon :name="assetIcon(a.name)" class="size-4 text-muted shrink-0" aria-hidden="true" />
                         <span class="min-w-0 flex-1">
                           <span class="text-sm font-medium text-highlighted block truncate">{{ a.model }}</span>
@@ -6041,7 +6168,7 @@ function reopenTicket() {
                           :aria-invalid="deductionAssetNotesAttempted && deductionAssetNoteMissing(a.serial)"
                           :aria-describedby="`case-note-help-${a.serial}`"
                           :placeholder="deductionAssetNotePlaceholder"
-                          @update:model-value="(v) => { if (ticket) ticket.deductionCaseAssetNotes = { ...(ticket.deductionCaseAssetNotes ?? {}), [a.serial]: String(v) } }"
+                          @update:model-value="(v) => typeCaseField({ deductionCaseAssetNotes: { ...(ticket?.deductionCaseAssetNotes ?? {}), [a.serial]: String(v) } })"
                         />
                         <p :id="`case-note-help-${a.serial}`" class="text-sm mt-1.5 flex items-start gap-1.5" :class="deductionAssetNotesAttempted && deductionAssetNoteMissing(a.serial) ? 'text-red-700' : 'text-muted'">
                           <UIcon :name="deductionAssetNotesAttempted && deductionAssetNoteMissing(a.serial) ? 'i-lucide-circle-alert' : 'i-lucide-info'" class="size-4 shrink-0 mt-0.5" aria-hidden="true" />
@@ -6069,11 +6196,11 @@ function reopenTicket() {
                   <!-- Outcome step: the answers so far, each with a way back to change it. -->
                   <div v-else-if="deductionCaseStepIdx === DEDUCTION_CASE_STEPS.length - 1" class="stage-enter">
                     <h4 class="text-sm font-semibold text-default mb-2">Case Details summary</h4>
-                    <dl class="rounded-lg border border-default divide-y divide-default">
-                      <div v-for="row in caseSummaryRows" :key="row.step" class="flex items-center gap-3 px-4 py-2.5">
-                        <dt class="w-28 shrink-0 text-xs text-muted">{{ row.label }}</dt>
-                        <dd class="min-w-0 flex-1 truncate text-sm text-default">{{ row.value }}</dd>
-                        <UButton size="xs" color="neutral" variant="ghost" :aria-label="`Change ${row.label}`" @click="deductionCaseStepIdx = row.step">Change</UButton>
+                    <dl class="rounded-lg border border-default divide-y divide-default overflow-hidden">
+                      <div v-for="row in caseSummaryRows" :key="row.step" class="flex items-stretch gap-0 pr-4">
+                        <dt class="w-36 shrink-0 bg-gray-50 dark:bg-gray-800/60 px-4 py-3 text-xs font-medium text-muted border-r border-default">{{ row.label }}</dt>
+                        <dd class="min-w-0 flex-1 px-4 py-3 text-sm font-medium text-highlighted whitespace-pre-line break-words">{{ row.value }}</dd>
+                        <UButton size="xs" color="primary" variant="ghost" class="self-center" :aria-label="`Change ${row.label}`" @click="deductionCaseStepIdx = row.step">Change</UButton>
                       </div>
                     </dl>
                   </div>
@@ -6136,7 +6263,7 @@ function reopenTicket() {
                        every other send stage. -->
                   <EmailRecipientsSummary :to="ticket.employee.email" :cc="deductionEffectiveTemplate?.cc ?? []" :bcc="deductionEffectiveTemplate?.bcc ?? []" class="mb-6" />
                   <div class="mb-6">
-                    <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Email Template</label>
+                    <label class="text-xs font-normal text-default block mb-2">Email Template</label>
                     <EmailAttachSection
                       v-if="deductionEffectiveTemplate"
                       :name="deductionEffectiveTemplate.name"
@@ -6148,8 +6275,8 @@ function reopenTicket() {
                       :form-options="activeTemplateOptions.map(o => ({ id: o.value, name: o.label }))"
                       :current-form-id="deductionEffectiveTemplateKey ?? undefined"
                       :placeholder-issue-count="placeholderIssueCount(deductionEffectiveTemplate.subject + caseHtml(deductionEffectiveTemplate.body))"
-                      @preview="() => openTemplatePreview(withCaseRows(deductionEffectiveTemplate))"
-                      @edit="() => navigateTo(`/templates/email/${deductionEffectiveTemplateKey}/edit`, { open: { target: '_blank' } })"
+                      @preview="() => openTemplatePreview(withCaseRows(deductionEffectiveTemplate), deductionEffectiveTemplateKey)"
+                      @edit="() => openInNewTab(`/templates/email/${deductionEffectiveTemplateKey}/edit`)"
                       @replace="(key) => deductionTemplateOverride = key"
                       @remove="() => deductionTemplateOverride = null"
                       @check-placeholders="openPlaceholderCheck(deductionEffectiveTemplate.name, deductionEffectiveTemplate.subject + caseHtml(deductionEffectiveTemplate.body), 'i-lucide-mail', withCaseRows(deductionEffectiveTemplate))"
@@ -6163,7 +6290,7 @@ function reopenTicket() {
                     />
                   </div>
                   <div class="mb-6">
-                    <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Attached Form</label>
+                    <label class="text-xs font-normal text-default block mb-2">Attached Form</label>
                     <EmailAttachSection
                       v-if="deductionEffectiveForm"
                       :name="deductionEffectiveForm.name"
@@ -6172,7 +6299,7 @@ function reopenTicket() {
                       :current-form-id="deductionEffectiveForm.id"
                       :placeholder-issue-count="placeholderIssueCount(caseHtml(RETRIEVAL_FORM_CONTENT[deductionEffectiveForm.id]))"
                       @preview="() => openFormPreview(deductionEffectiveForm!.id, true)"
-                      @edit="() => navigateTo(`/templates/forms/${deductionEffectiveForm!.id}/edit`, { open: { target: '_blank' } })"
+                      @edit="() => openInNewTab(`/templates/forms/${deductionEffectiveForm!.id}/edit`)"
                       @replace="(id) => deductionFormOverride = id"
                       @remove="() => deductionFormOverride = null"
                       @check-placeholders="openPlaceholderCheck(deductionEffectiveForm!.name, caseHtml(RETRIEVAL_FORM_CONTENT[deductionEffectiveForm!.id]), 'i-lucide-file-text')"
@@ -6214,9 +6341,12 @@ function reopenTicket() {
                   <UButton v-if="ticket.deductionOutcome !== 'quotation-pending'" color="primary" size="sm" trailing-icon="i-lucide-chevron-right" @click="continueFromCharging">{{ ticket.equipmentNotReturned || ticket.deductionOutcome === 'settlement' ? 'Continue to Closure' : 'Continue to Returned Item Check' }}</UButton>
                   <p v-else class="text-xs text-muted">Waiting on the repair quotation. Change the outcome to No Charge or Determination &amp; Charge once it is back.</p>
                 </template>
-                <UTooltip v-else :text="!deductionOutcomeSelection ? 'Select an outcome first' : !deductionEffectiveTemplate ? 'Attach an email template first' : deductionOutcomeUnchanged ? 'This outcome is already recorded' : deductionSendLabel">
-                  <UButton color="primary" size="sm" :aria-disabled="(!deductionOutcomeSelection || !deductionEffectiveTemplate || deductionOutcomeUnchanged) || undefined" :class="{ [disabledLook]: !deductionOutcomeSelection || !deductionEffectiveTemplate || deductionOutcomeUnchanged }" @click="guardedClick(!!deductionOutcomeSelection && !!deductionEffectiveTemplate && !deductionOutcomeUnchanged, !deductionOutcomeSelection ? 'Select an outcome first.' : !deductionEffectiveTemplate ? 'Attach an email template first.' : 'This outcome is already recorded. Pick a different one to change it.', confirmDeductionOutcome)">{{ deductionSendLabel }}</UButton>
-                </UTooltip>
+                <div v-else class="flex items-center gap-2 flex-wrap">
+                  <UTooltip :text="!deductionOutcomeSelection ? 'Select an outcome first' : !deductionEffectiveTemplate ? 'Attach an email template first' : deductionOutcomeUnchanged ? 'This outcome is already recorded' : deductionSendLabel">
+                    <UButton color="primary" size="sm" :aria-disabled="(!deductionOutcomeSelection || !deductionEffectiveTemplate || deductionOutcomeUnchanged) || undefined" :class="{ [disabledLook]: !deductionOutcomeSelection || !deductionEffectiveTemplate || deductionOutcomeUnchanged, 'btn-ready-pulse': chargeSendPulse.active.value }" :loading="sending" @click="guardedClick(!!deductionOutcomeSelection && !!deductionEffectiveTemplate && !deductionOutcomeUnchanged, !deductionOutcomeSelection ? 'Select an outcome first.' : !deductionEffectiveTemplate ? 'Attach an email template first.' : 'This outcome is already recorded. Pick a different one to change it.', confirmDeductionOutcome)">{{ deductionSendLabel }}</UButton>
+                  </UTooltip>
+                  <EmailMarkSentExternally v-if="deductionOutcomeSelection !== 'quotation-pending'" :loading="sending" @confirm="guardedClick(!!deductionOutcomeSelection && !!deductionEffectiveTemplate && !deductionOutcomeUnchanged, !deductionOutcomeSelection ? 'Select an outcome first.' : !deductionEffectiveTemplate ? 'Attach an email template first.' : 'This outcome is already recorded. Pick a different one to change it.', () => confirmDeductionOutcome(true))" />
+                </div>
               </div>
               <!-- Already resolved - a plain read-only summary, same shape
                    as every other already-completed stage in this workspace
@@ -6249,13 +6379,13 @@ function reopenTicket() {
               {{ closureCopyWasSent ? 'Closure record sent to the team member.' : 'Closed without sending a closure record.' }}<template v-if="closureOutstanding">{{ ' ' }}{{ closureOutstanding }} {{ closureOutstanding === 1 ? 'item was' : 'items were' }} still outstanding at closing, listed below.</template>
             </SentBanner>
             <div class="mb-6">
-              <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">{{ ticket.status === 'closed' ? 'Final state' : 'Before you close' }}</label>
+              <label class="text-xs font-normal text-default block mb-2">{{ ticket.status === 'closed' ? 'Final state' : 'Before you close' }}</label>
               <div class="rounded-lg border border-default divide-y divide-default">
                 <div v-for="c in closureChecks" :key="c.label" class="flex items-start gap-3 px-4 py-3">
                   <UIcon :name="c.ok ? 'i-lucide-circle-check' : 'i-lucide-circle-alert'" class="size-4.5 mt-0.5 shrink-0" :class="c.ok ? 'text-success' : 'text-warning'" />
                   <div class="min-w-0 flex-1">
                     <div class="text-sm font-medium text-default">{{ c.label }}</div>
-                    <div class="text-xs text-muted mt-0.5">{{ c.detail }}</div>
+                    <div class="text-xs text-helper mt-0.5">{{ c.detail }}</div>
                   </div>
                 </div>
               </div>
@@ -6314,7 +6444,7 @@ function reopenTicket() {
           <UButton color="neutral" variant="outline" size="xs" square icon="i-lucide-x" class="rounded-full shrink-0 mt-0.5" aria-label="Close" @click="close" />
           <div>
             <h3 class="text-base font-semibold text-highlighted">Activity Log</h3>
-            <div class="text-xs text-muted mt-0.5">Every action recorded on this ticket, newest first.</div>
+            <div class="text-xs text-helper mt-0.5">Every action recorded on this ticket, newest first.</div>
           </div>
         </div>
       </template>
@@ -6369,7 +6499,7 @@ function reopenTicket() {
                 {{ HISTORY_CATEGORY_META[cat].label }}
               </UButton>
             </div>
-            <USelect v-else v-model="activityFilter" :items="activityFilterSelectItems" size="sm" class="w-48" />
+            <SharedSelect v-else v-model="activityFilter" :items="activityFilterSelectItems" size="sm" class="w-48" />
           </div>
         </div>
         <div class="flex-1 overflow-y-auto px-4 pt-4 pb-4 sm:px-6 sm:pb-6 fade-scroll-y">
@@ -6433,8 +6563,8 @@ function reopenTicket() {
           </div>
           </template>
         </div>
-        <div v-if="ticket.history.length && !filteredHistory.length" class="text-sm text-dimmed text-center py-8">No {{ HISTORY_CATEGORY_META[activityFilter as HistoryCategory]?.label.toLowerCase() }} activity yet.</div>
-        <div v-if="!ticket.history.length" class="text-sm text-dimmed text-center py-8">Nothing recorded yet - this fills in as the ticket moves through its stages.</div>
+        <div v-if="ticket.history.length && !filteredHistory.length" class="text-sm text-placeholder text-center py-8">No {{ HISTORY_CATEGORY_META[activityFilter as HistoryCategory]?.label.toLowerCase() }} activity yet.</div>
+        <div v-if="!ticket.history.length" class="text-sm text-placeholder text-center py-8">Nothing recorded yet - this fills in as the ticket moves through its stages.</div>
         </div>
       </template>
     </USlideover>
@@ -6450,7 +6580,7 @@ function reopenTicket() {
           <UButton color="neutral" variant="outline" size="xs" square icon="i-lucide-x" class="rounded-full shrink-0 mt-0.5" aria-label="Close" @click="close" />
           <div class="min-w-0">
             <h3 class="text-base font-semibold text-highlighted">Placeholder Check</h3>
-            <div class="text-xs text-muted mt-0.5">Comparing each placeholder's value against this ticket's own data.</div>
+            <div class="text-xs text-helper mt-0.5">Comparing each placeholder's value against this ticket's own data.</div>
             <!-- Same icon+blue-text treatment as DrawerContextBadge.vue (the
                  Templates > Email editor's own Placeholder Library drawer),
                  so a name shown under a drawer's title reads the same way
@@ -6463,7 +6593,7 @@ function reopenTicket() {
         </div>
       </template>
       <template #body>
-        <div v-if="!placeholderCheckEntries.length" class="text-sm text-dimmed text-center py-8">This content has no placeholder tokens to check.</div>
+        <div v-if="!placeholderCheckEntries.length" class="text-sm text-placeholder text-center py-8">This content has no placeholder tokens to check.</div>
         <div v-else class="flex flex-col">
           <!-- Same sectioning shape as the Templates > Email editor's own
                Placeholder Library drawer (PlaceholderDrawer.vue): a colored
@@ -6475,25 +6605,26 @@ function reopenTicket() {
               <UBadge :color="PLACEHOLDER_STATUS_META[group.status].color" variant="solid" size="xs" class="rounded-full">{{ group.entries.length }}</UBadge>
             </div>
             <component
-              :is="placeholderCheckSourceEmail ? 'button' : 'div'"
+              :is="entryIsClickable(entry) ? 'button' : 'div'"
               v-for="entry in group.entries"
               :key="entry.code"
               type="button"
               class="flex items-start gap-2.5 rounded-lg px-2.5 py-2 mb-0.5 text-left w-full"
-              :class="placeholderCheckSourceEmail ? 'hover:bg-elevated cursor-pointer' : ''"
-              @click="placeholderCheckSourceEmail && locatePlaceholderInPreview(entry.code)"
+              :class="entryIsClickable(entry) ? 'hover:bg-elevated cursor-pointer' : ''"
+              @click="onPlaceholderEntryClick(entry)"
             >
               <UIcon :name="PLACEHOLDER_STATUS_META[entry.status].icon" class="size-4 shrink-0 mt-0.5" :class="PLACEHOLDER_STATUS_META[entry.status].iconClass" />
               <div class="flex-1 min-w-0">
                 <span class="text-xs font-medium text-highlighted">{{ curly(entry.code) }}</span>
-                <div class="text-xs text-muted mt-0.5">{{ entry.name }}</div>
-                <div v-if="entry.status === 'missing'" class="text-xs text-dimmed mt-1">This ticket has no value for it yet, so the placeholder stays as is.</div>
+                <div class="text-xs text-helper mt-0.5">{{ entry.name }}</div>
+                <div v-if="entryGoesToField(entry)" class="text-xs text-primary mt-1 font-medium">No value yet. This one is a field on Case Details &ndash; open it to fill it.</div>
+                <div v-else-if="entry.status === 'missing'" class="text-xs text-dimmed mt-1">This ticket has no value for it yet, so the placeholder stays as is.</div>
                 <div v-else-if="entry.status === 'unrecognized'" class="text-xs text-dimmed mt-1">Not a recognized placeholder, so it prints blank in the sent document.</div>
                 <div v-else-if="entry.status === 'org-constant'" class="text-xs text-dimmed mt-1">Same Asset Team detail on every ticket. Appears as <span class="text-default font-medium">{{ entry.previewValue }}</span></div>
                 <div v-else class="text-xs text-dimmed mt-1">Appears in this template as <span class="text-default font-medium">{{ entry.previewValue }}</span></div>
               </div>
-              <UTooltip v-if="placeholderCheckSourceEmail" text="Show where this prints in the preview">
-                <UIcon name="i-lucide-eye" class="size-3.5 text-dimmed shrink-0 mt-0.5" />
+              <UTooltip v-if="entryIsClickable(entry)" :text="entryGoesToField(entry) ? 'Go to the field to fill it' : 'Show where this prints in the preview'">
+                <UIcon :name="entryGoesToField(entry) ? 'i-lucide-pencil' : 'i-lucide-eye'" class="size-3.5 shrink-0 mt-0.5" :class="entryGoesToField(entry) ? 'text-primary' : 'text-dimmed'" />
               </UTooltip>
             </component>
           </template>
@@ -6518,7 +6649,7 @@ function reopenTicket() {
           <UButton color="neutral" variant="outline" size="xs" square icon="i-lucide-x" class="rounded-full shrink-0 mt-0.5" aria-label="Close" @click="close" />
           <div>
             <h3 class="text-base font-semibold text-highlighted">Ticket {{ ticket.ticketNumber }} &middot; Artifacts Summary</h3>
-            <div class="text-xs text-muted mt-0.5">Everything produced so far - references, endorsements, gate records, sends.</div>
+            <div class="text-xs text-helper mt-0.5">Everything produced so far - references, endorsements, gate records, sends.</div>
           </div>
         </div>
       </template>
@@ -6544,7 +6675,7 @@ function reopenTicket() {
                     <ul v-if="item.event.points.length" class="mt-1.5 flex flex-col gap-1">
                       <li v-for="(pt, pi) in item.event.points" :key="pi" class="flex gap-2 text-sm text-muted"><span class="mt-2 size-1 shrink-0 rounded-full bg-gray-400" aria-hidden="true" /><span>{{ pt }}</span></li>
                     </ul>
-                    <div class="text-xs text-muted mt-2">{{ item.event.actor }} &middot; {{ item.event.when }}</div>
+                    <div class="text-xs text-helper mt-2">{{ item.event.actor }} &middot; {{ item.event.when }}</div>
                   </div>
                 </div>
                 <!-- An asset: its name and status together, its tag and serial as short labelled facts. -->
@@ -6569,7 +6700,7 @@ function reopenTicket() {
               </div>
             </div>
           </div>
-          <div v-if="!artifactGroups.length" class="text-sm text-dimmed text-center py-8">Nothing produced yet - this fills in as the ticket moves through its stages.</div>
+          <div v-if="!artifactGroups.length" class="text-sm text-placeholder text-center py-8">Nothing produced yet - this fills in as the ticket moves through its stages.</div>
         </div>
       </template>
       <template #footer>
@@ -6604,7 +6735,45 @@ function reopenTicket() {
          version history previews with (real prose-styled rendering, tokens
          resolved to this ticket's actual data), shared by every
          template-sending stage (A6/B9/A8). -->
-    <EmailFullPreviewModal v-model:open="previewOpen" title="Email Preview" :subject="previewSubject" :body="previewBody" />
+    <LazyEmailFullPreviewModal v-model="previewOpen" title="Email Preview" :subject="previewSubject" :body="previewBody" copyable downloadable :edit-href="previewEditHref" @download="downloadPreviewEml" />
+
+    <!-- Form preview - the attached form rendered in-app by embedding the real
+         /form-preview page in an iframe (same origin, reads the values written
+         before opening). A page-opened new tab is blocked in embedded browser
+         contexts, so the form is shown here and "Open in new tab" is offered
+         for environments that allow it. -->
+    <UModal
+      v-model:open="formPreviewOpen"
+      :ui="{
+        content: 'max-w-[920px] w-[94vw] h-[88vh] flex flex-col',
+        header: 'p-4 sm:p-4 shrink-0',
+        body: 'p-0 sm:p-0 flex flex-col min-h-0 flex-1'
+      }"
+    >
+      <template #header="{ close }">
+        <h2 class="text-base font-semibold text-highlighted flex items-center gap-2 flex-1 min-w-0">
+          <UIcon name="i-lucide-file-text" class="text-primary size-5" />
+          Form Preview
+        </h2>
+        <div class="flex items-center gap-2 shrink-0">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-external-link"
+            :to="formPreviewUrl"
+            target="_blank"
+            rel="noopener"
+          >
+            Open in new tab
+          </UButton>
+          <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-x" aria-label="Close" @click="close" />
+        </div>
+      </template>
+      <template #body>
+        <iframe v-if="formPreviewUrl" :src="formPreviewUrl" title="Form preview" class="w-full h-full border-0 rounded-b-[inherit] bg-white" />
+      </template>
+    </UModal>
 
     <!-- Gate Pass details - the drawer opened from the header's GP reference button. -->
     <!-- Gate Pass details - floating/padded the same way as Artifacts
@@ -6629,7 +6798,7 @@ function reopenTicket() {
           <UButton color="neutral" variant="outline" size="xs" square icon="i-lucide-x" class="rounded-full shrink-0 mt-0.5" aria-label="Close" @click="close" />
           <div v-if="activeGatePass">
             <h3 class="text-base font-semibold text-highlighted">{{ GATE_PASS_KIND_LABEL[gatePassKind] }}</h3>
-            <div class="text-xs text-muted mt-0.5">{{ activeGatePass.ref }} &middot; Valid until {{ fmtDate(activeGatePass.validUntil) }}</div>
+            <div class="text-xs text-helper mt-0.5">{{ activeGatePass.ref }} &middot; Valid until {{ fmtDate(activeGatePass.validUntil) }}</div>
           </div>
         </div>
       </template>
@@ -6746,18 +6915,21 @@ function reopenTicket() {
         <UButton color="neutral" variant="ghost" size="sm" square icon="i-lucide-x" aria-label="Close" @click="close" />
       </template>
       <template #body>
-        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1 fade-scroll-y">
           <div v-for="(a, i) in ticket.assets" :key="a.serial" class="rounded-md border border-default p-2.5 flex items-center justify-between gap-3 text-sm">
-            <span class="font-medium">{{ a.name }}</span>
+            <span class="min-w-0">
+              <span class="font-medium text-default block truncate">{{ a.model }}</span>
+              <span class="text-xs text-muted block truncate">{{ a.name }} · {{ a.assetTag }}</span>
+            </span>
             <USelect
               v-model="assetResolutions[i]"
-              :items="[{ label: 'Returned', value: 'returned' }, { label: 'Send to charging', value: 'charge' }, { label: 'Keep Open', value: 'open' }]"
+              :items="resolutionOptions"
               size="md"
-              class="w-40"
+              class="w-48 shrink-0"
             />
           </div>
         </div>
-        <div class="mt-3 rounded-lg border border-default bg-white p-3.5" role="status" aria-live="polite">
+        <div class="mt-3 rounded-lg border border-default bg-card p-3.5" role="status" aria-live="polite">
           <div class="text-sm font-semibold text-default mb-1.5">What happens next</div>
           <ul class="flex flex-col gap-1.5">
             <li v-for="(n, i) in closureNextSteps" :key="i" class="flex items-start gap-2 text-sm text-default">
@@ -6767,7 +6939,7 @@ function reopenTicket() {
           </ul>
         </div>
         <label class="flex items-start gap-2 text-sm mt-3">
-          <UCheckbox v-model="closureDocumented" class="mt-0.5" />
+          <UCheckbox v-model="closureDocumented" aria-label="Send the team member a detailed closure copy" class="mt-0.5" />
           <span>Send the team member a detailed closure copy (PDF)<span class="text-xs text-muted block mt-0.5">{{ closureDocumented ? 'Will be sent on close.' : "Leave unchecked and it won't be sent." }}</span></span>
         </label>
         <!-- So confirming closure never means "trust it went out" with no
@@ -6778,8 +6950,8 @@ function reopenTicket() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="closureOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="confirmClosure">{{ closureOpensCharge ? 'Open charging case' : 'Confirm & Close' }}</UButton>
+          <UButton color="neutral" variant="outline" @click="closureOpen = false">Not yet</UButton>
+          <UButton color="primary" @click="confirmClosure">{{ closureOpensCharge ? 'Open charging case' : 'Close ticket' }}</UButton>
         </div>
       </template>
     </UModal>
@@ -6794,19 +6966,19 @@ function reopenTicket() {
         <div class="flex flex-col gap-5">
           <p class="text-sm text-muted">Allowed until a notice is sent, a call is logged or an acknowledgment is captured. The notice email, deadline and steps follow the new reason and mode.</p>
           <div>
-            <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Reason</label>
+            <label class="text-xs font-normal text-default block mb-2">Reason</label>
             <USelect v-model="pathReason" :items="reasonOptions" size="md" class="w-full" />
           </div>
           <div>
-            <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Mode</label>
+            <label class="text-xs font-normal text-default block mb-2">Mode</label>
             <div class="grid grid-cols-2 gap-2">
               <button type="button" class="rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors" :class="pathMode === 'onsite' ? 'border-primary bg-primary/5 text-primary' : 'border-default text-default hover:bg-gray-50'" @click="pathMode = 'onsite'">Onsite</button>
               <button type="button" class="rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors" :class="pathMode === 'remote' ? 'border-primary bg-primary/5 text-primary' : 'border-default text-default hover:bg-gray-50'" @click="pathMode = 'remote'">Remote</button>
             </div>
-            <p v-if="pathReason === 'unexplained-absence'" class="text-xs text-muted mt-1.5">Unexplained Absence is Remote only.</p>
+            <p v-if="pathReason === 'unexplained-absence'" class="text-xs text-helper mt-1.5">Unexplained Absence is Remote only.</p>
           </div>
           <div v-if="pathReason === 'recalled'">
-            <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Recall Effective Date <span class="text-red-600">*</span></label>
+            <label class="text-xs font-normal text-default block mb-2">Recall Effective Date <span class="text-red-600">*</span></label>
             <SharedDatePicker v-model="pathRecallDate" size="md" />
           </div>
           <div v-if="pathPreview" class="rounded-lg border border-default bg-gray-50 px-4 py-3 flex flex-col gap-1 text-sm">
@@ -6815,7 +6987,7 @@ function reopenTicket() {
             <div class="flex justify-between gap-4"><span class="text-muted">Target date</span><span class="font-medium text-default text-right">{{ pathPreview.target ? fmtDate(pathPreview.target) : 'Set once assets are confirmed' }}</span></div>
           </div>
           <div>
-            <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Reason for this change <span class="text-red-600">*</span></label>
+            <label class="text-xs font-normal text-default block mb-2">Reason for this change <span class="text-red-600">*</span></label>
             <UTextarea v-model="pathNote" :rows="2" class="w-full" placeholder="Why is the path changing?" @update:model-value="pathError = ''" />
             <p v-if="pathError" class="text-xs text-red-600 mt-1.5">{{ pathError }}</p>
           </div>
@@ -6823,8 +6995,8 @@ function reopenTicket() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="pathChangeOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="doChangePath">Save change</UButton>
+          <UButton color="neutral" variant="outline" @click="pathChangeOpen = false">Keep current</UButton>
+          <UButton color="primary" @click="doChangePath">Apply change</UButton>
         </div>
       </template>
     </UModal>
@@ -6837,14 +7009,14 @@ function reopenTicket() {
       </template>
       <template #body>
         <p class="text-sm text-default mb-4">This ticket moves from <strong>{{ ticket?.assignee.name }}</strong> to <strong>{{ currentUserName() }}</strong>. The handover goes on record.</p>
-        <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Handover note <span class="text-red-600">*</span></label>
+        <label class="text-xs font-normal text-default block mb-2">Handover note <span class="text-red-600">*</span></label>
         <UTextarea v-model="takeoverNote" :rows="3" class="w-full" placeholder="Where things stand and what needs doing next" @update:model-value="takeoverError = ''" />
         <p v-if="takeoverError" class="text-xs text-red-600 mt-1.5">{{ takeoverError }}</p>
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="takeoverOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="doTakeover">Take over</UButton>
+          <UButton color="neutral" variant="outline" @click="takeoverOpen = false">Not now</UButton>
+          <UButton color="primary" @click="doTakeover">Take over ticket</UButton>
         </div>
       </template>
     </UModal>
@@ -6857,9 +7029,9 @@ function reopenTicket() {
       </template>
       <template #body>
         <p class="text-sm text-default mb-4">The case closes with no retrieval and the assets are no longer pending return. This is recorded, not deleted.</p>
-        <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Why is it cancelled?</label>
+        <label class="text-xs font-normal text-default block mb-2">Why is it cancelled?</label>
         <USelect v-model="cancelReason" :items="cancelReasonOptions" size="md" class="w-full mb-4" />
-        <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Note <span class="text-red-600">*</span></label>
+        <label class="text-xs font-normal text-default block mb-2">Note <span class="text-red-600">*</span></label>
         <UTextarea v-model="cancelNote" :rows="3" class="w-full" placeholder="What confirmed it, and who confirmed it" @update:model-value="cancelError = ''" />
         <p v-if="cancelError" class="text-xs text-red-600 mt-1.5">{{ cancelError }}</p>
       </template>
@@ -6879,16 +7051,16 @@ function reopenTicket() {
       </template>
       <template #body>
         <!-- Matched to the other ticket modals (takeover, cancel, path change):
-             the same uppercase/tracking label style and body spacing. -->
-        <label for="save-template-name" class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-1.5">Template name <span class="text-red-600">*</span></label>
+             the same sentence case label style and body spacing. -->
+        <label for="save-template-name" class="text-xs font-normal text-default block mb-2">Template name <span class="text-red-600">*</span></label>
         <UInput id="save-template-name" v-model="saveTemplateName" placeholder="e.g. Remote resignation checklist" size="md" class="w-full" autofocus @keyup.enter="doSaveTemplate" @update:model-value="saveTemplateError = ''" />
         <p v-if="saveTemplateError" class="text-xs text-red-600 mt-1.5">{{ saveTemplateError }}</p>
-        <p v-else class="text-xs text-muted mt-1.5">{{ ticket?.checklistItems.length ?? 0 }} task{{ (ticket?.checklistItems.length ?? 0) === 1 ? '' : 's' }}<template v-if="ticket"> &middot; {{ REASON_LABELS[ticket.reason] }}<template v-if="ticket.mode"> ({{ ticket.mode === 'onsite' ? 'Onsite' : 'Remote' }})</template></template></p>
+        <p v-else class="text-xs text-helper mt-1.5">{{ ticket?.checklistItems.length ?? 0 }} task{{ (ticket?.checklistItems.length ?? 0) === 1 ? '' : 's' }}<template v-if="ticket"> &middot; {{ REASON_LABELS[ticket.reason] }}<template v-if="ticket.mode"> ({{ ticket.mode === 'onsite' ? 'Onsite' : 'Remote' }})</template></template></p>
       </template>
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
-          <UButton color="neutral" variant="outline" @click="saveTemplateOpen = false">Cancel</UButton>
-          <UButton color="primary" @click="doSaveTemplate">Save template</UButton>
+          <UButton color="neutral" variant="outline" @click="saveTemplateOpen = false">Not now</UButton>
+          <UButton color="primary" @click="doSaveTemplate">Save checklist</UButton>
         </div>
       </template>
     </UModal>
@@ -6907,7 +7079,7 @@ function reopenTicket() {
             <UButton size="xs" color="neutral" variant="outline" @click="templateToReplaceWith = null">Keep current</UButton>
           </template>
         </SharedBanner>
-        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1 fade-scroll-y">
           <div v-for="t in checklistTemplates" :key="t.id" class="rounded-lg border border-default px-3.5 py-2.5 flex items-center gap-3">
             <div class="min-w-0 flex-1">
               <div class="text-sm font-medium text-default truncate">{{ t.name }}</div>
@@ -6947,15 +7119,15 @@ function reopenTicket() {
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
                     <div class="text-sm font-semibold text-highlighted">Asset Management Team <span class="font-normal text-muted">&lt;{{ SAMPLE_VALUES.ASSET_TEAM_EMAIL }}&gt;</span></div>
-                    <div class="text-xs text-muted mt-1"><span class="text-dimmed">To:</span> {{ ticket.employee.name }} &lt;{{ ticket.employee.email }}&gt;</div>
-                    <div class="text-xs text-muted mt-0.5"><span class="text-dimmed">Cc:</span> {{ SAMPLE_VALUES.ASSET_TEAM_EMAIL }}</div>
+                    <div class="text-xs text-helper mt-1"><span class="text-dimmed">To:</span> {{ ticket.employee.name }} &lt;{{ ticket.employee.email }}&gt;</div>
+                    <div class="text-xs text-helper mt-0.5"><span class="text-dimmed">Cc:</span> {{ SAMPLE_VALUES.ASSET_TEAM_EMAIL }}</div>
                   </div>
                   <span class="shrink-0 text-xs text-muted whitespace-nowrap">{{ whenDot(closureSentWhen) }}</span>
                 </div>
               </div>
             </div>
             <!-- attachment -->
-            <button type="button" class="mt-4 inline-flex items-center gap-3 rounded-lg border border-default bg-white px-3 py-2 text-left hover:bg-gray-50 transition-colors" @click="exportTeamMemberCopy">
+            <button type="button" class="mt-4 inline-flex items-center gap-3 rounded-lg border border-default bg-card px-3 py-2 text-left hover:bg-gray-50 transition-colors" @click="exportTeamMemberCopy">
               <span class="inline-flex items-center justify-center size-8 rounded-md bg-red-50 text-red-600 shrink-0"><UIcon name="i-lucide-file-text" class="size-4.5" /></span>
               <span class="min-w-0">
                 <span class="block text-sm font-medium text-default truncate">Equipment-Return-Closure-Record-{{ ticket.ticketNumber }}.pdf</span>
@@ -6974,7 +7146,7 @@ function reopenTicket() {
           <div class="px-6 pb-6">
             <div class="text-xs font-semibold uppercase tracking-wide text-dimmed mb-2">Attachment preview</div>
             <div class="rounded-lg bg-gray-100 p-4 sm:p-6">
-              <div class="mx-auto max-w-[640px] bg-white shadow-sm ring-1 ring-black/5 rounded-sm px-8 py-7">
+              <div class="ams-paper mx-auto max-w-[640px] bg-card shadow-sm ring-1 ring-black/5 rounded-sm px-8 py-7">
                 <div class="flex items-start justify-between gap-4 pb-4 mb-5 border-b border-default">
                   <div class="text-xs leading-snug text-muted" v-html="closureLetterhead.headerLeft" />
                   <div class="text-xs leading-snug text-muted text-right" v-html="closureLetterhead.headerRight" />
@@ -6986,7 +7158,14 @@ function reopenTicket() {
         </div>
       </template>
       <template #footer>
-        <div class="flex justify-end w-full">
+        <div class="flex items-center gap-2 w-full">
+          <UButton :color="copyFlash.isCopied('closure') ? 'success' : 'primary'" variant="outline" :icon="copyFlash.icon('closure')" @click="copyClosureContents">
+            {{ copyFlash.label('closure') }}
+          </UButton>
+          <UTooltip text="Download this message as an .eml file to send from your own mail client, in case in-system sending is unavailable. The PDF record downloads separately." :ui="{ content: 'max-w-xs whitespace-normal text-center' }">
+            <UButton color="neutral" variant="outline" icon="i-lucide-download" @click="downloadClosureEml">Download EML</UButton>
+          </UTooltip>
+          <div class="flex-1" />
           <UButton color="neutral" variant="outline" @click="sendPreviewOpen = false">Close</UButton>
         </div>
       </template>

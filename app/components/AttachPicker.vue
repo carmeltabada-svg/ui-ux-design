@@ -14,7 +14,7 @@ interface Props {
   icon?: string
 }
 
-const props = withDefaults(defineProps<Props>(), { icon: 'i-lucide-paperclip' })
+withDefaults(defineProps<Props>(), { icon: 'i-lucide-paperclip' })
 
 const emit = defineEmits<{
   select: [id: string]

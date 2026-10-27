@@ -1,7 +1,8 @@
 import { watch } from 'vue'
-import { TICKETS, NOTIFICATIONS, syncSequencesToTickets, repairRestoredTicket, type Ticket, type AppNotification } from '~/data/ticketTrackers'
+import { TICKETS, NOTIFICATIONS, repairRestoredTicket, type Ticket, type AppNotification } from '~/data/ticketTrackers'
 
-// Same reasoning and pattern as formStorage.ts: TICKETS/NOTIFICATIONS only
+// PROTOTYPE ONLY (see docs/BACKEND_SWAP.md): this is the mock server's database for tickets.
+// TICKETS/NOTIFICATIONS only
 // ever exist in one tab's JS memory otherwise - there's no backend. A
 // simulated HRIS update, an acknowledgment, a Target Date re-baseline, all
 // of it looked like it silently vanished the moment you opened a second tab
@@ -74,10 +75,9 @@ function looksLikeARegression(saved: StoredShape): boolean {
 let lastKnown: string | null = null
 
 /**
- * Called after the page itself has finished rendering, same as forms - see
- * formStorage.ts. Runs after seedDemoTickets() has already populated fresh
- * seed data, so a saved snapshot correctly overwrites it rather than the
- * other way around. Safe to call again on every later navigation.
+ * Called after the page itself has finished rendering. Runs after the tickets
+ * have been loaded from the api layer, so a saved snapshot correctly overwrites
+ * them rather than the other way around. Safe to call again on every later navigation.
  *
  * Real bug, reproduced live: this used to re-apply unconditionally on every
  * single page:finish, even when localStorage hadn't changed since the last
@@ -95,9 +95,19 @@ let lastKnown: string | null = null
 /** True once the first hydrate attempt has finished, so a page can tell "still loading saved tickets" from "this ticket really does not exist". */
 export const ticketsHydrated = ref(false)
 
+/**
+ * This file is the mock server's ticket database. Against a real backend (apiMode 'http') it is
+ * switched off, so a saved browser snapshot can never overwrite what the server returned.
+ * Set once at startup by plugins/00.masterData.ts.
+ */
+let mirrorEnabled = true
+export function setTicketMirrorEnabled(on: boolean) {
+  mirrorEnabled = on
+}
+
 export function hydrateTicketsFromStorage() {
   try {
-    hydrateNow()
+    if (mirrorEnabled) hydrateNow()
   } finally {
     ticketsHydrated.value = true
   }
@@ -118,12 +128,12 @@ function hydrateNow() {
   }
   lastKnown = raw
   applyStored(saved)
-  syncSequencesToTickets()
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 
 function writeStorage() {
+  if (!mirrorEnabled) return
   clearTimeout(saveTimer)
   saveTimer = undefined
   const serialized = JSON.stringify({ tickets: TICKETS, notifications: NOTIFICATIONS })
@@ -141,7 +151,7 @@ function writeStorage() {
  * the race against navigation: the brand-new ticket exists only in memory,
  * the new page's hydration overwrites TICKETS with the stale pre-creation
  * snapshot, and the ticket "disappears" (Ticket not found) despite having
- * just been created. Same fix as formStorage.ts's flushFormsToStorage.
+ * just been created.
  */
 export function flushTicketsToStorage() {
   writeStorage()
@@ -160,7 +170,7 @@ export function watchTicketsToStorage() {
   // it up on next reload, so a badge/notification that appeared in one tab
   // is visible in an already-open other tab too.
   window.addEventListener('storage', (e) => {
-    if (e.key !== STORAGE_KEY || !e.newValue || e.newValue === lastKnown) return
+    if (!mirrorEnabled || e.key !== STORAGE_KEY || !e.newValue || e.newValue === lastKnown) return
     try {
       const saved = JSON.parse(e.newValue) as StoredShape
       if (looksLikeARegression(saved)) {
