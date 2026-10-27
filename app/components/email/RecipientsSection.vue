@@ -88,24 +88,24 @@ const bccModel = computed<string[]>({
 
 <template>
   <div class="pt-5 border-t border-default">
-    <label class="text-xs font-semibold uppercase tracking-wide text-dimmed block mb-3.5">
+    <label class="text-xs font-normal text-default block mb-3">
       Recipients
-      <span class="normal-case font-normal tracking-normal text-dimmed">· Sent by Asset Management</span>
+      <span class="font-normal text-dimmed">· Sent by Asset Management</span>
     </label>
 
     <div class="flex items-center gap-2.5 py-1.5 mb-1.5">
-      <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10">To</span>
+      <span class="text-xs font-normal text-default min-w-10">To</span>
       <UTooltip text="GoTeam email address resolved from the retrieval ticket">
         <span class="inline-flex items-center gap-1.5 text-xs italic text-muted bg-elevated rounded-full px-3 py-1.5">
           <UIcon name="i-lucide-lock" class="size-2.5 text-dimmed" />
-          <span class="font-mono not-italic rounded px-1" style="background: rgb(254,249,194); color: rgb(137,75,0);">{{ toToken }}</span>
+          <span class="not-italic rounded px-1" style="background: var(--ams-warn-chip-bg); color: var(--ams-warn-chip-fg);">{{ toToken }}</span>
         </span>
       </UTooltip>
     </div>
 
     <div class="mb-4">
       <div class="flex items-start gap-2.5 mb-1.5">
-        <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10 pt-1.5 shrink-0">CC</span>
+        <span class="text-xs font-normal text-default min-w-10 pt-1.5 shrink-0">CC</span>
 
         <div ref="ccRowRef" class="flex flex-nowrap gap-1.5 items-center flex-1 min-w-0">
           <USelectMenu
@@ -164,7 +164,7 @@ const bccModel = computed<string[]>({
           <UPopover v-if="ccOverflow.length">
             <button
               type="button"
-              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100"
+              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-600 text-amber-600 bg-amber-50 hover:bg-amber-100"
             >
               +{{ ccOverflow.length }} more
             </button>
@@ -189,7 +189,7 @@ const bccModel = computed<string[]>({
 
     <div class="mb-1.5">
       <div class="flex items-start gap-2.5">
-        <span class="text-xs font-semibold uppercase tracking-wider text-dimmed min-w-10 pt-1.5 shrink-0">BCC</span>
+        <span class="text-xs font-normal text-default min-w-10 pt-1.5 shrink-0">BCC</span>
 
         <div ref="bccRowRef" class="flex flex-nowrap gap-1.5 items-center flex-1 min-w-0">
           <USelectMenu
@@ -241,7 +241,7 @@ const bccModel = computed<string[]>({
           <UPopover v-if="bccOverflow.length">
             <button
               type="button"
-              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100"
+              class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 shrink-0 border border-dashed border-amber-600 text-amber-600 bg-amber-50 hover:bg-amber-100"
             >
               +{{ bccOverflow.length }} more
             </button>

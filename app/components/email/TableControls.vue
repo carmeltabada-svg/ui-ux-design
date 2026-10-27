@@ -121,7 +121,7 @@ function setHeaderColor(color: string | null) {
         <div class="grid grid-cols-6 gap-1 p-2">
           <button
             type="button"
-            class="size-5 rounded-full ring-1 ring-default bg-white flex items-center justify-center"
+            class="size-5 rounded-full ring-1 ring-default bg-card flex items-center justify-center"
             aria-label="No fill"
             @click="setHeaderColor(null)"
           >

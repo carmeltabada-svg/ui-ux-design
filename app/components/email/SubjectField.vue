@@ -25,13 +25,14 @@ const html = computed(() => wrapTokens(props.modelValue))
       :model-value="modelValue"
       size="lg"
       placeholder="Write a subject line..."
+      aria-label="Subject line"
       class="w-full font-semibold mb-1"
       @update:model-value="$emit('update:modelValue', String($event))"
       @focus="$emit('focus')"
     />
     <div
       v-else-if="modelValue"
-      class="text-base font-semibold text-default pb-1 leading-relaxed"
+      class="text-base font-semibold text-highlighted pb-1 leading-relaxed"
       data-pane="editor"
       v-html="html"
       @click="onTokenClick"

@@ -1,4 +1,4 @@
-import { inject, provide, reactive, type InjectionKey } from 'vue'
+import { inject, type InjectionKey } from 'vue'
 
 // Lets the page rendering a form (the builder canvas, or the standalone
 // /form-preview page) know whether each required field currently has a
@@ -13,12 +13,6 @@ import { inject, provide, reactive, type InjectionKey } from 'vue'
 // "useX is not defined" SSR error) until the server restarts. A plain
 // explicit import is resolved by Vite immediately, no registry involved.
 const KEY = Symbol('form-field-values') as InjectionKey<Record<string, boolean>>
-
-export function provideFormFieldValues() {
-  const state = reactive<Record<string, boolean>>({})
-  provide(KEY, state)
-  return state
-}
 
 export function useFormFieldValues() {
   return inject(KEY, null)

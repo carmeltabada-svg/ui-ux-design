@@ -152,7 +152,7 @@ function contentMarginsFor(margins: PageMargins) {
 // counter span.
 function footerRightHtml(total: number) {
   return props.showPageNumbers
-    ? `<span style="font-size:9.5px;color:#9CA3AF">Page {page} of ${total}</span>`
+    ? `<span style="font-size:9.5px;color:var(--ams-doc-muted,#6B7280)">Page {page} of ${total}</span>`
     : ''
 }
 
@@ -192,8 +192,8 @@ const editor = useEditor({
       // dashed line (via the CSS override below) marking where a page
       // would break - the same "this is a break point, not a real gap"
       // signal Word's own Draft/Normal view uses for a manual page break.
-      pageBreakBackground: '#ffffff',
-      pageGapBorderColor: '#D4D4D8',
+      pageBreakBackground: 'var(--ams-doc-page)',
+      pageGapBorderColor: 'var(--ams-doc-gap)',
       // Shrunk from the package's 50px default - there's no real gap to
       // fill with space now, just room for the dashed break line itself.
       pageGap: 28,
@@ -436,7 +436,7 @@ onBeforeUnmount(() => {
     <div
       class="flex justify-center py-8 px-4"
       :class="naturalScroll ? '' : 'flex-1 min-h-0 overflow-auto'"
-      :style="naturalScroll ? undefined : backgroundStyle(background, '#E4E4E7')"
+      :style="naturalScroll ? undefined : backgroundStyle(background, 'var(--ams-canvas)')"
     >
       <!-- Wraps EditorContent and the (optional) actions slot in one shared-
            width column so the actions row - the form's Submit button - lines
@@ -452,7 +452,24 @@ onBeforeUnmount(() => {
         class="form-document-editor-page-column"
         :style="{ width: `${PAGE_SIZES[pageSize].widthPx}px` }"
       >
-        <EditorContent :editor="editor" />
+        <!-- The editor builds after the page mounts, so a page-shaped skeleton holds the space until then. -->
+        <div
+          v-if="!editor"
+          class="ams-doc-skeleton flex flex-col gap-4 px-[72px] py-[72px] min-h-[520px]"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading document"
+        >
+          <SharedSkeleton width="w-20" height="h-6" />
+          <SharedSkeleton width="w-2/3" height="h-3" />
+          <SharedSkeleton width="w-1/2" height="h-6" class="mt-8" />
+          <SharedSkeleton :lines="3" height="h-4" />
+          <SharedSkeleton width="w-1/3" height="h-4" />
+          <SharedSkeleton height="h-8" />
+          <SharedSkeleton width="w-1/3" height="h-4" />
+          <SharedSkeleton height="h-8" />
+        </div>
+        <EditorContent v-else :editor="editor" />
         <div v-if="$slots.actions" class="flex justify-end pt-4" :style="{ paddingRight: `${margins.right}px` }">
           <slot name="actions" />
         </div>
@@ -473,7 +490,7 @@ onBeforeUnmount(() => {
    it at all from a scoped style block. */
 .form-document-editor :deep(.rm-with-pagination) {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1);
-  background: #ffffff;
+  background: var(--ams-doc-page);
 }
 
 /* The builder's own canvas backdrop used to be a static gray class here,
@@ -501,7 +518,7 @@ onBeforeUnmount(() => {
    (a solid gray fill, then a two-sided inset shadow imitating paper depth)
    were both rejected as still reading as a fabricated gap. This is the
    opposite choice: the break area matches the page's own background
-   (pageBreakBackground: '#ffffff' above), so the document reads as
+   (pageBreakBackground: 'var(--ams-doc-page)' above), so the document reads as
    genuinely continuous - the dashed line is the only signal a break falls
    here, the same non-committal indicator Word's Draft view or Google Docs'
    pageless mode uses, not a claim that real page geometry exists under it.

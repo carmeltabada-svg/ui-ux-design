@@ -146,7 +146,7 @@ watch([hasDrawn, uploadedSrc, mode], () => {
 <template>
   <div class="w-full" @click.stop>
     <div class="flex items-center justify-between mb-1.5 no-print">
-      <div class="inline-flex rounded-md border border-[#D1D5DB] p-0.5 bg-[#F9FAFB] gap-0.5">
+      <div class="inline-flex rounded-md border border-(color:--ams-doc-border) p-0.5 bg-(color:--ams-doc-fill) gap-0.5">
         <UButton
           type="button"
           size="xs"
@@ -197,22 +197,22 @@ watch([hasDrawn, uploadedSrc, mode], () => {
       </UButton>
     </div>
 
-    <div v-if="mode === 'draw'" ref="canvasWrap" class="relative">
+    <div v-if="mode === 'draw'" ref="canvasWrap" class="relative ams-paper bg-card rounded-sm">
       <canvas
         ref="canvas"
-        class="w-full h-[72px] border-0 border-b border-[#9CA3AF] bg-transparent touch-none"
+        class="w-full h-[72px] border-0 border-b border-(color:--ams-doc-hint) bg-transparent touch-none"
         :class="disabled ? 'cursor-not-allowed' : 'cursor-crosshair'"
         @pointerdown="startDraw"
         @pointermove="moveDraw"
         @pointerup="endDraw"
         @pointerleave="endDraw"
       />
-      <span v-if="!hasDrawn" class="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] italic text-[#9CA3AF]">
+      <span v-if="!hasDrawn" class="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] italic text-(color:--ams-doc-muted)">
         Place your signature here
       </span>
     </div>
 
-    <div v-else class="border-0 border-b border-[#9CA3AF]">
+    <div v-else class="border-0 border-b border-(color:--ams-doc-hint)">
       <input ref="fileInput" type="file" accept="image/png,image/webp,image/*" class="hidden" :disabled="disabled" @change="onFilePicked">
       <UButton
         v-if="!uploadedSrc"
@@ -220,14 +220,14 @@ watch([hasDrawn, uploadedSrc, mode], () => {
         variant="ghost"
         color="neutral"
         block
-        class="h-[72px] flex-col gap-1 text-[#9CA3AF] hover:text-[#6B7280]"
+        class="h-[72px] flex-col gap-1 text-(color:--ams-doc-hint) hover:text-(color:--ams-doc-muted)"
         icon="i-lucide-upload"
         :disabled="disabled"
         @click="fileInput?.click()"
       >
         <span class="text-[11px] italic normal-case">Upload a transparent signature image</span>
       </UButton>
-      <div v-else class="h-[72px] flex items-center px-2" style="background-image: linear-gradient(45deg, #F3F4F6 25%, transparent 25%), linear-gradient(-45deg, #F3F4F6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #F3F4F6 75%), linear-gradient(-45deg, transparent 75%, #F3F4F6 75%); background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0;">
+      <div v-else class="ams-paper h-[72px] flex items-center px-2 rounded-sm" style="background-image: linear-gradient(45deg, #F3F4F6 25%, transparent 25%), linear-gradient(-45deg, #F3F4F6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #F3F4F6 75%), linear-gradient(-45deg, transparent 75%, #F3F4F6 75%); background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0;">
         <img :src="uploadedSrc" alt="Uploaded signature" class="max-h-16 max-w-full object-contain">
       </div>
     </div>

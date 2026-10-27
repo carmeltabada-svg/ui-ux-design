@@ -49,7 +49,7 @@ const emit = defineEmits<{
           type="button"
           draggable="true"
           aria-label="Reorder field"
-          class="flex items-center justify-center size-6 rounded-md text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] cursor-grab active:cursor-grabbing"
+          class="flex items-center justify-center size-6 rounded-md text-(color:--ams-doc-hint) hover:text-(color:--ams-doc-text) hover:bg-(color:--ams-doc-fill) cursor-grab active:cursor-grabbing"
         >
           <UIcon name="i-lucide-grip-vertical" class="size-4" />
         </button>

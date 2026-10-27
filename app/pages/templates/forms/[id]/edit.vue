@@ -3,6 +3,7 @@ import {
   RETRIEVAL_FORMS,
   RETRIEVAL_FORM_SECTIONS,
   RETRIEVAL_FORM_CONTENT,
+  FORM_VERSIONS,
   SEEDED_FORM_IDS,
   PAGE_SIZES,
   DEFAULT_PAGE_MARGINS,
@@ -16,9 +17,10 @@ import {
   type PageMargins,
   type MarginPresetName
 } from '~/data/retrievalForms'
+import type { DropdownMenuItem } from '@nuxt/ui'
 import { CURRENT_USER_NAME, ensureTemplateRuntime, CUSTOM_TEMPLATE_IDS } from '~/data/templateRuntime'
-import { TEMPLATE_GROUPS } from '~/data/templates'
-import { flushFormsToStorage, hydrateFormsFromStorage } from '~/utils/formStorage'
+import { TEMPLATE_GROUPS, TOKEN_GROUPS, extractTokenCodes } from '~/data/templates'
+import { formSync } from '~/data/syncedStores'
 import { describeSnapshotChanges, countDistinctAt, type ChangeCategory } from '~/utils/versionDiff'
 import { provideFormFieldRegistry } from '~/utils/formFieldRegistry'
 import { provideFormFieldsInteractive } from '~/utils/formFieldsInteractive'
@@ -34,21 +36,6 @@ definePageMeta({ key: route => route.fullPath })
 
 const route = useRoute()
 const toast = useToast()
-
-// The formStorage.client.ts plugin also calls this, but only on Nuxt's
-// `page:finish` hook - which fires *after* this component's own setup runs.
-// That's fine for `RETRIEVAL_FORMS`/`RETRIEVAL_FORM_SECTIONS` (this page
-// only reads them once, synchronously below, and nothing re-reads them
-// later), but it's too late for `content` further down: MasterDataFormDocumentEditor
-// treats its initial content as just that - initial - so if the editor
-// instance had already mounted with pre-hydration content by the time
-// hydration ran, it never picks up the real saved value at all (confirmed
-// the hard way: an insert survived in localStorage but the editor kept
-// showing the pre-hydration field count on every reload, even though the
-// stored value momentarily *was* correct). Calling this here, synchronously,
-// before anything else reads the shared stores - same as /form-preview.vue
-// already does - closes that race instead of relying on the plugin's timing.
-if (import.meta.client) hydrateFormsFromStorage()
 
 const formId = computed(() => route.params.id as string)
 const existing = computed(() => RETRIEVAL_FORMS.find(f => f.id === formId.value))
@@ -110,7 +97,7 @@ const DESCRIPTION_MAX = 140
 // only as the source for the one-time migration into `content` just below,
 // and because undo/redo and version history still snapshot it (seed data for
 // the next real cleanup pass, not touched further this round).
-const sections = ref<FormSection[]>(JSON.parse(JSON.stringify(RETRIEVAL_FORM_SECTIONS[formId.value] ?? [])))
+const sections = ref<FormSection[]>(deepClone(RETRIEVAL_FORM_SECTIONS[formId.value] ?? []))
 
 // The Tiptap document itself - the actual canvas content now, replacing
 // sections/fields as the thing a team member edits. Migrated once, lazily,
@@ -119,21 +106,16 @@ const sections = ref<FormSection[]>(JSON.parse(JSON.stringify(RETRIEVAL_FORM_SEC
 // its old `sections` (see ~/utils/formContentMigration.ts) and that
 // conversion is written back immediately so it only ever runs once per form.
 ensureFormContent(formId.value)
-// A live computed onto the reactive store, not a one-time snapshot ref -
-// localStorage hydration (see app/plugins/formStorage.client.ts) runs on the
-// Nuxt `page:finish` hook, which fires *after* this component's own setup,
-// so a plain `ref(RETRIEVAL_FORM_CONTENT[formId.value])` taken here would
-// permanently miss whatever hydration loads a moment later (confirmed the
-// hard way: an inserted field survived in localStorage but vanished on
-// reload, because the ref had already snapshotted the pre-hydration - i.e.
-// freshly re-migrated, seed-only - content before hydration overwrote the
-// real saved value underneath it). A computed re-reads the store's current
-// value on every access, so it can never go stale regardless of when
-// hydration happens to run relative to setup.
+// A live computed onto the reactive store, not a one-time snapshot ref: it re-reads the store's
+// current value on every access, so a restored version or an undo shows up.
 const content = computed({
   get: () => RETRIEVAL_FORM_CONTENT[formId.value] ?? '',
   set: (value: string) => { RETRIEVAL_FORM_CONTENT[formId.value] = value }
 })
+
+// Read-only browsing of the placeholder library, outside edit mode.
+const placeholderBrowseOpen = ref(false)
+const browseUsedCodes = computed(() => extractTokenCodes(content.value))
 
 // Every FormFieldNodeView registers its own filled/required state here (see
 // ~/utils/formFieldRegistry.ts) - the document-canvas replacement for the old
@@ -206,9 +188,16 @@ const pageSizeItems = (Object.keys(PAGE_SIZES) as PageSize[]).map(value => ({ la
 // Auto-name from the first section's title until the name field is typed
 // into directly - mirrors the email template's "name follows the subject
 // line" behavior, just sourced from the first section here since forms don't
-// have a single subject line.
+// have a single subject line. Only meaningful for a form still on the legacy
+// sections model (`sections.length` real) - a real Tiptap-document form (see
+// `content` above) has an empty `sections` array by design, since it never
+// used that model at all, so this must never fire for one: a corrupted/
+// incomplete saved snapshot that happens to be missing `nameManuallySet`
+// would otherwise immediately blank out the real name to "Untitled form" on
+// mount (and that gets autosaved right back, permanently) even though the
+// document itself is fully intact - reproduced exactly this way.
 watch(sections, (secs) => {
-  if (nameManuallySet.value) return
+  if (nameManuallySet.value || content.value.trim()) return
   const first = secs[0]?.title?.trim()
   name.value = first || 'Untitled form'
 }, { deep: true, immediate: true })
@@ -265,8 +254,8 @@ function persist() {
   rec.margins = { ...margins.value }
   rec.nameManuallySet = nameManuallySet.value
   rec.showSubmitButton = showSubmitButton.value
-  rec.updatedAt = 'Just now'
-  RETRIEVAL_FORM_SECTIONS[formId.value] = JSON.parse(JSON.stringify(sections.value))
+  rec.updatedAt = nowISO()
+  RETRIEVAL_FORM_SECTIONS[formId.value] = deepClone(sections.value)
   RETRIEVAL_FORM_CONTENT[formId.value] = content.value
 }
 
@@ -283,25 +272,25 @@ watch([name, description, mode, status, themeColor, background, pageSize, margin
   autosaveTimer = setTimeout(() => commit(persist), 600)
 }, { deep: true })
 
-onBeforeRouteLeave(() => {
+onBeforeRouteLeave(async () => {
   flushAutosave()
-  flushFormsToStorage()
+  await formSync.flush()
   return true
 })
 
 function flushEverything() {
   flushAutosave()
-  flushFormsToStorage()
+  void formSync.flush()
   recordSavedVersion()
 }
 
 onMounted(() => window.addEventListener('beforeunload', flushEverything))
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', flushEverything)
+  clearTimeout(historyDebounce)
   flushEverything()
 })
 
-// The boxed section header's move/color/duplicate/remove icons were always
 function setStatus(next: 'active' | 'draft' | 'retired') {
   status.value = next
   toast.add({
@@ -327,7 +316,7 @@ function preventCloseAutoFocus(e: Event) {
 const modeLabel = computed(() => (mode.value === 'onsite' ? 'Onsite' : 'Remote'))
 const statusLabel = computed(() => statusItems.find(i => i.value === status.value)?.label ?? 'Status')
 
-const overflowMenuItems = computed(() => [[
+const overflowMenuItems = computed<DropdownMenuItem[][]>(() => [[
   { label: 'Copy link', icon: 'i-lucide-link', onSelect: copyLink },
   { label: 'Duplicate form', icon: 'i-lucide-copy', onSelect: duplicateThisForm },
   { label: 'Version history', icon: 'i-lucide-history', onSelect: () => { historyOpen.value = true } },
@@ -477,9 +466,9 @@ function duplicateThisForm() {
   navigateTo(`/templates/forms/${form.id}/edit?mode=edit`)
 }
 
-function viewInNewTab() {
+async function viewInNewTab() {
   flushAutosave()
-  flushFormsToStorage()
+  await formSync.flush()
   // `noopener` forces this preview tab into its own, unrelated browsing-
   // context/process group - without it, Chrome can keep it in the same
   // renderer process as this editor tab (since it still holds a live
@@ -490,14 +479,15 @@ function viewInNewTab() {
   window.open(`/form-preview?formId=${encodeURIComponent(formId.value)}&mode=${mode.value}`, '_blank', 'noopener')
 }
 
+const { copy } = useCopyFlash()
+
 async function copyLink() {
   flushAutosave()
-  flushFormsToStorage()
+  await formSync.flush()
   const url = `${window.location.origin}/form-preview?formId=${encodeURIComponent(formId.value)}&mode=${mode.value}`
-  try {
-    await navigator.clipboard.writeText(url)
+  if (await copy('form-link', url)) {
     toast.add({ title: 'Link copied', description: url, icon: 'i-lucide-check', color: 'success' })
-  } catch {
+  } else {
     toast.add({ title: 'Could not copy link', icon: 'i-lucide-triangle-alert', color: 'error' })
   }
 }
@@ -519,6 +509,9 @@ function submitForm() {
   if (hasUnfilledRequired.value) return
   toast.add({ title: 'Form submitted', icon: 'i-lucide-check', color: 'success' })
 }
+
+// One-shot pulse on Done the first time this form picks up a change to save.
+const donePulse = useReadyPulse(computed(() => `form-done:${formId.value}`), computed(() => viewMode.value === 'edit' && saveState.value === 'saving'))
 
 function doneEditing() {
   flushAutosave()
@@ -546,7 +539,7 @@ interface Snapshot {
 }
 
 function takeSnapshot(): Snapshot {
-  return JSON.parse(JSON.stringify({
+  return deepClone({
     name: name.value,
     description: description.value,
     mode: mode.value,
@@ -555,12 +548,12 @@ function takeSnapshot(): Snapshot {
     background: background.value,
     pageSize: pageSize.value,
     sections: sections.value,
-    savedAt: new Date().toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-  }))
+    savedAt: nowISO()
+  })
 }
 
 function applySnapshot(snap: Snapshot) {
-  const clone = JSON.parse(JSON.stringify(snap))
+  const clone = deepClone(snap)
   name.value = clone.name
   description.value = clone.description
   mode.value = clone.mode
@@ -668,7 +661,11 @@ function takeSavedSnapshot(): SavedSnapshot {
 // instead of one entry per actual save. It's a separate list now, only
 // appended to at an explicit save point (Done, or leaving the page mid-edit)
 // - see `recordSavedVersion`.
-const savedVersions = ref<SavedSnapshot[]>([takeSavedSnapshot()])
+if (!FORM_VERSIONS[formId.value]) FORM_VERSIONS[formId.value] = [takeSavedSnapshot()]
+const savedVersions = computed<SavedSnapshot[]>({
+  get: () => (FORM_VERSIONS[formId.value] ?? []) as SavedSnapshot[],
+  set: (v) => { FORM_VERSIONS[formId.value] = v }
+})
 
 function recordSavedVersion() {
   const top = savedVersions.value[savedVersions.value.length - 1]
@@ -780,7 +777,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 <template>
   <div class="bg-gray-50 h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
-    <div data-tabs-header class="bg-white px-6 pt-4 pb-3 shrink-0 border-b border-default">
+    <div data-tabs-header class="bg-card px-6 pt-4 pb-3 shrink-0 border-b border-default">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1.5 group">
@@ -911,6 +908,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           </div>
 
           <div class="flex items-center gap-2">
+            <UTooltip v-if="viewMode === 'read'" text="Browse the placeholder library">
+              <UButton color="neutral" variant="outline" size="md" icon="i-lucide-braces" @click="placeholderBrowseOpen = true">
+                Placeholders
+              </UButton>
+            </UTooltip>
             <UTooltip text="Preview form in new tab">
               <UButton
                 color="neutral"
@@ -927,6 +929,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               variant="solid"
               size="md"
               :icon="viewMode === 'edit' ? 'i-lucide-check' : 'i-lucide-pencil'"
+              :class="{ 'btn-ready-pulse': donePulse.active.value }"
               @click="viewMode === 'edit' ? doneEditing() : goToEdit()"
             >
               {{ viewMode === 'edit' ? 'Done' : 'Edit' }}
@@ -1040,6 +1043,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       :form-mode="mode"
     />
 
+    <EmailPlaceholderDrawer v-model="placeholderBrowseOpen" read-only :groups="TOKEN_GROUPS" :used-codes="browseUsedCodes" context-label="Document" :context-mode="mode" />
+
     <USlideover v-model:open="historyOpen" :ui="{ content: 'max-w-md', body: 'fade-scroll-y' }">
       <template #header>
         <div class="flex-1 min-w-0">
@@ -1065,7 +1070,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       </template>
     </USlideover>
 
-    <div class="flex flex-1 min-h-0 bg-gray-50">
+    <div class="flex flex-1 min-h-0 bg-gray-50 stage-enter">
       <div class="flex flex-col flex-1 min-w-0 px-6 py-3 gap-3">
         <div class="flex-1 min-h-0 rounded-lg border border-default overflow-hidden">
           <MasterDataFormDocumentEditor

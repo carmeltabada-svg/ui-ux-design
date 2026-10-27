@@ -189,10 +189,10 @@ const placeholder = computed(() => {
       class="relative align-top break-words"
       :class="[
         editable ? 'pl-8 pr-16' : '',
-        plain ? 'py-1' : 'border border-[#D1D5DB] px-3 py-3'
+        plain ? 'py-1' : 'border border-(color:--ams-doc-border) px-3 py-3'
       ]"
     >
-      <div class="leading-relaxed text-[#374151] prose-tiptap text-sm" v-html="wrapTokens(field.content || '')" />
+      <div class="leading-relaxed text-(color:--ams-doc-text) prose-tiptap text-sm" v-html="wrapTokens(field.content || '')" />
       <MasterDataFieldRowControls v-if="editable" :can-move-up="canMoveUp" :can-move-down="canMoveDown" @move-up="emit('move-up')" @move-down="emit('move-down')" @duplicate="emit('duplicate')" @remove="emit('remove')" />
     </td>
   </tr>
@@ -208,23 +208,23 @@ const placeholder = computed(() => {
       class="relative align-top"
       :class="[
         editable ? 'pl-8 pr-16' : '',
-        plain ? 'py-1' : 'border border-[#D1D5DB] px-3 py-3'
+        plain ? 'py-1' : 'border border-(color:--ams-doc-border) px-3 py-3'
       ]"
     >
       <UButton
         type="button"
-        :color="field.buttonColor || 'primary'"
+        :color="(field.buttonColor as 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' | undefined) || 'primary'"
         variant="solid"
         size="sm"
         :icon="field.buttonIcon || undefined"
-        :to="interactive ? (field.buttonUrl || undefined) : undefined"
+        :to="interactive ? (safeUrl(field.buttonUrl) || undefined) : undefined"
         :disabled="!interactive"
         target="_blank"
         @click.stop
       >
         {{ field.label || 'Open link' }}
       </UButton>
-      <p v-if="field.hint" class="text-xs font-normal text-[#9CA3AF] mt-1.5 normal-case">{{ field.hint }}</p>
+      <p v-if="field.hint" class="text-xs font-normal text-(color:--ams-doc-hint) mt-1.5 normal-case">{{ field.hint }}</p>
       <MasterDataFieldRowControls v-if="editable" :can-move-up="canMoveUp" :can-move-down="canMoveDown" @move-up="emit('move-up')" @move-down="emit('move-down')" @duplicate="emit('duplicate')" @remove="emit('remove')" />
     </td>
   </tr>
@@ -235,14 +235,14 @@ const placeholder = computed(() => {
       class="relative align-top"
       :class="[
         editable ? 'pl-8 pr-16' : '',
-        plain ? 'py-1' : 'border border-[#D1D5DB] px-3 py-4'
+        plain ? 'py-1' : 'border border-(color:--ams-doc-border) px-3 py-4'
       ]"
     >
       <div class="relative">
         <MasterDataSignaturePad v-model:has-content="hasSignature" :disabled="!interactive || !!lockedReasons?.length" />
-        <div v-if="lockedReasons?.length" class="absolute -inset-1.5 z-[1] flex items-center justify-center rounded-md bg-[#FAFAFD]/95 p-3">
-          <div class="max-w-[340px] border border-[#E8C77E] border-l-[3px] border-l-[#E87040] bg-white px-3.5 py-2.5 text-xs text-[#7A5000] shadow-sm">
-            <p class="mb-1 font-semibold text-[#B4530F]">Signature locked</p>
+        <div v-if="lockedReasons?.length" class="absolute -inset-1.5 z-[1] flex items-center justify-center rounded-md bg-(color:--ams-doc-lock)/95 p-3">
+          <div class="max-w-[340px] border border-[#E8C77E] border-l-[3px] border-l-[#E87040] bg-card px-3.5 py-2.5 text-xs text-(color:--ams-doc-warn-text) shadow-sm">
+            <p class="mb-1 font-semibold text-(color:--ams-doc-warn-title)">Signature locked</p>
             <p class="mb-1">Complete the required items before signing:</p>
             <ul class="list-disc pl-4">
               <li v-for="reason in lockedReasons" :key="reason">{{ reason }}</li>
@@ -250,10 +250,10 @@ const placeholder = computed(() => {
           </div>
         </div>
       </div>
-      <p class="text-xs text-[#6B7280] uppercase tracking-wide mt-1">
-        {{ field.label }}<span class="text-[#DC2626]">*</span>
+      <p class="text-xs text-(color:--ams-doc-muted) uppercase tracking-wide mt-1">
+        {{ field.label }}<span class="text-(color:--ams-doc-error)">*</span>
       </p>
-      <p v-if="field.hint" class="text-xs font-normal text-[#9CA3AF] mt-0.5 normal-case">{{ field.hint }}</p>
+      <p v-if="field.hint" class="text-xs font-normal text-(color:--ams-doc-hint) mt-0.5 normal-case">{{ field.hint }}</p>
       <FormKit
         type="text"
         v-model="signatureValue"
@@ -263,7 +263,7 @@ const placeholder = computed(() => {
         validation-visibility="live"
         outer-class="contents"
         wrapper-class="hidden"
-        :message-class="showValidation ? 'text-xs text-[#DC2626] mt-0.5 normal-case' : 'hidden'"
+        :message-class="showValidation ? 'text-xs text-(color:--ams-doc-error) mt-0.5 normal-case' : 'hidden'"
       />
       <MasterDataFieldRowControls v-if="editable" :can-move-up="canMoveUp" :can-move-down="canMoveDown" @move-up="emit('move-up')" @move-down="emit('move-down')" @duplicate="emit('duplicate')" @remove="emit('remove')" />
     </td>
@@ -292,22 +292,22 @@ const placeholder = computed(() => {
             outer-class="contents"
             wrapper-class="inline-flex items-center gap-2"
             inner-class="contents"
-            input-class="size-4 shrink-0 accent-[#386BE6]"
-            :message-class="showValidation ? 'text-xs text-[#DC2626] mt-0.5' : 'hidden'"
+            input-class="size-4 shrink-0 accent-(color:--ams-doc-accent)"
+            :message-class="showValidation ? 'text-xs text-(color:--ams-doc-error) mt-0.5' : 'hidden'"
             @click.stop
           >
             <template #label>
-              <span class="font-semibold text-sm text-[#111827]" :class="interactive ? 'cursor-pointer' : ''">{{ field.label }}<span v-if="field.required" class="text-[#DC2626]">*</span></span>
+              <span class="font-semibold text-sm text-(color:--ams-doc-strong)" :class="interactive ? 'cursor-pointer' : ''">{{ field.label }}<span v-if="field.required" class="text-(color:--ams-doc-error)">*</span></span>
             </template>
           </FormKit>
-          <p v-if="field.hint" class="text-xs font-normal text-[#9CA3AF] mt-0.5">{{ field.hint }}</p>
+          <p v-if="field.hint" class="text-xs font-normal text-(color:--ams-doc-hint) mt-0.5">{{ field.hint }}</p>
         </div>
       </template>
 
       <template v-else-if="field.type === 'file_upload'">
         <div @click.stop>
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-semibold text-sm text-[#111827]">{{ field.label }}<span v-if="field.required" class="text-[#DC2626]">*</span></span>
+            <span class="font-semibold text-sm text-(color:--ams-doc-strong)">{{ field.label }}<span v-if="field.required" class="text-(color:--ams-doc-error)">*</span></span>
             <template v-if="!fileList.length">
               <UButton
                 as="label"
@@ -331,7 +331,7 @@ const placeholder = computed(() => {
           <div v-if="fileList.length" class="mt-2 relative inline-block">
             <img
               :src="filePreviewUrl"
-              class="max-h-40 rounded-md border border-[#D1D5DB] cursor-pointer"
+              class="max-h-40 rounded-md border border-(color:--ams-doc-border) cursor-pointer"
               alt="Attached file preview"
               @click="openFile(fileList[0]?.file)"
             >
@@ -365,18 +365,18 @@ const placeholder = computed(() => {
             label-class="hidden"
             no-files-class="hidden"
             file-list-class="hidden"
-            :message-class="showValidation ? 'text-xs text-[#DC2626] mt-0.5 w-full' : 'hidden'"
+            :message-class="showValidation ? 'text-xs text-(color:--ams-doc-error) mt-0.5 w-full' : 'hidden'"
             input-class="sr-only"
           />
         </div>
-        <p v-if="field.hint" class="text-xs font-normal text-[#9CA3AF] mt-0.5">{{ field.hint }}</p>
+        <p v-if="field.hint" class="text-xs font-normal text-(color:--ams-doc-hint) mt-0.5">{{ field.hint }}</p>
       </template>
 
       <template v-else>
-        <div class="font-semibold text-[#111827] text-sm">
-          {{ field.label }}<span v-if="field.required" class="text-[#DC2626]">*</span>
+        <div class="font-semibold text-(color:--ams-doc-strong) text-sm">
+          {{ field.label }}<span v-if="field.required" class="text-(color:--ams-doc-error)">*</span>
         </div>
-        <p v-if="field.hint" class="text-xs font-normal text-[#9CA3AF] mt-0.5">{{ field.hint }}</p>
+        <p v-if="field.hint" class="text-xs font-normal text-(color:--ams-doc-hint) mt-0.5">{{ field.hint }}</p>
         <div class="mt-1.5" @click.stop>
           <FormKit
             :type="field.type === 'paragraph' ? 'textarea' : field.type === 'number' ? 'number' : 'text'"
@@ -392,9 +392,9 @@ const placeholder = computed(() => {
             inner-class="contents"
             label-class="hidden"
             :input-class="field.type === 'paragraph'
-              ? 'w-full resize-none border-0 border-b rounded-none border-[#D1D5DB] px-0 py-1 text-sm bg-transparent focus:outline-none focus:border-[#386BE6] disabled:cursor-not-allowed disabled:opacity-60'
-              : 'w-full border-0 border-b rounded-none border-[#D1D5DB] px-0 py-1 text-sm bg-transparent focus:outline-none focus:border-[#386BE6] disabled:cursor-not-allowed disabled:opacity-60'"
-            :message-class="showValidation ? 'text-xs text-[#DC2626] mt-0.5' : 'hidden'"
+              ? 'w-full resize-none border-0 border-b rounded-none border-(color:--ams-doc-border) px-0 py-1 text-sm bg-transparent focus:outline-none focus:border-(color:--ams-doc-accent) disabled:cursor-not-allowed disabled:opacity-60'
+              : 'w-full border-0 border-b rounded-none border-(color:--ams-doc-border) px-0 py-1 text-sm bg-transparent focus:outline-none focus:border-(color:--ams-doc-accent) disabled:cursor-not-allowed disabled:opacity-60'"
+            :message-class="showValidation ? 'text-xs text-(color:--ams-doc-error) mt-0.5' : 'hidden'"
           />
         </div>
       </template>
@@ -414,15 +414,15 @@ const placeholder = computed(() => {
          reference mockup's `.att.on` treatment - the acknowledgement box itself going
          green once accepted, not just the little checkbox square. -->
     <td
-      class="relative border border-[#D1D5DB] bg-[#F9FAFB] px-3 py-2 text-sm font-semibold text-[#374151] w-[38%] align-top break-words"
+      class="relative border border-(color:--ams-doc-border) bg-(color:--ams-doc-fill) px-3 py-2 text-sm font-semibold text-(color:--ams-doc-text) w-[38%] align-top break-words"
       :class="[editable ? 'pl-8' : '', field.type === 'checkbox' && checked ? '!bg-emerald-50 !border-emerald-300' : '']"
     >
-      {{ field.label }}<span v-if="field.required" class="text-[#DC2626]">*</span>
-      <p v-if="field.hint" class="text-xs font-normal text-[#9CA3AF] mt-0.5 normal-case break-words">{{ field.hint }}</p>
+      {{ field.label }}<span v-if="field.required" class="text-(color:--ams-doc-error)">*</span>
+      <p v-if="field.hint" class="text-xs font-normal text-(color:--ams-doc-hint) mt-0.5 normal-case break-words">{{ field.hint }}</p>
       <MasterDataFieldRowControls v-if="editable" only="grip" :can-move-up="canMoveUp" :can-move-down="canMoveDown" @move-up="emit('move-up')" @move-down="emit('move-down')" />
     </td>
     <td
-      class="relative border border-[#D1D5DB] px-3 py-2 text-sm text-[#1F2937] align-top break-words min-w-0"
+      class="relative border border-(color:--ams-doc-border) px-3 py-2 text-sm text-(color:--ams-doc-cell) align-top break-words min-w-0"
       :class="[editable ? 'pr-16' : '', field.type === 'checkbox' && checked ? 'bg-emerald-50 border-emerald-300' : '']"
     >
       <FormKit
@@ -438,8 +438,8 @@ const placeholder = computed(() => {
         wrapper-class="contents"
         inner-class="contents"
         label-class="hidden"
-        input-class="size-4 shrink-0 accent-[#386BE6]"
-        :message-class="showValidation ? 'text-xs text-[#DC2626] mt-0.5' : 'hidden'"
+        input-class="size-4 shrink-0 accent-(color:--ams-doc-accent)"
+        :message-class="showValidation ? 'text-xs text-(color:--ams-doc-error) mt-0.5' : 'hidden'"
         @click.stop
       />
       <div v-else-if="field.type === 'file_upload'" class="flex flex-col items-center gap-2" @click.stop>
@@ -464,7 +464,7 @@ const placeholder = computed(() => {
         <div v-else class="relative inline-block">
           <img
             :src="filePreviewUrl"
-            class="max-h-40 rounded-md border border-[#D1D5DB] cursor-pointer"
+            class="max-h-40 rounded-md border border-(color:--ams-doc-border) cursor-pointer"
             alt="Attached file preview"
             @click="openFile(fileList[0]?.file)"
           >
@@ -498,7 +498,7 @@ const placeholder = computed(() => {
           label-class="hidden"
           no-files-class="hidden"
           file-list-class="hidden"
-          :message-class="showValidation ? 'text-xs text-[#DC2626] mt-0.5' : 'hidden'"
+          :message-class="showValidation ? 'text-xs text-(color:--ams-doc-error) mt-0.5' : 'hidden'"
           input-class="sr-only"
         />
       </div>
@@ -519,7 +519,7 @@ const placeholder = computed(() => {
         :input-class="field.type === 'paragraph'
           ? 'w-full resize-none border-0 px-0 py-0 text-sm bg-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60'
           : 'w-full border-0 px-0 py-0 text-sm bg-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60'"
-        :message-class="showValidation ? 'text-xs text-[#DC2626] mt-0.5' : 'hidden'"
+        :message-class="showValidation ? 'text-xs text-(color:--ams-doc-error) mt-0.5' : 'hidden'"
         @click.stop
       />
       <MasterDataFieldRowControls v-if="editable" only="actions" @duplicate="emit('duplicate')" @remove="emit('remove')" />

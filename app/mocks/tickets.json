@@ -1,0 +1,1214 @@
+[
+  {
+    "id": "EMP-04821",
+    "ticket_number": 422,
+    "reference": "APR-26-00418",
+    "employee": {
+      "id": "EMP-04821",
+      "shift": {
+        "days": "Mon to Fri",
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "name": "Marisol Ferrer",
+      "position": "Client Success Manager",
+      "dept": "Client Success",
+      "client": "Northwind Retail",
+      "email": "m.ferrer@goteam.io",
+      "contact_number": "+63 917 555 0142",
+      "personal_email": "marisol.ferrer88@gmail.com",
+      "alt_contact_name": "Liza Ferrer",
+      "alt_contact_number": "+63 917 555 0199",
+      "leadership_coach": "Jerome Cruz - Team Lead",
+      "address": "142 Salinas Drive, Barangay Lahug, Cebu City, 6000 Cebu",
+      "address_mode": "remote",
+      "case_type": "Voluntary Resignation",
+      "suggested_reason": "resignation",
+      "lwd": "2026-09-25",
+      "sep": "2026-09-30",
+      "assets": [
+        {
+          "name": "Laptop",
+          "model": "MacBook Pro 14\" M3"
+        },
+        {
+          "name": "Mouse",
+          "model": "Apple Magic Mouse"
+        },
+        {
+          "name": "Docking Station",
+          "model": "CalDigit TS4"
+        },
+        {
+          "name": "Headset",
+          "model": "Jabra Evolve2 65"
+        },
+        {
+          "name": "Laptop Charger",
+          "model": "Apple 96W USB-C"
+        }
+      ]
+    },
+    "assignee": {
+      "name": "D. Reyes",
+      "email": "d.reyes@goteam.io"
+    },
+    "reason": "resignation",
+    "mode": "remote",
+    "lwd": "2026-09-25",
+    "separation_date": "2026-09-30",
+    "authorizing_endorsement": "PC-END-2026-0417",
+    "authorizing_endorsement_date": "2026-09-15",
+    "gate_count": 0,
+    "gates_released": 0,
+    "gate_notes": {},
+    "stage_index": 10,
+    "furthest_stage_index": 10,
+    "overdue_forced": false,
+    "checklist_review": null,
+    "assets_locked": true,
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Pro 14\" M3",
+        "type": "Computer Equipment",
+        "serial": "SN-10821",
+        "asset_tag": "GT-AST-5821",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse",
+        "type": "Computer Equipment",
+        "serial": "SN-10858",
+        "asset_tag": "GT-AST-5874",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4",
+        "type": "Computer Equipment",
+        "serial": "SN-10895",
+        "asset_tag": "GT-AST-5927",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65",
+        "type": "Computer Equipment",
+        "serial": "SN-10932",
+        "asset_tag": "GT-AST-5980",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C",
+        "type": "Computer Equipment",
+        "serial": "SN-10969",
+        "asset_tag": "GT-AST-6033",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      }
+    ],
+    "target_date": "2026-09-28",
+    "call_attempts": [],
+    "sms_sent_at": null,
+    "overdue_reminder_sent_at": null,
+    "overdue_reminder_count": 0,
+    "reminder_count": 0,
+    "deduction_applicable": null,
+    "contact": {
+      "number": "+63 917 555 0142",
+      "number_verified": false,
+      "email": "marisol.ferrer88@gmail.com",
+      "email_verified": false,
+      "alt_name": "Liza Ferrer",
+      "alt_number": "+63 917 555 0199"
+    },
+    "it_lock": {
+      "scheduled_confirmed": true,
+      "scheduled_for": "2026-09-25",
+      "executed_confirmed": true
+    },
+    "courier_provider_id": "jrs-express",
+    "courier_branch_name": "JRS Express - Cebu IT Park Branch",
+    "courier_branch_address": "142 Salinas Drive, Barangay Lahug, Cebu City, 6000 Cebu",
+    "courier_branch_substituted": false,
+    "branch_capture_method": "call",
+    "team_member_address_override": null,
+    "branch_request_sent_at": null,
+    "branch_request_template_key": null,
+    "branch_request_reply_received": false,
+    "transit_tracking_ref": "",
+    "transit_confirmed_at": null,
+    "gate_release_dates": {},
+    "target_date_history": [],
+    "hris_update_pending": false,
+    "hris_update_changed_at": null,
+    "hris_update_acknowledged_at": null,
+    "it_lock_needs_reschedule": false,
+    "history": [
+      {
+        "action": "Marked In Transit",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "transit"
+      },
+      {
+        "action": "Retrieval notice sent (email + SMS)",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "send"
+      },
+      {
+        "action": "Courier endorsement sent",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "send"
+      },
+      {
+        "action": "Courier branch confirmed via confirmation call: JRS Express, JRS Express - Cebu IT Park Branch, 142 Salinas Drive, Barangay Lahug, Cebu City, 6000 Cebu",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "branch"
+      },
+      {
+        "action": "Asset list confirmed (5 of 5) - locked, status moves to Pending Return",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "asset"
+      },
+      {
+        "action": "Ticket Created - APR-26-00418",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      },
+      {
+        "action": "Entry recorded: authorizing endorsement (+ recorded date) + Last Working Day + Separation Date captured",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      }
+    ],
+    "gate_pass_ref": null,
+    "gate_pass": null,
+    "building_gate_pass_ref": null,
+    "building_gate_pass": null,
+    "evidence_proof": null,
+    "evidence_condition": null,
+    "atd_reference": null,
+    "deduction_date": "",
+    "deduction_item": "",
+    "deduction_amount": "",
+    "deduction_authorized_by": "",
+    "deduction_case_first_name_override": null,
+    "deduction_case_officer_override": null,
+    "deduction_case_return_requested_date": "",
+    "deduction_case_received_date": "",
+    "deduction_case_assessed_date": "",
+    "deduction_case_buyout_election_date": "",
+    "deduction_case_quotation_expected_date": "",
+    "deduction_case_hear_back_by_date": "",
+    "deduction_case_response_due_date": "",
+    "deduction_case_amount_basis": null,
+    "deduction_case_supporting_doc_ref": "",
+    "deduction_case_amount_figures": "",
+    "deduction_case_amount_words": "",
+    "deduction_case_asset_serials": [],
+    "deduction_outcome": null,
+    "quotation_received_on": null,
+    "quotation_reference": "",
+    "quotation_file_name": "",
+    "referred_to_payroll_at": null,
+    "referred_to_payroll_by": "",
+    "inspection_route": null,
+    "status": "open",
+    "created_at": "2026-10-13",
+    "created_by": "D. Reyes",
+    "acknowledgment_token": "seed-EMP-04821",
+    "audit_trail_id": "AUD-2026-00422",
+    "last_updated_by": "D. Reyes",
+    "last_updated_at": "2026-10-13T05:05:38.266Z",
+    "checklist": [
+      {
+        "text": "Offboarding notice reviewed and confirmed with People & Culture",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Any pending approvals or requests from this team member checked",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Handover of ongoing tasks coordinated with their manager",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Return instructions explained to the team member",
+        "required": true,
+        "done": false,
+        "done_by": null
+      }
+    ]
+  },
+  {
+    "id": "EMP-02214",
+    "ticket_number": 423,
+    "reference": "APR-26-00419",
+    "employee": {
+      "id": "EMP-02214",
+      "shift": {
+        "days": "Mon to Fri",
+        "start": "07:00",
+        "end": "16:00"
+      },
+      "name": "Rafael Tan",
+      "position": "Financial Analyst",
+      "dept": "Finance",
+      "client": "Meridian Logistics",
+      "email": "r.tan@goteam.io",
+      "contact_number": "+63 917 555 0455",
+      "personal_email": "rtan.finance@gmail.com",
+      "alt_contact_name": "Grace Tan",
+      "alt_contact_number": "+63 917 555 0460",
+      "leadership_coach": "Patricia Villanueva - Finance Manager",
+      "address": "212 United Nations Ave, Barangay Malate, Manila, 1004 Metro Manila",
+      "address_mode": "onsite",
+      "case_type": "Immediate Resignation",
+      "suggested_reason": "immediate-resignation",
+      "lwd": "2026-09-16",
+      "sep": "2026-09-16",
+      "assets": [
+        {
+          "name": "Laptop",
+          "model": "MacBook Pro 13\" M2"
+        },
+        {
+          "name": "External SSD",
+          "model": "Samsung T7 1TB"
+        },
+        {
+          "name": "Laptop Charger",
+          "model": "Apple 67W USB-C"
+        }
+      ]
+    },
+    "assignee": {
+      "name": "D. Reyes",
+      "email": "d.reyes@goteam.io"
+    },
+    "reason": "immediate-resignation",
+    "mode": "onsite",
+    "lwd": "2026-09-16",
+    "separation_date": "2026-09-16",
+    "authorizing_endorsement": "PC-END-2026-0301",
+    "authorizing_endorsement_date": "2026-09-14",
+    "gate_count": 0,
+    "gates_released": 0,
+    "gate_notes": {},
+    "stage_index": 8,
+    "furthest_stage_index": 8,
+    "overdue_forced": false,
+    "checklist_review": null,
+    "assets_locked": true,
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Pro 13\" M2",
+        "type": "Computer Equipment",
+        "serial": "SN-10214",
+        "asset_tag": "GT-AST-3214",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "External SSD",
+        "model": "Samsung T7 1TB",
+        "type": "Computer Equipment",
+        "serial": "SN-10251",
+        "asset_tag": "GT-AST-3267",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 67W USB-C",
+        "type": "Computer Equipment",
+        "serial": "SN-10288",
+        "asset_tag": "GT-AST-3320",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      }
+    ],
+    "target_date": "2026-10-13",
+    "call_attempts": [],
+    "sms_sent_at": null,
+    "overdue_reminder_sent_at": null,
+    "overdue_reminder_count": 0,
+    "reminder_count": 0,
+    "deduction_applicable": null,
+    "contact": {
+      "number": "+63 917 555 0455",
+      "number_verified": false,
+      "email": "rtan.finance@gmail.com",
+      "email_verified": false,
+      "alt_name": "Grace Tan",
+      "alt_number": "+63 917 555 0460"
+    },
+    "it_lock": {
+      "scheduled_confirmed": true,
+      "scheduled_for": "2026-09-16",
+      "executed_confirmed": true
+    },
+    "courier_provider_id": null,
+    "courier_branch_name": "",
+    "courier_branch_address": "",
+    "courier_branch_substituted": false,
+    "branch_capture_method": null,
+    "team_member_address_override": null,
+    "branch_request_sent_at": null,
+    "branch_request_template_key": null,
+    "branch_request_reply_received": false,
+    "transit_tracking_ref": "",
+    "transit_confirmed_at": null,
+    "gate_release_dates": {},
+    "target_date_history": [],
+    "hris_update_pending": false,
+    "hris_update_changed_at": null,
+    "hris_update_acknowledged_at": null,
+    "it_lock_needs_reschedule": false,
+    "history": [
+      {
+        "action": "Retrieval notice sent",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "send"
+      },
+      {
+        "action": "Asset list confirmed (3 of 3) - locked, status moves to Pending Return",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "asset"
+      },
+      {
+        "action": "Ticket Created - APR-26-00419",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      },
+      {
+        "action": "Entry recorded: authorizing endorsement (+ recorded date) + Last Working Day + Separation Date captured",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      }
+    ],
+    "gate_pass_ref": null,
+    "gate_pass": null,
+    "building_gate_pass_ref": null,
+    "building_gate_pass": null,
+    "evidence_proof": null,
+    "evidence_condition": null,
+    "atd_reference": null,
+    "deduction_date": "",
+    "deduction_item": "",
+    "deduction_amount": "",
+    "deduction_authorized_by": "",
+    "deduction_case_first_name_override": null,
+    "deduction_case_officer_override": null,
+    "deduction_case_return_requested_date": "",
+    "deduction_case_received_date": "",
+    "deduction_case_assessed_date": "",
+    "deduction_case_buyout_election_date": "",
+    "deduction_case_quotation_expected_date": "",
+    "deduction_case_hear_back_by_date": "",
+    "deduction_case_response_due_date": "",
+    "deduction_case_amount_basis": null,
+    "deduction_case_supporting_doc_ref": "",
+    "deduction_case_amount_figures": "",
+    "deduction_case_amount_words": "",
+    "deduction_case_asset_serials": [],
+    "deduction_outcome": null,
+    "quotation_received_on": null,
+    "quotation_reference": "",
+    "quotation_file_name": "",
+    "referred_to_payroll_at": null,
+    "referred_to_payroll_by": "",
+    "inspection_route": null,
+    "status": "open",
+    "created_at": "2026-10-13",
+    "created_by": "D. Reyes",
+    "acknowledgment_token": "seed-EMP-02214",
+    "audit_trail_id": "AUD-2026-00423",
+    "last_updated_by": "D. Reyes",
+    "last_updated_at": "2026-10-13T05:05:38.267Z",
+    "checklist": [
+      {
+        "text": "Offboarding notice reviewed and confirmed with People & Culture",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Any pending approvals or requests from this team member checked",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Handover of ongoing tasks coordinated with their manager",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Return instructions explained to the team member",
+        "required": true,
+        "done": false,
+        "done_by": null
+      }
+    ]
+  },
+  {
+    "id": "EMP-05102",
+    "ticket_number": 424,
+    "reference": "APR-26-00420",
+    "employee": {
+      "id": "EMP-05102",
+      "shift": {
+        "days": "Mon to Fri",
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "name": "Andrea Villar",
+      "position": "People & Culture Associate",
+      "dept": "People & Culture",
+      "client": "Internal",
+      "email": "a.villar@goteam.io",
+      "contact_number": "",
+      "personal_email": "andrea.v.villar@yahoo.com",
+      "alt_contact_name": "Ramon Villar",
+      "alt_contact_number": "+63 917 555 0341",
+      "leadership_coach": "Sophia Reyes - HRBP",
+      "address": "27 Quimpo Blvd, Barangay Talomo, Davao City, 8000 Davao del Sur",
+      "address_mode": "remote",
+      "case_type": "Unexplained Absence Case",
+      "suggested_reason": "unexplained-absence",
+      "lwd": "2026-09-21",
+      "sep": "2026-09-28",
+      "assets": [
+        {
+          "name": "Laptop",
+          "model": "MacBook Air 13\" M2"
+        },
+        {
+          "name": "Webcam",
+          "model": "Logitech Brio 505"
+        },
+        {
+          "name": "Headset",
+          "model": "Jabra Evolve2 40"
+        }
+      ]
+    },
+    "assignee": {
+      "name": "D. Reyes",
+      "email": "d.reyes@goteam.io"
+    },
+    "reason": "unexplained-absence",
+    "mode": "remote",
+    "lwd": "2026-09-21",
+    "separation_date": "2026-09-28",
+    "authorizing_endorsement": "",
+    "authorizing_endorsement_date": "",
+    "gate_count": 3,
+    "gates_released": 0,
+    "gate_notes": {},
+    "stage_index": 6,
+    "furthest_stage_index": 6,
+    "overdue_forced": false,
+    "checklist_review": null,
+    "assets_locked": true,
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2",
+        "type": "Computer Equipment",
+        "serial": "SN-10102",
+        "asset_tag": "GT-AST-6102",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Webcam",
+        "model": "Logitech Brio 505",
+        "type": "Computer Equipment",
+        "serial": "SN-10139",
+        "asset_tag": "GT-AST-6155",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 40",
+        "type": "Computer Equipment",
+        "serial": "SN-10176",
+        "asset_tag": "GT-AST-6208",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      }
+    ],
+    "target_date": "2026-09-24",
+    "call_attempts": [],
+    "sms_sent_at": null,
+    "overdue_reminder_sent_at": null,
+    "overdue_reminder_count": 0,
+    "reminder_count": 0,
+    "deduction_applicable": null,
+    "contact": {
+      "number": "",
+      "number_verified": false,
+      "email": "andrea.v.villar@yahoo.com",
+      "email_verified": false,
+      "alt_name": "Ramon Villar",
+      "alt_number": "+63 917 555 0341"
+    },
+    "it_lock": {
+      "scheduled_confirmed": true,
+      "scheduled_for": "2026-09-21",
+      "executed_confirmed": true
+    },
+    "courier_provider_id": "jrs-express",
+    "courier_branch_name": "JRS Express - Davao Branch",
+    "courier_branch_address": "27 Quimpo Blvd, Barangay Talomo, Davao City, 8000 Davao del Sur",
+    "courier_branch_substituted": false,
+    "branch_capture_method": "call",
+    "team_member_address_override": null,
+    "branch_request_sent_at": null,
+    "branch_request_template_key": null,
+    "branch_request_reply_received": false,
+    "transit_tracking_ref": "",
+    "transit_confirmed_at": null,
+    "gate_release_dates": {},
+    "target_date_history": [],
+    "hris_update_pending": false,
+    "hris_update_changed_at": null,
+    "hris_update_acknowledged_at": null,
+    "it_lock_needs_reschedule": false,
+    "history": [
+      {
+        "action": "Courier branch confirmed via confirmation call: JRS Express, JRS Express - Davao Branch, 27 Quimpo Blvd, Barangay Talomo, Davao City, 8000 Davao del Sur",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "branch"
+      },
+      {
+        "action": "Asset list confirmed (3 of 3) - locked, status moves to Pending Return",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "asset"
+      },
+      {
+        "action": "Ticket Created - APR-26-00420",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      },
+      {
+        "action": "Entry recorded: authorizing endorsement (+ recorded date) + Last Working Day + Separation Date captured",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      }
+    ],
+    "gate_pass_ref": null,
+    "gate_pass": null,
+    "building_gate_pass_ref": null,
+    "building_gate_pass": null,
+    "evidence_proof": null,
+    "evidence_condition": null,
+    "atd_reference": null,
+    "deduction_date": "",
+    "deduction_item": "",
+    "deduction_amount": "",
+    "deduction_authorized_by": "",
+    "deduction_case_first_name_override": null,
+    "deduction_case_officer_override": null,
+    "deduction_case_return_requested_date": "",
+    "deduction_case_received_date": "",
+    "deduction_case_assessed_date": "",
+    "deduction_case_buyout_election_date": "",
+    "deduction_case_quotation_expected_date": "",
+    "deduction_case_hear_back_by_date": "",
+    "deduction_case_response_due_date": "",
+    "deduction_case_amount_basis": null,
+    "deduction_case_supporting_doc_ref": "",
+    "deduction_case_amount_figures": "",
+    "deduction_case_amount_words": "",
+    "deduction_case_asset_serials": [],
+    "deduction_outcome": null,
+    "quotation_received_on": null,
+    "quotation_reference": "",
+    "quotation_file_name": "",
+    "referred_to_payroll_at": null,
+    "referred_to_payroll_by": "",
+    "inspection_route": null,
+    "status": "open",
+    "created_at": "2026-10-13",
+    "created_by": "D. Reyes",
+    "acknowledgment_token": "seed-EMP-05102",
+    "audit_trail_id": "AUD-2026-00424",
+    "last_updated_by": "D. Reyes",
+    "last_updated_at": "2026-10-13T05:05:38.268Z",
+    "checklist": [
+      {
+        "text": "Offboarding notice reviewed and confirmed with People & Culture",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Any pending approvals or requests from this team member checked",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Handover of ongoing tasks coordinated with their manager",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Return instructions explained to the team member",
+        "required": true,
+        "done": false,
+        "done_by": null
+      }
+    ]
+  },
+  {
+    "id": "EMP-01187",
+    "ticket_number": 425,
+    "reference": "APR-26-00421",
+    "employee": {
+      "id": "EMP-01187",
+      "shift": {
+        "days": "Mon to Fri",
+        "start": "22:00",
+        "end": "07:00"
+      },
+      "name": "Josef Cruz",
+      "position": "Operations Supervisor",
+      "dept": "Operations",
+      "client": "Meridian Logistics",
+      "email": "j.cruz@goteam.io",
+      "contact_number": "+63 917 555 0623",
+      "personal_email": "",
+      "alt_contact_name": "Elena Cruz",
+      "alt_contact_number": "+63 917 555 0630",
+      "leadership_coach": "Andres Fernandez - Operations Manager",
+      "address": "56 Diversion Road, Barangay Mandurriao, Iloilo City, 5000 Iloilo",
+      "address_mode": "remote",
+      "case_type": "Recall from Leave",
+      "suggested_reason": "recalled",
+      "lwd": "2026-09-20",
+      "sep": "2026-09-22",
+      "assets": [
+        {
+          "name": "Laptop",
+          "model": "Lenovo ThinkPad T14 Gen 4"
+        },
+        {
+          "name": "Monitor",
+          "model": "LG 24MK430H 24\""
+        },
+        {
+          "name": "Docking Station",
+          "model": "Dell WD19S"
+        },
+        {
+          "name": "Headset",
+          "model": "Plantronics Blackwire 3220"
+        },
+        {
+          "name": "USB Hub",
+          "model": "Anker 7-in-1 USB-C Hub"
+        }
+      ]
+    },
+    "assignee": {
+      "name": "J. Santos",
+      "email": "j.santos@goteam.io"
+    },
+    "reason": "recalled",
+    "mode": "remote",
+    "lwd": "2026-09-20",
+    "separation_date": "2026-09-22",
+    "authorizing_endorsement": "PC-END-2026-0290",
+    "authorizing_endorsement_date": "2026-09-13",
+    "gate_count": 1,
+    "gates_released": 1,
+    "gate_notes": {},
+    "stage_index": 13,
+    "furthest_stage_index": 13,
+    "overdue_forced": false,
+    "checklist_review": null,
+    "assets_locked": true,
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad T14 Gen 4",
+        "type": "Computer Equipment",
+        "serial": "SN-10187",
+        "asset_tag": "GT-AST-2187",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H 24\"",
+        "type": "Computer Equipment",
+        "serial": "SN-10224",
+        "asset_tag": "GT-AST-2240",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Docking Station",
+        "model": "Dell WD19S",
+        "type": "Computer Equipment",
+        "serial": "SN-10261",
+        "asset_tag": "GT-AST-2293",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220",
+        "type": "Computer Equipment",
+        "serial": "SN-10298",
+        "asset_tag": "GT-AST-2346",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "USB Hub",
+        "model": "Anker 7-in-1 USB-C Hub",
+        "type": "Computer Equipment",
+        "serial": "SN-10335",
+        "asset_tag": "GT-AST-2399",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      }
+    ],
+    "target_date": "2026-09-25",
+    "call_attempts": [],
+    "sms_sent_at": null,
+    "overdue_reminder_sent_at": null,
+    "overdue_reminder_count": 0,
+    "reminder_count": 0,
+    "deduction_applicable": null,
+    "contact": {
+      "number": "+63 917 555 0623",
+      "number_verified": false,
+      "email": "",
+      "email_verified": false,
+      "alt_name": "Elena Cruz",
+      "alt_number": "+63 917 555 0630"
+    },
+    "it_lock": {
+      "scheduled_confirmed": true,
+      "scheduled_for": "2026-09-20",
+      "executed_confirmed": true
+    },
+    "courier_provider_id": "jrs-express",
+    "courier_branch_name": "JRS Express - Iloilo Branch",
+    "courier_branch_address": "56 Diversion Road, Barangay Mandurriao, Iloilo City, 5000 Iloilo",
+    "courier_branch_substituted": false,
+    "branch_capture_method": "call",
+    "team_member_address_override": null,
+    "branch_request_sent_at": null,
+    "branch_request_template_key": null,
+    "branch_request_reply_received": false,
+    "transit_tracking_ref": "",
+    "transit_confirmed_at": null,
+    "gate_release_dates": {},
+    "target_date_history": [],
+    "hris_update_pending": false,
+    "hris_update_changed_at": null,
+    "hris_update_acknowledged_at": null,
+    "it_lock_needs_reschedule": false,
+    "history": [
+      {
+        "action": "Assets physically received",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "return"
+      },
+      {
+        "action": "Marked In Transit",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "transit"
+      },
+      {
+        "action": "Courier endorsement sent",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "send"
+      },
+      {
+        "action": "Courier branch confirmed via confirmation call: JRS Express, JRS Express - Iloilo Branch, 56 Diversion Road, Barangay Mandurriao, Iloilo City, 5000 Iloilo",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "branch"
+      },
+      {
+        "action": "Asset list confirmed (5 of 5) - locked, status moves to Pending Return",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "asset"
+      },
+      {
+        "action": "Ticket Created - APR-26-00421",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      },
+      {
+        "action": "Entry recorded: authorizing endorsement (+ recorded date) + Last Working Day + Separation Date captured",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      }
+    ],
+    "gate_pass_ref": null,
+    "gate_pass": null,
+    "building_gate_pass_ref": null,
+    "building_gate_pass": null,
+    "evidence_proof": null,
+    "evidence_condition": null,
+    "atd_reference": null,
+    "deduction_date": "",
+    "deduction_item": "",
+    "deduction_amount": "",
+    "deduction_authorized_by": "",
+    "deduction_case_first_name_override": null,
+    "deduction_case_officer_override": null,
+    "deduction_case_return_requested_date": "",
+    "deduction_case_received_date": "",
+    "deduction_case_assessed_date": "",
+    "deduction_case_buyout_election_date": "",
+    "deduction_case_quotation_expected_date": "",
+    "deduction_case_hear_back_by_date": "",
+    "deduction_case_response_due_date": "",
+    "deduction_case_amount_basis": null,
+    "deduction_case_supporting_doc_ref": "",
+    "deduction_case_amount_figures": "",
+    "deduction_case_amount_words": "",
+    "deduction_case_asset_serials": [],
+    "deduction_outcome": null,
+    "quotation_received_on": null,
+    "quotation_reference": "",
+    "quotation_file_name": "",
+    "referred_to_payroll_at": null,
+    "referred_to_payroll_by": "",
+    "inspection_route": null,
+    "status": "open",
+    "created_at": "2026-10-13",
+    "created_by": "D. Reyes",
+    "recall_effective_date": "2026-09-22",
+    "acknowledgment_token": "seed-EMP-01187",
+    "audit_trail_id": "AUD-2026-00425",
+    "last_updated_by": "D. Reyes",
+    "last_updated_at": "2026-10-13T05:05:38.270Z",
+    "checklist": [
+      {
+        "text": "Offboarding notice reviewed and confirmed with People & Culture",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Any pending approvals or requests from this team member checked",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Handover of ongoing tasks coordinated with their manager",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Return instructions explained to the team member",
+        "required": true,
+        "done": false,
+        "done_by": null
+      }
+    ]
+  },
+  {
+    "id": "EMP-03310",
+    "ticket_number": 426,
+    "reference": "APR-26-00422",
+    "employee": {
+      "id": "EMP-03310",
+      "shift": {
+        "days": "Mon to Fri",
+        "start": "10:00",
+        "end": "19:00"
+      },
+      "name": "Kevin Ong",
+      "position": "Software Engineer",
+      "dept": "Engineering",
+      "client": "Internal",
+      "email": "k.ong@goteam.io",
+      "contact_number": "+63 917 555 0210",
+      "personal_email": "",
+      "alt_contact_name": "",
+      "alt_contact_number": "",
+      "leadership_coach": "Miguel Ramos - Engineering Manager",
+      "address": "88 Jose Abad Santos Ave, Barangay Tondo, Manila, 1012 Metro Manila",
+      "address_mode": "onsite",
+      "case_type": "Contract End",
+      "suggested_reason": "end-of-contract",
+      "lwd": "2026-10-01",
+      "sep": "2026-10-05",
+      "assets": [
+        {
+          "name": "Laptop",
+          "model": "Lenovo ThinkPad X1 Carbon Gen 11"
+        },
+        {
+          "name": "Monitor",
+          "model": "Dell UltraSharp 27\" U2723QE"
+        },
+        {
+          "name": "Docking Station",
+          "model": "Lenovo ThinkPad USB-C Dock Gen 2"
+        },
+        {
+          "name": "Keyboard & Mouse",
+          "model": "Logitech MK540"
+        }
+      ]
+    },
+    "assignee": {
+      "name": "M. Bautista",
+      "email": "m.bautista@goteam.io"
+    },
+    "reason": "end-of-contract",
+    "mode": "onsite",
+    "lwd": "2026-10-01",
+    "separation_date": "2026-10-05",
+    "authorizing_endorsement": "PC-END-2026-0155",
+    "authorizing_endorsement_date": "2026-09-10",
+    "gate_count": 1,
+    "gates_released": 1,
+    "gate_notes": {},
+    "stage_index": 12,
+    "furthest_stage_index": 12,
+    "overdue_forced": false,
+    "checklist_review": null,
+    "assets_locked": true,
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad X1 Carbon Gen 11",
+        "type": "Computer Equipment",
+        "serial": "SN-10310",
+        "asset_tag": "GT-AST-4310",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell UltraSharp 27\" U2723QE",
+        "type": "Computer Equipment",
+        "serial": "SN-10347",
+        "asset_tag": "GT-AST-4363",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Docking Station",
+        "model": "Lenovo ThinkPad USB-C Dock Gen 2",
+        "type": "Computer Equipment",
+        "serial": "SN-10384",
+        "asset_tag": "GT-AST-4416",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      },
+      {
+        "name": "Keyboard & Mouse",
+        "model": "Logitech MK540",
+        "type": "Computer Equipment",
+        "serial": "SN-10421",
+        "asset_tag": "GT-AST-4469",
+        "checked": true,
+        "remarks": "",
+        "resolution": null
+      }
+    ],
+    "target_date": "2026-10-01",
+    "call_attempts": [],
+    "sms_sent_at": null,
+    "overdue_reminder_sent_at": null,
+    "overdue_reminder_count": 0,
+    "reminder_count": 0,
+    "deduction_applicable": null,
+    "contact": {
+      "number": "+63 917 555 0210",
+      "number_verified": false,
+      "email": "",
+      "email_verified": false,
+      "alt_name": "",
+      "alt_number": ""
+    },
+    "it_lock": {
+      "scheduled_confirmed": true,
+      "scheduled_for": "2026-10-01",
+      "executed_confirmed": true
+    },
+    "courier_provider_id": null,
+    "courier_branch_name": "",
+    "courier_branch_address": "",
+    "courier_branch_substituted": false,
+    "branch_capture_method": null,
+    "team_member_address_override": null,
+    "branch_request_sent_at": null,
+    "branch_request_template_key": null,
+    "branch_request_reply_received": false,
+    "transit_tracking_ref": "",
+    "transit_confirmed_at": null,
+    "gate_release_dates": {},
+    "target_date_history": [],
+    "hris_update_pending": false,
+    "hris_update_changed_at": null,
+    "hris_update_acknowledged_at": null,
+    "it_lock_needs_reschedule": false,
+    "history": [
+      {
+        "action": "Ticket Closed",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "closure"
+      },
+      {
+        "action": "Asset list confirmed (4 of 4) - locked, status moves to Pending Return",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "asset"
+      },
+      {
+        "action": "Ticket Created - APR-26-00422",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      },
+      {
+        "action": "Entry recorded: authorizing endorsement (+ recorded date) + Last Working Day + Separation Date captured",
+        "actor": "D. Reyes",
+        "when": "2026-10-13T05:05:00.000Z",
+        "category": "entry"
+      }
+    ],
+    "gate_pass_ref": null,
+    "gate_pass": null,
+    "building_gate_pass_ref": null,
+    "building_gate_pass": null,
+    "evidence_proof": null,
+    "evidence_condition": null,
+    "atd_reference": null,
+    "deduction_date": "",
+    "deduction_item": "",
+    "deduction_amount": "",
+    "deduction_authorized_by": "",
+    "deduction_case_first_name_override": null,
+    "deduction_case_officer_override": null,
+    "deduction_case_return_requested_date": "",
+    "deduction_case_received_date": "",
+    "deduction_case_assessed_date": "",
+    "deduction_case_buyout_election_date": "",
+    "deduction_case_quotation_expected_date": "",
+    "deduction_case_hear_back_by_date": "",
+    "deduction_case_response_due_date": "",
+    "deduction_case_amount_basis": null,
+    "deduction_case_supporting_doc_ref": "",
+    "deduction_case_amount_figures": "",
+    "deduction_case_amount_words": "",
+    "deduction_case_asset_serials": [],
+    "deduction_outcome": null,
+    "quotation_received_on": null,
+    "quotation_reference": "",
+    "quotation_file_name": "",
+    "referred_to_payroll_at": null,
+    "referred_to_payroll_by": "",
+    "inspection_route": null,
+    "status": "closed",
+    "created_at": "2026-10-13",
+    "created_by": "D. Reyes",
+    "acknowledgment_token": "seed-EMP-03310",
+    "audit_trail_id": "AUD-2026-00426",
+    "last_updated_by": "D. Reyes",
+    "last_updated_at": "2026-10-13T05:05:38.272Z",
+    "checklist": [
+      {
+        "text": "Offboarding notice reviewed and confirmed with People & Culture",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Any pending approvals or requests from this team member checked",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Handover of ongoing tasks coordinated with their manager",
+        "required": true,
+        "done": false,
+        "done_by": null
+      },
+      {
+        "text": "Return instructions explained to the team member",
+        "required": true,
+        "done": false,
+        "done_by": null
+      }
+    ]
+  }
+]

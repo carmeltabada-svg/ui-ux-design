@@ -89,10 +89,15 @@ function openLinkPopover() {
   linkPopoverOpen.value = true
 }
 
+const toast = useToast()
+
 function insertButtonLink() {
-  const href = linkUrl.value.trim()
+  const href = safeUrl(linkUrl.value)
   const label = linkLabel.value.trim() || 'Click here'
-  if (!href) return
+  if (!href) {
+    if (linkUrl.value.trim()) toast.add({ title: 'That link is not allowed', description: 'Use a web address (https://), an email (mailto:) or a phone number (tel:).', icon: 'i-lucide-triangle-alert', color: 'warning' })
+    return
+  }
   props.editor?.chain().focus().insertButtonLink({ href, label }).run()
   linkPopoverOpen.value = false
 }

@@ -25,11 +25,11 @@ export interface ChangeCategory {
  * all vs. a section's title) and report real counts.
  */
 export function describeSnapshotChanges(
-  prev: Record<string, unknown>,
-  next: Record<string, unknown>,
+  prev: object,
+  next: object,
   categories: ChangeCategory[]
 ): string | null {
-  const changes = diff(prev, next)
+  const changes = diff(prev as Record<string, unknown>, next as Record<string, unknown>)
   if (!changes.length) return null
 
   const parts: string[] = []

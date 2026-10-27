@@ -1,0 +1,15 @@
+[
+  {
+    "id": "tpl-standard-offboarding",
+    "name": "Standard offboarding",
+    "tasks": [
+      { "text": "Offboarding notice reviewed and confirmed with People & Culture", "required": true },
+      { "text": "Any pending approvals or requests from this team member checked", "required": true },
+      { "text": "Handover of ongoing tasks coordinated with their manager", "required": true },
+      { "text": "Return instructions explained to the team member", "required": true }
+    ],
+    "default_for": ["*"],
+    "created_at": "2026-09-01",
+    "updated_at": "2026-09-01"
+  }
+]

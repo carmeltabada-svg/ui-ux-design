@@ -96,18 +96,18 @@ function pxToFontSize(px: number): number {
 }
 
 const NODE_STYLES: Record<string, string> = {
-  h2: 'font-size:22px;font-weight:700;color:#111827;margin:22px 0 10px;font-family:Segoe UI,Arial,sans-serif;',
-  p: 'margin:0 0 16px;font-family:Segoe UI,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;',
-  ul: 'margin:0 0 16px;padding-left:22px;font-family:Segoe UI,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;',
-  ol: 'margin:0 0 16px;padding-left:22px;font-family:Segoe UI,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;',
+  h2: 'font-size:22px;font-weight:700;color:#111827;margin:22px 0 10px;font-family:Inter,sans-serif;',
+  p: 'margin:0 0 16px;font-family:Inter,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;',
+  ul: 'margin:0 0 16px;padding-left:22px;font-family:Inter,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;',
+  ol: 'margin:0 0 16px;padding-left:22px;font-family:Inter,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;',
   li: 'margin:0 0 6px;',
   // Matches `.prose-tiptap blockquote` in main.css (`var(--ui-border)` /
   // `var(--ui-text-muted)`, which resolve to these two hex values - see
   // main.css's `:root` block) rather than the old, slightly-off approximation.
   blockquote: 'margin:0 0 16px;padding:2px 0 2px 14px;border-left:3px solid #e2e8f0;color:#64748b;font-style:italic;',
-  table: 'border-collapse:collapse;width:100%;margin:0 0 16px;font-family:Segoe UI,Arial,sans-serif;font-size:14px;',
+  table: 'border-collapse:collapse;width:100%;margin:0 0 16px;font-family:Inter,sans-serif;font-size:14px;',
   td: 'border:1px solid #e2e8f0;padding:8px 12px;text-align:left;',
-  th: 'border:1px solid #e2e8f0;padding:8px 12px;text-align:left;font-weight:700;font-family:Segoe UI,Arial,sans-serif;color:#1f2937;',
+  th: 'border:1px solid #e2e8f0;padding:8px 12px;text-align:left;font-weight:700;font-family:Inter,sans-serif;color:#1f2937;',
   a: 'color:#386be6;',
   // `border:0` is the classic reset for the border some clients (Outlook
   // included) draw around a linked/atom image by default - CSS `border` is
@@ -201,7 +201,7 @@ function tableizeFillBlocks(doc: Document) {
     td.setAttribute('bgcolor', bg)
     td.setAttribute(
       'style',
-      `background-color:${bg};border-left:3px solid ${border};color:${color};padding:12px 16px;font-family:Segoe UI,Arial,sans-serif;font-size:15px;line-height:1.65;`
+      `background-color:${bg};border-left:3px solid ${border};color:${color};padding:12px 16px;font-family:Inter,sans-serif;font-size:15px;line-height:1.65;`
     )
     td.innerHTML = el.innerHTML
     tr.appendChild(td)
@@ -330,7 +330,7 @@ function tableizeButtons(doc: Document) {
     // so clicking it in the editor can't trigger actual browser navigation;
     // this export step is what turns the stored destination into a real,
     // functional link for the final pasted/exported email.
-    const href = el.getAttribute('data-href') || '#'
+    const href = safeUrl(el.getAttribute('data-href')) || '#'
     const label = el.textContent || 'Click here'
     // The button node's own `renderHTML` (tiptapExtensions.ts) wraps the
     // anchor in a `<div style="text-align:...">` purely so alignment has
@@ -371,7 +371,7 @@ function tableizeButtons(doc: Document) {
     a.setAttribute('rel', 'noopener noreferrer')
     a.setAttribute(
       'style',
-      `display:inline-block;font-family:Segoe UI,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;white-space:nowrap;`
+      `display:inline-block;font-family:Inter,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;white-space:nowrap;`
     )
     a.textContent = label
     font.appendChild(a)
@@ -473,7 +473,7 @@ export function buildEmailExportHtml(bodyHtml: string, samples: Record<string, s
   // colored margin around a white email" (the actual, only intended effect
   // of the `background` option - the content itself was never meant to
   // pick up any tint).
-  const CONTENT_PADDING = 'background-color:#ffffff;font-family:Segoe UI,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;padding:32px 24px;'
+  const CONTENT_PADDING = 'background-color:#ffffff;font-family:Inter,sans-serif;font-size:15px;line-height:1.65;color:#1f2937;padding:32px 24px;'
   const rows: string[] = []
   let buffer: string[] = []
   const flushBuffer = () => {
@@ -527,7 +527,7 @@ export function buildEmailExportHtml(bodyHtml: string, samples: Record<string, s
   // detaching the note from the colored background it's meant to sit on
   // (reported as "the note is outside the background").
   const footerRow = footerNote?.trim()
-    ? `<tr><td align="center"${background ? ` bgcolor="${background}"` : ''} style="${background ? `background-color:${background};` : ''}padding:16px 24px 24px;font-family:Segoe UI,Arial,sans-serif;font-size:12px;line-height:1.6;color:#94a3b8;text-align:center;">${escapePlainText(footerNote.trim())}</td></tr>`
+    ? `<tr><td align="center"${background ? ` bgcolor="${background}"` : ''} style="${background ? `background-color:${background};` : ''}padding:16px 24px 24px;font-family:Inter,sans-serif;font-size:12px;line-height:1.6;color:#94a3b8;text-align:center;">${escapePlainText(footerNote.trim())}</td></tr>`
     : ''
 
   if (!background && !footerRow) return innerTable
@@ -554,4 +554,21 @@ export function buildEmailExportPlainText(bodyHtml: string, samples: Record<stri
     .replace(/<[^>]+>/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
+}
+
+/**
+ * Writes a `.eml` the operator can open in their own mail client. The subject is
+ * stripped of CR/LF so a token value can't inject extra email headers, and the
+ * blob URL is revoked after a tick (revoking it synchronously after click() can
+ * cancel the download in some browsers).
+ */
+export function downloadEmlFile(subject: string, bodyHtml: string, filename: string) {
+  const safeSubject = subject.replace(/[\r\n]+/g, ' ')
+  const eml = `Subject: ${safeSubject}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n${bodyHtml}`
+  const url = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename.endsWith('.eml') ? filename : `${filename}.eml`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

@@ -1,4 +1,5 @@
 import type { FieldRegistryEntry } from '~/utils/formFieldRegistry'
+import { escapeAttr as esc } from '~/utils/escapeHtml'
 
 // Turns a document's real `div[data-form-field ...]` markers - the only
 // thing `FormFieldNode.renderHTML` ever emits (see ~/utils/formFieldNode.ts;
@@ -81,10 +82,3 @@ export function renderFormFieldsAsStaticHtml(html: string, values: Record<string
   return doc.body.innerHTML
 }
 
-function esc(s: string): string {
-  return (s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
