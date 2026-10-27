@@ -21,20 +21,35 @@ interface Props {
   readOnly?: boolean
   /** Where an insert lands ( "Subject line" or "Body" ), shown in the header. */
   targetLabel?: string
+  /**
+   * Puts a token into the editor and says whether it went in. A token is only marked Added when it did.
+   * `keepFocus` is true when the pick came from the keyboard, so focus can stay on the token row.
+   */
+  inserter?: (code: string, keepFocus: boolean) => boolean
 }
 
 const props = defineProps<Props>()
 
 const open = defineModel<boolean>({ default: false })
 
-const emit = defineEmits<{
-  insert: [string]
-}>()
+// Narrow screens get a bottom sheet so the field being edited stays visible and clickable above it.
+const narrow = ref(false)
+onMounted(() => {
+  const mq = window.matchMedia('(max-width: 639px)')
+  narrow.value = mq.matches
+  mq.addEventListener('change', e => { narrow.value = e.matches })
+})
+
+// The drawer is non-modal and ignores outside clicks (the author keeps clicking the editor), so
+// Escape is handled here: it closes the drawer while focus is inside it.
+function closeOnEscape(e: KeyboardEvent) {
+  if (e.key === 'Escape' && open.value && !props.readOnly && (e.target as HTMLElement | null)?.closest('[role="dialog"]')) open.value = false
+}
+onMounted(() => document.addEventListener('keydown', closeOnEscape))
+onBeforeUnmount(() => document.removeEventListener('keydown', closeOnEscape))
 
 const search = ref('')
 const filter = ref<'all' | 'used'>('all')
-
-const usedCount = computed(() => props.usedCodes.length)
 
 // Several placeholders can be inserted in a row, so the drawer stays open. While it is open the
 // lists are grouped by what was used when it opened (a token does not jump sections under the
@@ -48,6 +63,8 @@ watch(open, (isOpen) => {
     search.value = ""
   }
 }, { immediate: true })
+// Counts follow the same snapshot as the lists, so a chip never disagrees with the section under it.
+const usedCount = computed(() => open.value ? groupingUsed.value.length : props.usedCodes.length)
 const addedTotal = computed(() => Object.values(addedCounts.value).reduce((n, c) => n + c, 0))
 
 const flatUsed = computed(() => {
@@ -98,18 +115,19 @@ function tokenLabel(code: string) {
 
 const { copy, isCopied } = useCopyFlash()
 
-function select(code: string) {
+function select(code: string, e: MouseEvent) {
   if (props.readOnly) {
     copy(code, tokenLabel(code))
     return
   }
-  emit('insert', code)
+  // detail is 0 for a keyboard activation (Enter or Space)
+  if (!props.inserter?.(code, e.detail === 0)) return
   addedCounts.value = { ...addedCounts.value, [code]: (addedCounts.value[code] ?? 0) + 1 }
 }
 </script>
 
 <template>
-  <USlideover v-model:open="open" inset :modal="readOnly" :dismissible="readOnly" :overlay="readOnly" :ui="{ content: 'max-w-[440px] w-[calc(100%-1.5rem)] inset-y-3 right-3 overflow-hidden', header: 'p-4 sm:px-6 min-h-16 bg-card', body: 'p-0 sm:p-0 flex flex-col overflow-hidden bg-card' }">
+  <USlideover v-model:open="open" inset :side="narrow ? 'bottom' : 'right'" :modal="readOnly" :dismissible="readOnly" :overlay="readOnly" :ui="{ content: narrow ? 'h-[45vh] overflow-hidden' : 'max-w-[440px] w-[calc(100%-1.5rem)] inset-y-3 right-3 overflow-hidden', header: 'p-4 sm:px-6 min-h-16 bg-card', body: 'p-0 sm:p-0 flex flex-col overflow-hidden bg-card' }">
     <template #header="{ close }">
       <div class="flex-1 min-w-0">
         <h2 class="text-base font-semibold text-highlighted">Placeholder Library</h2>
@@ -118,7 +136,7 @@ function select(code: string) {
         </p>
         <p v-if="!readOnly && targetLabel" class="mt-1.5 text-xs text-muted">
           Inserting into <span class="font-semibold text-default">{{ targetLabel }}</span> at your cursor. Pick as many as you need.
-          <span v-if="addedTotal" class="text-success font-medium" role="status">{{ addedTotal }} added.</span>
+          <span v-if="addedTotal" class="text-ams-success font-medium" role="status">{{ addedTotal }} added.</span>
         </p>
       </div>
       <UButton
@@ -183,7 +201,7 @@ function select(code: string) {
               type="button"
               class="group w-full flex items-start gap-2 rounded-lg px-2.5 py-2 mb-0.5 text-left hover:bg-elevated"
               :aria-label="readOnly ? `Copy ${tok.name} placeholder` : undefined"
-              @click="select(tok.code)"
+              @click="select(tok.code, $event)"
             >
               <span class="flex flex-col items-start min-w-0 flex-1">
                 <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
@@ -193,7 +211,7 @@ function select(code: string) {
               <span v-if="readOnly" class="shrink-0 mt-0.5 transition-opacity" :class="isCopied(tok.code) ? 'opacity-100 text-success copy-flash' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-primary'" aria-hidden="true">
                 <UIcon :name="isCopied(tok.code) ? 'i-lucide-check' : 'i-lucide-copy'" class="size-4" />
               </span>
-              <span v-else-if="addedCounts[tok.code]" class="shrink-0 mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-success">
+              <span v-else-if="addedCounts[tok.code]" class="shrink-0 mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-ams-success">
                 <UIcon name="i-lucide-check" class="size-4" aria-hidden="true" />
                 <span>Added<template v-if="addedCounts[tok.code]! > 1"> {{ addedCounts[tok.code] }} times</template></span>
               </span>
@@ -216,7 +234,7 @@ function select(code: string) {
               type="button"
               class="group w-full flex items-start gap-2 rounded-lg px-2.5 py-2 mb-0.5 text-left hover:bg-elevated"
               :aria-label="readOnly ? `Copy ${tok.name} placeholder` : undefined"
-              @click="select(tok.code)"
+              @click="select(tok.code, $event)"
             >
               <span class="flex flex-col items-start min-w-0 flex-1">
                 <span class="text-sm font-semibold text-default">{{ tok.name }}</span>
@@ -226,7 +244,7 @@ function select(code: string) {
               <span v-if="readOnly" class="shrink-0 mt-0.5 transition-opacity" :class="isCopied(tok.code) ? 'opacity-100 text-success copy-flash' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-primary'" aria-hidden="true">
                 <UIcon :name="isCopied(tok.code) ? 'i-lucide-check' : 'i-lucide-copy'" class="size-4" />
               </span>
-              <span v-else-if="addedCounts[tok.code]" class="shrink-0 mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-success">
+              <span v-else-if="addedCounts[tok.code]" class="shrink-0 mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-ams-success">
                 <UIcon name="i-lucide-check" class="size-4" aria-hidden="true" />
                 <span>Added<template v-if="addedCounts[tok.code]! > 1"> {{ addedCounts[tok.code] }} times</template></span>
               </span>

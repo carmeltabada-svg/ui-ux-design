@@ -91,3 +91,81 @@ test('subject: undo and redo work after inserting a placeholder', async ({ page 
   for (let i = 0; i < 3 && (await subjectInput(page).inputValue()) !== 'A{{TM_FULL_NAME}}B'; i++) await page.keyboard.press('ControlOrMeta+Shift+z')
   await expect(subjectInput(page)).toHaveValue('A{{TM_FULL_NAME}}B')
 })
+
+const drawerTitle = (page: Page) => page.getByText('Placeholder Library')
+const tokenRow = (page: Page, name: string) => page.getByRole('button', { name: new RegExp(name) }).first()
+
+test('a refused insert is never marked Added', async ({ page }) => {
+  await openEditor(page)
+  await page.getByRole('button', { name: 'Insert placeholder', exact: true }).click()
+  await tokenRow(page, 'Team member full name').click()
+  await expect(noCursorToast(page)).toBeVisible()
+  await expect(page.getByText(/\d+ added\./)).toHaveCount(0)
+  await expect(page.getByText('Added', { exact: true })).toHaveCount(0)
+})
+
+test('subject by keyboard: focus stays on the token row, so Enter inserts again', async ({ page }) => {
+  await openEditor(page)
+  await subjectInput(page).fill('AB')
+  await subjectInput(page).press('Home')
+  await subjectInput(page).press('ArrowRight')
+  await subjectInput(page).press('Shift+Tab')
+  await page.keyboard.press('Enter')
+  await expect(drawerTitle(page)).toBeVisible()
+  await tokenRow(page, 'Team member full name').focus()
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  await expect(subjectInput(page)).toHaveValue('A{{TM_FULL_NAME}}{{TM_FULL_NAME}}B')
+  await expect(tokenRow(page, 'Team member full name')).toBeFocused()
+})
+
+test('added text meets contrast and the counts agree', async ({ page }) => {
+  await openEditor(page)
+  await subjectInput(page).click()
+  await subjectInput(page).press('End')
+  await page.getByRole('button', { name: 'Insert placeholder into the subject line' }).click()
+  const header = page.locator('span').filter({ hasText: 'Used in this template' })
+  const chip = page.getByRole('button', { name: /Used in template/ })
+  const before = (await chip.innerText()).replace(/\D/g, '')
+  await tokenRow(page, 'Contact number').click()
+  const status = page.getByRole('status').filter({ hasText: 'added.' })
+  await expect(status).toBeVisible()
+  // the 600-shade green (#007f45) on white is above 4.5:1
+  await expect(status).toHaveCSS('color', 'rgb(0, 127, 69)')
+  expect((await chip.innerText()).replace(/\D/g, '')).toBe(before)
+  expect((await header.locator('xpath=following-sibling::*').first().innerText()).trim()).toBe(before)
+})
+
+test('Escape closes the drawer from inside it; the trigger gets focus back', async ({ page }) => {
+  await openEditor(page)
+  const trigger = page.getByRole('button', { name: 'Insert placeholder into the subject line' })
+  await trigger.focus()
+  await page.keyboard.press('Enter')
+  await expect(drawerTitle(page)).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(drawerTitle(page)).toBeHidden()
+  await expect(trigger).toBeFocused()
+})
+
+test('subject button tooltip says the same as its label', async ({ page }) => {
+  await openEditor(page)
+  await page.getByRole('button', { name: 'Insert placeholder into the subject line' }).focus()
+  await expect(page.getByText('Insert placeholder into the subject line', { exact: true }).first()).toBeVisible()
+})
+
+test('phone: the drawer is a bottom sheet and the subject stays clickable', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 })
+  await openEditor(page)
+  await subjectInput(page).fill('AB')
+  await page.getByRole('button', { name: 'Insert placeholder into the subject line' }).click()
+  await expect(drawerTitle(page)).toBeVisible()
+  const box = await page.locator('[role="dialog"]').boundingBox()
+  expect(box!.y).toBeGreaterThan(300)
+  expect(box!.width).toBeGreaterThan(320)
+  // The author scrolls the field into the free area above the sheet, then clicks it.
+  await subjectInput(page).evaluate(el => el.scrollIntoView({ block: 'start' }))
+  await subjectInput(page).click()
+  await subjectInput(page).press('End')
+  await tokenRow(page, 'Employee ID').click()
+  await expect(subjectInput(page)).toHaveValue('AB{{EMPLOYEE_ID}}')
+})

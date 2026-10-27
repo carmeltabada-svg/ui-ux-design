@@ -149,7 +149,7 @@ const usedCodes = computed(() => extractTokenCodes(subject.value + body.value))
 
 // Which field the open drawer inserts into: set by the Insert placeholder button that opened it.
 const insertTarget = ref<'subject' | 'body'>('body')
-const subjectField = ref<{ insertAtCursor: (text: string) => boolean } | null>(null)
+const subjectField = ref<{ insertAtCursor: (text: string, keepFocus?: boolean) => boolean } | null>(null)
 const bodyField = ref<{ insertAtCursor: (text: string) => 'ok' | 'none' | 'node' } | null>(null)
 
 function openPlaceholderDrawer(target: 'subject' | 'body') {
@@ -161,17 +161,17 @@ function openPlaceholderDrawer(target: 'subject' | 'body') {
 // it never blocks editing, inserting placeholders, or exporting.
 // A placeholder goes where the author's cursor is, never at the end. The drawer stays open so
 // several can be inserted in a row; with no cursor placed, nothing is inserted and a toast says why.
-function insertPlaceholder(code: string) {
+function insertPlaceholder(code: string, keepFocus = false): boolean {
   if (!isEditing.value) {
     toast.add({ title: 'Enter edit mode to insert a placeholder', icon: 'i-lucide-triangle-alert', color: 'warning' })
-    return
+    return false
   }
   const text = `{{${code}}}`
   const where = insertTarget.value === 'subject' ? 'the subject line' : 'the body'
   const result = insertTarget.value === 'subject'
-    ? (subjectField.value?.insertAtCursor(text) ? 'ok' : 'none')
+    ? (subjectField.value?.insertAtCursor(text, keepFocus) ? 'ok' : 'none')
     : (bodyField.value?.insertAtCursor(text) ?? 'none')
-  if (result === 'ok') return
+  if (result === 'ok') return true
   toast.add({
     title: 'No active cursor',
     description: result === 'node'
@@ -180,6 +180,7 @@ function insertPlaceholder(code: string) {
     icon: 'i-lucide-text-cursor',
     color: 'warning'
   })
+  return false
 }
 
 // Real version history - recorded on Save (not on every keystroke, and not
@@ -622,7 +623,7 @@ async function copyToClipboard() {
         :context-label="name"
         :context-mode="mode"
         :target-label="insertTarget === 'subject' ? 'Subject line' : 'Body'"
-        @insert="insertPlaceholder"
+        :inserter="insertPlaceholder"
       />
 
       <!-- Editor view keeps the fields column and the live preview as two
