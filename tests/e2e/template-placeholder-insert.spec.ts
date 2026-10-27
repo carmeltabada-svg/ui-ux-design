@@ -15,7 +15,7 @@ const URL = '/templates/email/t1/edit?mode=edit'
 async function openEditor(page: Page) {
   await page.goto(URL)
   await expect(subjectInput(page)).toBeVisible({ timeout: 30000 })
-  await expect(page.locator('.ProseMirror').first()).toBeVisible()
+  await expect(page.locator('.ProseMirror').first()).toBeVisible({ timeout: 30000 })
 }
 
 
@@ -72,4 +72,22 @@ test('body: with no cursor placed, nothing is inserted and a toast says so', asy
 
   await expect(noCursorToast(page)).toBeVisible()
   expect(await body.innerText()).toBe(before)
+})
+
+test('subject: undo and redo work after inserting a placeholder', async ({ page }) => {
+  await openEditor(page)
+  await subjectInput(page).fill('AB')
+  await subjectInput(page).press('Home')
+  await subjectInput(page).press('ArrowRight')
+  await page.getByRole('button', { name: 'Insert placeholder into the subject line' }).click()
+  await page.getByText('Team member full name', { exact: true }).first().click()
+  await expect(subjectInput(page)).toHaveValue('A{{TM_FULL_NAME}}B')
+
+  // Undo takes the placeholder back out (a couple of presses at most, depending on how the browser groups the edit).
+  for (let i = 0; i < 3 && (await subjectInput(page).inputValue()) !== 'AB'; i++) await page.keyboard.press('ControlOrMeta+z')
+  await expect(subjectInput(page)).toHaveValue('AB')
+
+  // Redo puts it back.
+  for (let i = 0; i < 3 && (await subjectInput(page).inputValue()) !== 'A{{TM_FULL_NAME}}B'; i++) await page.keyboard.press('ControlOrMeta+Shift+z')
+  await expect(subjectInput(page)).toHaveValue('A{{TM_FULL_NAME}}B')
 })

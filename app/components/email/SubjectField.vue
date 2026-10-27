@@ -34,12 +34,27 @@ function onFocus() {
   emit('focus')
 }
 
-/** Inserts text at the remembered cursor, replacing any selected text. Returns false when the author never chose a place. */
+/**
+ * Inserts text at the remembered cursor, replacing any selected text. Returns false when the author never
+ * chose a place. The text goes in through the browser's own editing command, so it joins the input's undo
+ * history: Ctrl+Z removes the placeholder and Ctrl+Y or Ctrl+Shift+Z puts it back. Setting the value from
+ * code would wipe that history. The input takes focus, which is also where Ctrl+Z needs to be pressed.
+ */
 function insertAtCursor(text: string): boolean {
   if (!hasCursor.value) return false
+  const el = input.value?.inputRef
   const start = Math.min(cursor.value.start, props.modelValue.length)
   const end = Math.min(cursor.value.end, props.modelValue.length)
-  emit('update:modelValue', props.modelValue.slice(0, start) + text + props.modelValue.slice(end))
+  let done = false
+  if (el) {
+    el.focus({ preventScroll: true })
+    el.setSelectionRange(start, end)
+    // Deprecated but still the only way to type into an input and keep native undo; it fires a normal input event.
+    done = document.execCommand('insertText', false, text)
+  }
+  if (!done) {
+    emit('update:modelValue', props.modelValue.slice(0, start) + text + props.modelValue.slice(end))
+  }
   cursor.value = { start: start + text.length, end: start + text.length }
   return true
 }
@@ -48,7 +63,7 @@ defineExpose({ insertAtCursor })
 
 <template>
   <div>
-    <div class="flex items-end justify-between gap-2">
+    <div class="flex items-end justify-between gap-2 mb-1.5">
       <EmailFieldLabel label="Subject line" class="pt-[10px]" />
       <UTooltip v-if="editing" text="Insert placeholder">
         <UButton
