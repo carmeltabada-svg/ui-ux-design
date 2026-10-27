@@ -147,21 +147,39 @@ const placeholderBrowseOpen = ref(false)
 const tokenGroups = TOKEN_GROUPS
 const usedCodes = computed(() => extractTokenCodes(subject.value + body.value))
 
+// Which field the open drawer inserts into: set by the Insert placeholder button that opened it.
 const insertTarget = ref<'subject' | 'body'>('body')
+const subjectField = ref<{ insertAtCursor: (text: string) => boolean } | null>(null)
+const bodyField = ref<{ insertAtCursor: (text: string) => 'ok' | 'none' | 'node' } | null>(null)
+
+function openPlaceholderDrawer(target: 'subject' | 'body') {
+  insertTarget.value = target
+  placeholderOpen.value = true
+}
 
 // Retired is just a status label here, the same as a form's retired status -
 // it never blocks editing, inserting placeholders, or exporting.
+// A placeholder goes where the author's cursor is, never at the end. The drawer stays open so
+// several can be inserted in a row; with no cursor placed, nothing is inserted and a toast says why.
 function insertPlaceholder(code: string) {
   if (!isEditing.value) {
     toast.add({ title: 'Enter edit mode to insert a placeholder', icon: 'i-lucide-triangle-alert', color: 'warning' })
     return
   }
-  if (insertTarget.value === 'subject') {
-    subject.value += `{{${code}}}`
-  } else {
-    body.value += `{{${code}}}`
-  }
-  toast.add({ title: `{{${code}}} added`, icon: 'i-lucide-check', color: 'success' })
+  const text = `{{${code}}}`
+  const where = insertTarget.value === 'subject' ? 'the subject line' : 'the body'
+  const result = insertTarget.value === 'subject'
+    ? (subjectField.value?.insertAtCursor(text) ? 'ok' : 'none')
+    : (bodyField.value?.insertAtCursor(text) ?? 'none')
+  if (result === 'ok') return
+  toast.add({
+    title: 'No active cursor',
+    description: result === 'node'
+      ? 'An image or button is selected. Click inside a line of text in the body, then pick the placeholder again.'
+      : `Click where you want the placeholder in ${where}, then pick it again. Nothing was inserted.`,
+    icon: 'i-lucide-text-cursor',
+    color: 'warning'
+  })
 }
 
 // Real version history - recorded on Save (not on every keystroke, and not
@@ -603,6 +621,7 @@ async function copyToClipboard() {
         :used-codes="usedCodes"
         :context-label="name"
         :context-mode="mode"
+        :target-label="insertTarget === 'subject' ? 'Subject line' : 'Body'"
         @insert="insertPlaceholder"
       />
 
@@ -620,15 +639,16 @@ async function copyToClipboard() {
             <EmailRetiredBanner v-if="status === 'retired'" />
 
             <EmailSubjectField
+              ref="subjectField"
               v-model="subject"
               :editing="isEditing"
-              @focus="insertTarget = 'subject'"
+              @open-placeholder="openPlaceholderDrawer('subject')"
             />
             <EmailBodyField
+              ref="bodyField"
               v-model="body"
               :editing="isEditing"
-              @focus="insertTarget = 'body'"
-              @open-placeholder="insertTarget = 'body'; placeholderOpen = true"
+              @open-placeholder="openPlaceholderDrawer('body')"
             />
 
             <div>

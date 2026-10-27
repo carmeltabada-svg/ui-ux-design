@@ -205,6 +205,10 @@ Use the browser's DevTools (computed styles) on the create view and a ticket wor
 | 80 | Open any select, then scroll the page; then scroll inside a long list | The menu closes on the page scroll; scrolling inside the list does not close it | The menu floats over the header, or closes while scrolling its own list |
 | 81 | Open a saved shipped email template | The subject carries the employee id, for example "(GT-00482)" in the template editor preview and "(04821)" in a ticket's email | The id is missing after a reload |
 | 82 | Use the theme toggle: Light, Dark, System | Every screen above works in both themes | Unreadable text in dark |
+| 83 | Open an email template, press Edit, press the braces button at the right of the Subject line label | The Placeholder Library opens on the right and says "Inserting into Subject line at your cursor" | No button, or the drawer says Body |
+| 84 | Click inside the subject text where you want a placeholder, press the subject braces button, pick two placeholders in a row | Both are inserted at the cursor, in order, and the drawer stays open; each shows "Added" | The drawer closes after one, or a placeholder lands at the end of the subject |
+| 85 | Edit a template and, without clicking into the body, press the body toolbar braces button and pick a placeholder. Repeat for the subject | Nothing is inserted and a toast "No active cursor" says to click where you want it | A placeholder appears at the top, the end or anywhere unasked |
+| 86 | Click in the middle of a body paragraph, press the toolbar braces button and pick three placeholders in a row | All three go at the cursor, one after the other, and the drawer stays open. Select an image or button first and the toast says to click inside a line of text | A placeholder is appended to the bottom of the body, or an image or button is replaced |
 
 ## 4. Responsive & Touch
 
@@ -229,6 +233,7 @@ The module is desktop-first; these checks confirm the measured behavior and tag 
 - [ ] Text and spacing cases 50 to 55 pass
 - [ ] Accessibility cases 56 to 60 pass
 - [ ] Ticket Tracker final pass cases 61 to 82 pass
+- [ ] Placeholder insertion cases 83 to 86 pass (also covered by `tests/e2e/template-placeholder-insert.spec.ts`)
 - [ ] Responsive & Touch block (§4) run; known gaps logged, not filed as bugs
 - [ ] `tests/e2e/ticket-smoke.spec.ts` and `ticket-send-and-time.spec.ts` pass (3 tests) (the two older spec files, 7 tests, that open the form `aof-commitment` are stale and are expected to fail until rewritten)
 - [ ] `npx vue-tsc --noEmit -p .nuxt/tsconfig.app.json` runs clean

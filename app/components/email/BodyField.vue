@@ -24,6 +24,12 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{ 'update:modelValue': [string]; focus: []; 'open-placeholder': [] }>()
 
+// True once the author has clicked or tabbed into the body in this edit session. Until then the
+// editor's selection is just the top of the document, not a place they chose, so a placeholder
+// must not be dropped there.
+const hasCursor = ref(false)
+watch(() => props.editing, () => { hasCursor.value = false })
+
 const { onTokenClick } = useTokenHighlight()
 
 const viewHtml = computed(() => wrapTokens(props.modelValue))
@@ -77,6 +83,7 @@ const editor = useEditor({
     },
     handleDOMEvents: {
       focus: () => {
+        hasCursor.value = true
         emit('focus')
         return false
       },
@@ -124,6 +131,22 @@ watch(() => props.modelValue, (value) => {
     editor.value.commands.setContent(value, { emitUpdate: false })
   }
 })
+
+/**
+ * Inserts text where the author's cursor is, replacing any text they have selected. The editor
+ * keeps its selection when it loses focus (for example while the placeholder drawer is open), so
+ * this works without pulling focus back, and repeated calls continue after the previous insert.
+ * 'none': the author never chose a place in the body. 'node': an image or button is selected, and
+ * inserting would replace it.
+ */
+function insertAtCursor(text: string): 'ok' | 'none' | 'node' {
+  const e = editor.value
+  if (!e || !hasCursor.value) return 'none'
+  if (e.state.selection instanceof NodeSelection) return 'node'
+  e.chain().insertContent({ type: 'text', text }).run()
+  return 'ok'
+}
+defineExpose({ insertAtCursor })
 
 onBeforeUnmount(() => {
   editor.value?.destroy()

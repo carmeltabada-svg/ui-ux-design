@@ -19,6 +19,8 @@ interface Props {
   contextMode: 'onsite' | 'remote'
   /** Browse-only: rows copy the token and show its sample value instead of inserting it. */
   readOnly?: boolean
+  /** Where an insert lands ( "Subject line" or "Body" ), shown in the header. */
+  targetLabel?: string
 }
 
 const props = defineProps<Props>()
@@ -34,8 +36,22 @@ const filter = ref<'all' | 'used'>('all')
 
 const usedCount = computed(() => props.usedCodes.length)
 
+// Several placeholders can be inserted in a row, so the drawer stays open. While it is open the
+// lists are grouped by what was used when it opened (a token does not jump sections under the
+// pointer after each insert), and each token shows how many times it was added this time.
+const groupingUsed = ref<string[]>([])
+const addedCounts = ref<Record<string, number>>({})
+watch(open, (isOpen) => {
+  if (isOpen) {
+    groupingUsed.value = [...props.usedCodes]
+    addedCounts.value = {}
+    search.value = ""
+  }
+}, { immediate: true })
+const addedTotal = computed(() => Object.values(addedCounts.value).reduce((n, c) => n + c, 0))
+
 const flatUsed = computed(() => {
-  const used = new Set(props.usedCodes)
+  const used = new Set(groupingUsed.value)
   const q = search.value.toLowerCase()
   const result: { group: string; tok: Token }[] = []
   for (const group of props.groups) {
@@ -49,7 +65,7 @@ const flatUsed = computed(() => {
 })
 
 const flatUnused = computed(() => {
-  const used = new Set(props.usedCodes)
+  const used = new Set(groupingUsed.value)
   const q = search.value.toLowerCase()
   const result: { group: string; tok: Token }[] = []
   for (const group of props.groups) {
@@ -88,17 +104,21 @@ function select(code: string) {
     return
   }
   emit('insert', code)
-  open.value = false
+  addedCounts.value = { ...addedCounts.value, [code]: (addedCounts.value[code] ?? 0) + 1 }
 }
 </script>
 
 <template>
-  <USlideover v-model:open="open" inset :ui="{ content: 'max-w-[440px] w-[calc(100%-1.5rem)] inset-y-3 right-3 overflow-hidden', header: 'p-4 sm:px-6 min-h-16 bg-card', body: 'p-0 sm:p-0 flex flex-col overflow-hidden bg-card' }">
+  <USlideover v-model:open="open" inset :modal="readOnly" :dismissible="readOnly" :overlay="readOnly" :ui="{ content: 'max-w-[440px] w-[calc(100%-1.5rem)] inset-y-3 right-3 overflow-hidden', header: 'p-4 sm:px-6 min-h-16 bg-card', body: 'p-0 sm:p-0 flex flex-col overflow-hidden bg-card' }">
     <template #header="{ close }">
       <div class="flex-1 min-w-0">
         <h2 class="text-base font-semibold text-highlighted">Placeholder Library</h2>
         <p class="mt-0.5">
           <EmailDrawerContextBadge :label="contextLabel" :mode="contextMode" />
+        </p>
+        <p v-if="!readOnly && targetLabel" class="mt-1.5 text-xs text-muted">
+          Inserting into <span class="font-semibold text-default">{{ targetLabel }}</span> at your cursor. Pick as many as you need.
+          <span v-if="addedTotal" class="text-success font-medium" role="status">{{ addedTotal }} added.</span>
         </p>
       </div>
       <UButton
@@ -173,6 +193,10 @@ function select(code: string) {
               <span v-if="readOnly" class="shrink-0 mt-0.5 transition-opacity" :class="isCopied(tok.code) ? 'opacity-100 text-success copy-flash' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-primary'" aria-hidden="true">
                 <UIcon :name="isCopied(tok.code) ? 'i-lucide-check' : 'i-lucide-copy'" class="size-4" />
               </span>
+              <span v-else-if="addedCounts[tok.code]" class="shrink-0 mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-success">
+                <UIcon name="i-lucide-check" class="size-4" aria-hidden="true" />
+                <span>Added<template v-if="addedCounts[tok.code]! > 1"> {{ addedCounts[tok.code] }} times</template></span>
+              </span>
             </button>
           </template>
         </template>
@@ -201,6 +225,10 @@ function select(code: string) {
               </span>
               <span v-if="readOnly" class="shrink-0 mt-0.5 transition-opacity" :class="isCopied(tok.code) ? 'opacity-100 text-success copy-flash' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-primary'" aria-hidden="true">
                 <UIcon :name="isCopied(tok.code) ? 'i-lucide-check' : 'i-lucide-copy'" class="size-4" />
+              </span>
+              <span v-else-if="addedCounts[tok.code]" class="shrink-0 mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-success">
+                <UIcon name="i-lucide-check" class="size-4" aria-hidden="true" />
+                <span>Added<template v-if="addedCounts[tok.code]! > 1"> {{ addedCounts[tok.code] }} times</template></span>
               </span>
             </button>
           </template>
