@@ -147,13 +147,13 @@ Full list: [Dev Doc §4](./DEV_HANDOFF.md#4-out-of-scope).
 This work is phased to manage dependencies and allow parallel streams.
 Full breakdown: [Implementation Phases](./IMPLEMENTATION_PHASES.md).
 
-| Phase | Focus | Depends on |
-|---|---|---|
-| **0 — Foundation** | Backend API, database schema, auth | Nothing |
-| **1 — Templates Builder** | Email editor + Outlook export, forms editor + FormKit fields, version history, print/PDF | Phase 0 |
-| **2 — Master Data** | Retrieval paths, offboarding checklists, config screens | Phase 0 |
-| **3 — Ticket Tracker** | List/create/detail, communications/send, logistics, closure | Phases 1 + 2 |
-| **4 — Integration** | Theming, data contracts, testing, security, rollout | Phase 3 |
+| Phase | Focus | Depends on | Can run alongside |
+|---|---|---|---|
+| **Phase 0** | Foundation: backend API, database schema, file storage, authentication and roles | Nothing | Nothing |
+| **Phase 1** | Templates builders: email editor and Outlook export, forms editor and FormKit fields, version history, print and PDF | Phase 0 | Phase 2 |
+| **Phase 2** | Master Data: Offboarding Checklists (built, to port to the backend); Retrieval Paths and Courier Providers (new builds) | Phase 0 | Phase 1 |
+| **Phase 3** | Ticket Tracker: list, create and workspace through closure; the 52 ticket actions and their stage rules on the server; sending email; courier logistics; charging; alerts and the morning digest | Phases 1 and 2 | Nothing |
+| **Phase 4** | Integration: theming, data contracts, testing, security, rollout | Phase 3 | Nothing |
 
 Phases 1 and 2 can run in parallel with different developers.
 
@@ -165,7 +165,7 @@ Phases 1 and 2 can run in parallel with different developers.
 - [Data Contract](./DATA_CONTRACT.md) and [Backend Swap](./BACKEND_SWAP.md)
 - [Token Data Mapping](./TOKEN_DATA_MAPPING.html): the 66 placeholders, which come from production (14), which this module creates (37) and which are still open (15)
 - [User Guide](./USER_GUIDE.html) (interactive, one page per role) and [Handoff walkthrough](./HANDOFF_WALKTHROUGH.md)
-- PRD requirements fulfilled: the Must-Have list in the PRD (backend, database, auth, front end porting, testing); the prototype fulfils the front end behavior only
+- PRD requirements fulfilled: the Must-Have (P0) list in the PRD, in its five groups: Backend & API, Database & Persistence, Auth & Authorization, Front-End Porting (including the ticket send flow, courier logistics and charging) and Testing. The prototype fulfils the front end behavior only
 - Live prototype: https://ams-retrieval-demo.netlify.app (a static build of `main`)
 - Source code: https://github.com/carmeltabada-svg/ui-ux-design (`main` is the source of truth; `retrieval` and `templates` are kept as backups)
 - Prior session notes (background only, not required reading):

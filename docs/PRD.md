@@ -79,6 +79,8 @@ These represent the minimum viable version. The module cannot ship without them.
 - [ ] Server-side validation for every form-field type (client-side FormKit validation alone is insufficient)
 - [ ] Input sanitization for all rich-text/HTML content from Tiptap editors before storage/render (XSS boundary)
 - [ ] Rate limiting and standard API hardening
+- [ ] The 52 ticket actions and their stage rules run on the server (`api/ticketActions.ts` is mock code), with per ticket serialization or a version check
+- [ ] Server side email sending for ticket stages (notice, reminders, courier endorsement, charging notice, closure copy): render from the ticket, refuse on missing placeholders, store a snapshot and a status, never show a failed send as sent
 
 **Database & Persistence**
 - [ ] Schema designed for: templates, form fields, submissions, version history, tickets (status/lifecycle/history), master data, users
@@ -96,8 +98,8 @@ These represent the minimum viable version. The module cannot ship without them.
 - [ ] Tiptap retrieval-forms editor + FormKit field system ported
 - [ ] Outlook export pipeline (`emailExportHtml.ts`) ported as-is (encodes hard-won compatibility knowledge)
 - [ ] Print/PDF preview + pagedjs wiring ported
-- [ ] Ticket Tracker views (list, detail, create) with status lifecycle and closure workflow ported
-- [ ] Master Data screens (retrieval paths, offboarding checklists) ported
+- [ ] Ticket Tracker views (list, detail, create) with status lifecycle and closure workflow ported, including the communications send flow, courier and shipping logistics and post-retrieval charging
+- [ ] Master Data: the Offboarding Checklists screen ported (the only built card); Retrieval Paths and Courier Providers are new builds
 - [ ] Theming reconciled with the real app's design system
 
 **Testing**
@@ -111,10 +113,7 @@ The core use case works without these, but they significantly improve the experi
 
 - [ ] Version history with server-side diff storage (vs. client-side `microdiff` only)
 - [ ] Server-side PDF generation (currently client-side `window.print()` only)
-- [ ] Communications send flow with template selection from within tickets
-- [ ] Courier/shipping logistics section in ticket detail
-- [ ] Post-retrieval charging forms within tickets
-- [ ] Courier Providers master data configuration
+- [ ] Courier Providers master data configuration screen (a new build; couriers are fixtures today)
 - [ ] Outlook export re-verified against real Outlook clients (desktop + web)
 - [ ] Load testing for concurrent multi-user editing
 
@@ -161,13 +160,13 @@ Out of scope for v1, but design decisions should not make these harder later.
 
 See `docs/IMPLEMENTATION_PHASES.md` for full phase breakdown with dependencies.
 
-| Phase | Focus | Depends on | Can parallelize with |
+| Phase | Focus | Depends on | Can run alongside |
 |---|---|---|---|
-| **Phase 0** | Foundation — backend API, database schema, auth | Nothing | Nothing |
-| **Phase 1** | Templates Builder — email editor, forms editor, version history, print/PDF | Phase 0 | Phase 2 |
-| **Phase 2** | Master Data — retrieval paths, offboarding checklists, config screens | Phase 0 | Phase 1 |
-| **Phase 3** | Retrieval Ticket Tracker — list/create/detail, communications, logistics, closure | Phases 1 + 2 | Nothing |
-| **Phase 4** | Integration — theming, data contracts, testing, security, rollout | Phase 3 | Nothing |
+| **Phase 0** | Foundation: backend API, database schema, file storage, authentication and roles | Nothing | Nothing |
+| **Phase 1** | Templates builders: email editor and Outlook export, forms editor and FormKit fields, version history, print and PDF | Phase 0 | Phase 2 |
+| **Phase 2** | Master Data: Offboarding Checklists (built, to port to the backend); Retrieval Paths and Courier Providers (new builds) | Phase 0 | Phase 1 |
+| **Phase 3** | Ticket Tracker: list, create and workspace through closure; the 52 ticket actions and their stage rules on the server; sending email; courier logistics; charging; alerts and the morning digest | Phases 1 and 2 | Nothing |
+| **Phase 4** | Integration: theming, data contracts, testing, security, rollout | Phase 3 | Nothing |
 
 ---
 

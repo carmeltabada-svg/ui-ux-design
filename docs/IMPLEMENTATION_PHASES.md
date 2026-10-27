@@ -1,6 +1,6 @@
 # Implementation Phases — AMS Retrieval Module
 
-**Last updated:** 2026-10-12
+**Last updated:** 2026-10-27
 **Companion docs:** [PRD](./PRD.md) · [Dev Documentation](./DEV_HANDOFF.md) · [QA Documentation](./QA_HANDOFF.md)
 
 ---
@@ -14,9 +14,9 @@ Phase 0 (Foundation)
   └── Auth/Permissions  ──┘
          │
 Phase 1 (Templates)          Phase 2 (Master Data)
-  ├── Email builder            ├── Retrieval paths
-  ├── Forms builder            ├── Offboarding checklists
-  └── Versioning + PDF         └── Courier providers
+  ├── Email builder            ├── Retrieval paths (to build)
+  ├── Forms builder            ├── Offboarding checklists (built)
+  └── Versioning + PDF         └── Courier providers (to build)
          │                     │
          └──── both feed ──────┘
                     │
@@ -33,6 +33,18 @@ Phase 1 (Templates)          Phase 2 (Master Data)
 **Phases 1 and 2 can run in parallel** with different developers.
 Phase 3 depends on both because tickets reference templates (for communications) and master data (for paths/checklists).
 Phase 4 is cross-cutting and runs last.
+
+---
+
+## Phase summary (the same table is in the PRD and the Jira ticket)
+
+| Phase | Focus | Depends on | Can run alongside |
+|---|---|---|---|
+| **Phase 0** | Foundation: backend API, database schema, file storage, authentication and roles | Nothing | Nothing |
+| **Phase 1** | Templates builders: email editor and Outlook export, forms editor and FormKit fields, version history, print and PDF | Phase 0 | Phase 2 |
+| **Phase 2** | Master Data: Offboarding Checklists (built, to port to the backend); Retrieval Paths and Courier Providers (new builds) | Phase 0 | Phase 1 |
+| **Phase 3** | Ticket Tracker: list, create and workspace through closure; the 52 ticket actions and their stage rules on the server; sending email; courier logistics; charging; alerts and the morning digest | Phases 1 and 2 | Nothing |
+| **Phase 4** | Integration: theming, data contracts, testing, security, rollout | Phase 3 | Nothing |
 
 ---
 
@@ -53,7 +65,7 @@ Phase 4 is cross-cutting and runs last.
 
 **Database schema and persistence layer**
 - Design schema for: templates, form fields, submissions, version history, tickets (status/lifecycle/history), master data (paths, checklists, courier providers), users
-- Authoritative reference for data shape: `app/data/retrievalForms.ts`, `app/data/templateRuntime.ts`, `app/data/templates.ts`
+- Authoritative reference for data shape: `app/api/types.ts`, `app/mocks/*.json` and `DATA_CONTRACT.md`
 - Implement file storage for uploads and captured signatures (currently in-memory/data-URL only)
 - *Reference: Dev Doc §10.2*
 
@@ -175,10 +187,13 @@ Phase 4 is cross-cutting and runs last.
 - Wire ticket CRUD to backend persistence with status lifecycle management
 
 **Communications, logistics, closure**
+- Implement the 52 ticket actions and their stage rules on the server (`api/ticketActions.ts` is mock code), with per ticket serialization or a version check
+- Implement the server side send operation (`api().emails.send`): render from the ticket, placeholder check, send, store a snapshot and a status, failed sends with retry, an idempotency key, and the "Mark as sent outside the system" path
+- Move the alert scan and the 08:00 digest to server jobs
 - Port communications/send flow with email template selection and placeholder guardrails
 - Port courier/shipping logistics section
 - Port post-retrieval charging forms and workflows
-- Port closure workflow — finalizing ticket with retrieval form submission
+- Port the closure workflow: the Close Ticket modal, a resolution per item (Returned, charging, Keep Open), the closure copy and Reopen
 - Wire audit trail / activity log to real persistence
 - *Reference: TICKET_WORKFLOW.md*
 
@@ -186,6 +201,8 @@ Phase 4 is cross-cutting and runs last.
 - [ ] A ticket can be created, progress through status stages, and be closed
 - [ ] Communications can be drafted from templates within a ticket
 - [ ] Placeholder guardrail blocks sending if any variable is unresolved
+- [ ] Every stage email is sent by the server; a failed send changes nothing and can be retried
+- [ ] The alert scan and the digest run on the server
 - [ ] Closure requires the evidence stage to be complete and any charging case resolved (linking a submitted form to the ticket is a backend requirement)
 - [ ] Activity log records all actions with timestamp and actor
 - [ ] Ticket list shows correct counts and status badges
@@ -207,8 +224,8 @@ Phase 4 is cross-cutting and runs last.
 - Dark mode is built; scope mobile support as separate design work if required
 
 **Data hand-off contracts**
-- Define the data contract for the separate "Send" feature: exported Outlook-safe HTML for email templates, submitted form values for retrieval forms
-- Leave `RecipientsSection.vue` and forms "emailed copy" notice as authoring/preview affordances until Send feature exists
+- Define the data hand-off for content the builders produce: exported Outlook-safe HTML for email templates and submitted form values for retrieval forms (the ticket send operation consumes it)
+- Leave `RecipientsSection.vue` and the forms "emailed copy" notice as authoring and preview affordances (sending happens from the ticket flow)
 - Get legal/compliance decision on e-signature certification requirements
 
 **Testing, security review, and rollout**
@@ -246,6 +263,6 @@ Phase 4 is cross-cutting and runs last.
 1. Real SMS and notification delivery (real email sending from the Ticket Tracker is in scope behind the existing send operation, INTEGRATIONS.md section 1)
 2. E-signature legal certification (pending legal decision)
 3. Further dark mode work beyond the built toggle (a screen reader pass, token reconciliation)
-4. Mobile/tablet layout (desktop-only internal tool)
+4. A phone ready layout for the two editors (the ticket list, create view and workspace are responsive)
 5. FormKit Pro inputs (license cost, add only if specific type requested)
 6. Merging the two Tiptap editors (intentionally separate)
