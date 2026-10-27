@@ -10,10 +10,10 @@ defineProps<Props>()
 </script>
 
 <template>
-  <div class="flex items-center justify-between mb-1.5">
-    <label class="text-xs font-semibold uppercase tracking-wide text-dimmed">
+  <div class="flex items-center justify-between mb-2">
+    <label class="text-xs font-normal text-default">
       {{ label }}
-      <span v-if="optional" class="ml-1 normal-case font-normal text-dimmed/70">(optional)</span>
+      <UBadge v-if="optional" color="neutral" variant="outline" size="sm" class="ml-1.5">Optional</UBadge>
     </label>
   </div>
 </template>

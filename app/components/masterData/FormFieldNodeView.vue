@@ -377,7 +377,8 @@ const placeholder = computed(() => {
             :ui="{ root: 'items-center', label: 'text-xs' }"
           />
 
-          <UFormField label="Hint" hint="optional" :ui="{ label: 'text-xs', labelWrapper: 'justify-start gap-1.5', hint: 'text-dimmed text-xs' }">
+          <UFormField label="Hint" :ui="{ label: 'text-xs', labelWrapper: 'justify-start gap-1.5' }">
+            <template #hint><UBadge color="neutral" variant="outline" size="sm">Optional</UBadge></template>
             <UInput v-model="draft.hint" class="w-full text-sm">
               <template v-if="placeholdersEnabled" #trailing>
                 <UButton color="neutral" variant="ghost" size="xs" square icon="i-lucide-braces" aria-label="Insert placeholder" @mousedown.stop @click.stop="openPlaceholders('hint')" />
@@ -407,7 +408,7 @@ const placeholder = computed(() => {
     <!-- short_text / paragraph / number - same shape, just a different input control -->
     <template v-if="['short_text', 'paragraph', 'number'].includes(attrs.fieldType)">
       <label v-if="!attrs.hideLabel" class="flex items-baseline gap-0.5 text-sm font-semibold text-highlighted mb-1 min-w-0">
-        <span class="break-words">{{ attrs.label }}</span><span v-if="attrs.required" class="text-error shrink-0">*</span>
+        <span class="break-words">{{ attrs.label }}</span><span v-if="attrs.required" class="text-red-600 shrink-0">*</span>
       </label>
       <UTextarea
         v-if="attrs.fieldType === 'paragraph'"
@@ -419,6 +420,7 @@ const placeholder = computed(() => {
         class="w-full"
         :ui="{ base: 'border-0 border-b rounded-none border-default px-0 py-1 text-sm bg-transparent focus:outline-none focus:border-primary resize-none' }"
         :placeholder="placeholder"
+        :aria-label="attrs.label"
         @mousedown.stop
         @click.stop
         @blur="touched = true"
@@ -432,6 +434,7 @@ const placeholder = computed(() => {
         class="w-full"
         :ui="{ base: 'border-0 border-b rounded-none border-default px-0 py-1 text-sm bg-transparent focus:outline-none focus:border-primary' }"
         :placeholder="placeholder"
+        :aria-label="attrs.label"
         @mousedown.stop
         @click.stop
         @blur="touched = true"
@@ -446,7 +449,7 @@ const placeholder = computed(() => {
         <label class="flex items-center gap-2 min-w-0" :class="interactive ? 'cursor-pointer' : 'cursor-default'" @mousedown.stop @click.stop>
           <UCheckbox v-model="checked" :disabled="!interactive" class="shrink-0" @change="touched = true" />
           <template v-if="!attrs.hideLabel">
-            <span class="font-semibold text-sm text-highlighted break-words min-w-0">{{ attrs.label }}</span><span v-if="attrs.required" class="text-error shrink-0">*</span>
+            <span class="font-semibold text-sm text-highlighted break-words min-w-0">{{ attrs.label }}</span><span v-if="attrs.required" class="text-red-600 shrink-0">*</span>
           </template>
         </label>
         <p v-if="attrs.hint" class="text-xs text-dimmed mt-0.5">{{ attrs.hint }}</p>
@@ -459,7 +462,7 @@ const placeholder = computed(() => {
       <div @mousedown.stop @click.stop>
         <div class="flex items-center gap-2 flex-wrap">
           <template v-if="!attrs.hideLabel">
-            <span class="font-semibold text-sm text-highlighted break-words max-w-full">{{ attrs.label }}</span><span v-if="attrs.required" class="text-error shrink-0">*</span>
+            <span class="font-semibold text-sm text-highlighted break-words max-w-full">{{ attrs.label }}</span><span v-if="attrs.required" class="text-red-600 shrink-0">*</span>
           </template>
           <template v-if="!fileList.length">
             <UButton as="label" :for="interactive ? fileInputId : undefined" type="button" variant="outline" color="neutral" size="xs" icon="i-lucide-upload" :disabled="!interactive" class="no-print" :class="interactive ? 'cursor-pointer' : ''">
@@ -482,7 +485,7 @@ const placeholder = computed(() => {
     <template v-else-if="attrs.fieldType === 'signature'">
       <div class="relative" @mousedown.stop @click.stop>
         <MasterDataSignaturePad v-model:has-content="hasSignature" v-model:data-url="signatureDataUrl" :disabled="!interactive || !!lockedReasons.length" />
-        <div v-if="lockedReasons.length" class="absolute inset-0 z-1 flex items-center justify-center rounded-md bg-[#FAFAFD]/90">
+        <div v-if="lockedReasons.length" class="absolute inset-0 z-1 flex items-center justify-center rounded-md bg-(color:--ams-doc-lock)/90">
           <UTooltip
             :delay-duration="0"
             :content="{ side: 'top' }"
@@ -520,14 +523,14 @@ const placeholder = computed(() => {
           </UTooltip>
         </div>
       </div>
-      <p v-if="!attrs.hideLabel" class="text-sm text-dimmed uppercase tracking-wide mt-1 break-words">{{ attrs.label }}<span class="text-error">*</span></p>
+      <p v-if="!attrs.hideLabel" class="text-sm text-dimmed uppercase tracking-wide mt-1 break-words">{{ attrs.label }}<span class="text-red-600">*</span></p>
       <p v-if="attrs.hint" class="text-xs text-dimmed mt-0.5">{{ attrs.hint }}</p>
       <p v-if="(touched || !!submitAttempted) && !hasSignature && !lockedReasons.length" class="text-xs text-error mt-0.5">Signature is required.</p>
     </template>
 
     <!-- button_link - an action, not a question -->
     <template v-else-if="attrs.fieldType === 'button_link'">
-      <UButton type="button" :color="(attrs.buttonColor as any) || 'primary'" variant="solid" size="sm" :to="interactive ? (attrs.buttonUrl || undefined) : undefined" :disabled="!interactive" target="_blank" class="max-w-full" :ui="{ base: 'max-w-full min-w-0' }" @mousedown.stop @click.stop>
+      <UButton type="button" :color="(attrs.buttonColor as 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' | undefined) || 'primary'" variant="solid" size="sm" :to="interactive ? (safeUrl(attrs.buttonUrl) || undefined) : undefined" :disabled="!interactive" target="_blank" rel="noopener noreferrer" class="max-w-full" :ui="{ base: 'max-w-full min-w-0' }" @mousedown.stop @click.stop>
         <span class="block break-words min-w-0">{{ attrs.label || 'Open link' }}</span>
       </UButton>
       <p v-if="attrs.hint" class="text-xs text-dimmed mt-1.5">{{ attrs.hint }}</p>

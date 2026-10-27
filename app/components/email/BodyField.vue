@@ -73,7 +73,7 @@ const editor = useEditor({
   ],
   editorProps: {
     attributes: {
-      class: 'min-h-40 p-3.5 text-sm text-default leading-relaxed rounded-b-lg focus:outline-none prose-tiptap'
+      class: 'min-h-40 p-3.5 text-sm text-highlighted leading-relaxed rounded-b-lg focus:outline-none prose-tiptap'
     },
     handleDOMEvents: {
       focus: () => {
@@ -151,12 +151,16 @@ onBeforeUnmount(() => {
           />
         </UTooltip>
       </div>
-      <EditorContent :editor="editor" />
+      <div v-if="!editor" class="p-4 flex flex-col gap-3 min-h-40" role="status" aria-live="polite" aria-label="Loading editor">
+        <SharedSkeleton :lines="4" height="h-4" />
+        <SharedSkeleton width="w-1/2" height="h-4" />
+      </div>
+      <EditorContent v-else :editor="editor" />
     </div>
 
     <div
       v-else
-      class="text-sm text-default leading-relaxed pb-2 prose-tiptap"
+      class="text-sm text-highlighted leading-relaxed pb-2 prose-tiptap"
       data-pane="editor"
       v-html="viewHtml"
       @click="onTokenClick"

@@ -330,7 +330,7 @@ function tableizeButtons(doc: Document) {
     // so clicking it in the editor can't trigger actual browser navigation;
     // this export step is what turns the stored destination into a real,
     // functional link for the final pasted/exported email.
-    const href = el.getAttribute('data-href') || '#'
+    const href = safeUrl(el.getAttribute('data-href')) || '#'
     const label = el.textContent || 'Click here'
     // The button node's own `renderHTML` (tiptapExtensions.ts) wraps the
     // anchor in a `<div style="text-align:...">` purely so alignment has
@@ -554,4 +554,21 @@ export function buildEmailExportPlainText(bodyHtml: string, samples: Record<stri
     .replace(/<[^>]+>/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
+}
+
+/**
+ * Writes a `.eml` the operator can open in their own mail client. The subject is
+ * stripped of CR/LF so a token value can't inject extra email headers, and the
+ * blob URL is revoked after a tick (revoking it synchronously after click() can
+ * cancel the download in some browsers).
+ */
+export function downloadEmlFile(subject: string, bodyHtml: string, filename: string) {
+  const safeSubject = subject.replace(/[\r\n]+/g, ' ')
+  const eml = `Subject: ${safeSubject}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n${bodyHtml}`
+  const url = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename.endsWith('.eml') ? filename : `${filename}.eml`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

@@ -64,7 +64,7 @@ function changeType(field: FormField, type: FormFieldType) {
        panel's own close (X) button and clicking the canvas background
        (see the form editor page) are the ways out instead. -->
   <div
-    class="flex flex-col fixed inset-y-0 right-0 z-30 w-[88vw] max-w-96 border-l border-default shadow-2xl bg-white min-h-0 overflow-hidden transition-transform duration-200 ease-out"
+    class="flex flex-col fixed inset-y-0 right-0 z-30 w-[88vw] max-w-96 border-l border-default shadow-2xl bg-card min-h-0 overflow-hidden transition-transform duration-200 ease-out"
     :class="field ? 'translate-x-0' : 'translate-x-full pointer-events-none'"
   >
     <template v-if="field">
@@ -115,7 +115,8 @@ function changeType(field: FormField, type: FormFieldType) {
             </UInput>
           </UFormField>
 
-          <UFormField label="Hint" hint="optional" :ui="{ label: 'text-xs', labelWrapper: 'justify-start gap-1.5', hint: 'text-dimmed text-xs' }">
+          <UFormField label="Hint" :ui="{ label: 'text-xs', labelWrapper: 'justify-start gap-1.5' }">
+            <template #hint><UBadge color="neutral" variant="outline" size="sm">Optional</UBadge></template>
             <UInput
               :model-value="field.hint"
               class="w-full text-sm"

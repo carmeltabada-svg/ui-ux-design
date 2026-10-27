@@ -8,7 +8,7 @@ interface Props {
   retired?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   retired: false
 })
 
@@ -41,7 +41,7 @@ function toggle(id: string) {
       <div
         v-for="(entry, idx) in entries"
         :key="entry.id"
-        class="group rounded-lg border border-default bg-white transition-colors hover:bg-elevated/50"
+        class="group rounded-lg border border-default bg-card transition-colors hover:bg-elevated/50"
       >
         <div class="flex items-center gap-3 px-4 py-3">
           <div class="size-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
@@ -55,7 +55,7 @@ function toggle(id: string) {
               <span class="text-xs font-semibold text-muted bg-elevated px-2 py-0.5 rounded-full">{{ entry.id }}</span>
             </div>
             <p class="text-sm text-muted mt-0.5 truncate">By {{ entry.actor }}</p>
-            <p class="text-xs text-dimmed mt-1">{{ entry.date }}</p>
+            <p class="text-xs text-dimmed mt-1">{{ formatDateTime(entry.date) }}</p>
           </div>
 
           <div v-if="idx !== 0" class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">

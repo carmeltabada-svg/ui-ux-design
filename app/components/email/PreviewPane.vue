@@ -22,8 +22,8 @@ const bodyHtml = computed(() => wrapTokens(props.body, SAMPLE_VALUES))
 </script>
 
 <template>
-  <div class="flex flex-col overflow-hidden bg-white lg:w-[min(460px,40%)] lg:min-w-60 rounded-lg border border-default">
-    <div class="flex items-center justify-between min-h-[68px] px-5 py-2.5 border-b border-default shrink-0 sticky top-0 bg-white z-[1]">
+  <div class="flex flex-col overflow-hidden bg-card lg:w-[min(460px,40%)] lg:min-w-60 rounded-lg border border-default">
+    <div class="flex items-center justify-between min-h-[68px] px-5 py-2.5 border-b border-default shrink-0 sticky top-0 bg-card z-[1]">
       <span class="text-xs font-semibold uppercase tracking-wide text-dimmed">Sample preview</span>
     </div>
 
@@ -42,7 +42,7 @@ const bodyHtml = computed(() => wrapTokens(props.body, SAMPLE_VALUES))
         :style="background ? { background } : undefined"
         :class="background ? '' : 'bg-elevated/50'"
       >
-        <div class="rounded-lg bg-white p-4 text-xs leading-relaxed" :class="background ? 'shadow-sm' : ''">
+        <div class="rounded-lg bg-card p-4 text-xs leading-relaxed" :class="background ? 'shadow-sm' : ''">
           <div class="font-semibold text-sm pb-3 mb-3 border-b border-dashed border-default text-default" v-html="subjectHtml" />
           <div class="flex-1 text-sm leading-relaxed text-default prose-tiptap" v-html="bodyHtml" />
         </div>

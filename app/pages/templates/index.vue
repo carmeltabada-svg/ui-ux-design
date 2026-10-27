@@ -31,8 +31,8 @@ const tabItems = [
 // state) so their state is visible at a glance without reading the badge;
 // active rows stay clean since "active" is the expected default state.
 function statusDotColor(status: string) {
-  if (status === 'draft') return '#94A3B8'
-  if (status === 'retired') return 'rgb(137,75,0)'
+  if (status === 'draft') return 'var(--ui-text-dimmed)'
+  if (status === 'retired') return 'var(--color-ams-warning)'
   return null
 }
 
@@ -125,6 +125,7 @@ const createMenuItems = computed(() => [[
     label: 'Start from an existing template',
     icon: 'i-lucide-copy',
     ui: { content: 'ml-1 max-h-72 overflow-y-auto fade-scroll-y' },
+    filter: allEmailKeys.value.length > 5,
     children: allEmailKeys.value.map(key => ({
       label: ensureTemplateRuntime(key).name,
       onSelect: () => createFromExisting(key)
@@ -318,6 +319,7 @@ const createFormMenuItems = computed(() => [[
     label: 'Start from an existing form',
     icon: 'i-lucide-copy',
     ui: { content: 'ml-1 max-h-72 overflow-y-auto fade-scroll-y' },
+    filter: RETRIEVAL_FORMS.length > 5,
     children: RETRIEVAL_FORMS.map(f => ({
       label: f.name,
       onSelect: () => createFormFromExisting(f)
@@ -412,7 +414,7 @@ function reactivateFormsSelected() {
          above), this header simply sits above it as a normal, non-scrolling
          flex item and never needs to reposition itself on scroll at all. -->
     <div class="shrink-0 bg-gray-50">
-      <div data-tabs-header class="bg-white px-6 pt-4 pb-3 border-b border-default">
+      <div data-tabs-header class="bg-card px-6 pt-4 pb-3 border-b border-default">
         <div class="flex items-start justify-between gap-5 mb-4">
           <div>
             <h1 class="text-2xl font-semibold text-highlighted">Templates</h1>
@@ -462,13 +464,14 @@ function reactivateFormsSelected() {
            below band 1 inside the same sticky wrapper. No `mb-3` here - that
            gap now lives as the scroll region's own `pt-3` below instead (see
            the comment down there for why it moved). -->
-      <div class="bg-white mx-6 mt-3 px-4 py-4 rounded-lg border border-default">
+      <div class="bg-card mx-6 mt-3 px-4 py-4 rounded-lg border border-default">
       <div class="flex flex-col sm:flex-row sm:items-center gap-3">
         <!-- Email tab -->
         <template v-if="activeTab === 'email'">
           <UInput
             v-model="emailSearch"
             icon="i-lucide-search"
+            aria-label="Search email templates"
             placeholder="Search templates..."
             size="md"
             class="w-full sm:max-w-xs"
@@ -515,6 +518,7 @@ function reactivateFormsSelected() {
           <UInput
             v-model="formSearch"
             icon="i-lucide-search"
+            aria-label="Search forms"
             placeholder="Search forms..."
             size="md"
             class="w-full sm:max-w-xs"
@@ -573,7 +577,7 @@ function reactivateFormsSelected() {
          over blank space, exactly like every other `fade-scroll-y` region
          in the app (they all have their own leading padding for the same
          reason - see PlaceholderDrawer.vue's `pt-[10px]`, for one). -->
-    <div class="flex-1 min-h-0 overflow-y-auto fade-scroll-y">
+    <div :key="activeTab" class="flex-1 min-h-0 overflow-y-auto fade-scroll-y stage-enter">
     <div class="px-6 pt-3 pb-4">
       <!-- Email tab -->
       <template v-if="activeTab === 'email'">
@@ -581,7 +585,7 @@ function reactivateFormsSelected() {
           <div
             v-for="row in paginatedEmailRows"
             :key="row.key"
-            class="group relative flex items-center gap-3 rounded-lg border border-default bg-white px-4 py-3 hover:bg-elevated/50 transition-colors"
+            class="group relative flex items-center gap-3 rounded-lg border border-default bg-card px-4 py-3 hover:bg-elevated/50 transition-colors"
           >
             <UCheckbox
               :model-value="selectedKeys.has(row.key)"
@@ -596,7 +600,7 @@ function reactivateFormsSelected() {
                 <UIcon name="i-lucide-mail" class="size-4 text-primary" />
                 <span
                   v-if="statusDotColor(row.status)"
-                  class="absolute -top-0.5 -right-0.5 size-2 rounded-full ring-1 ring-white"
+                  class="absolute -top-0.5 -right-0.5 size-2 rounded-full ring-1 ring-card"
                   :style="{ background: statusDotColor(row.status)! }"
                 />
               </div>
@@ -609,7 +613,7 @@ function reactivateFormsSelected() {
                 </div>
                 <p class="text-sm text-muted mt-0.5 truncate">{{ row.description }}</p>
                 <p v-if="row.lastSavedAt" class="text-xs text-dimmed mt-1">
-                  {{ row.status === 'draft' ? 'Last saved' : 'Updated' }} {{ row.lastSavedAt }}
+                  {{ row.status === 'draft' ? 'Last saved' : 'Updated' }} {{ formatDateTime(row.lastSavedAt) }}
                 </p>
               </div>
             </NuxtLink>
@@ -627,7 +631,7 @@ function reactivateFormsSelected() {
                   icon="i-lucide-pencil"
                   class="text-muted"
                   aria-label="Edit"
-                  @click.stop.prevent="navigateTo(`/templates/email/${row.key}/edit`)"
+                  @click.stop.prevent="navigateTo(`/templates/email/${row.key}/edit?mode=edit`)"
                 />
               </UTooltip>
               <UTooltip text="Duplicate">
@@ -691,7 +695,7 @@ function reactivateFormsSelected() {
           <div
             v-for="form in paginatedForms"
             :key="form.id"
-            class="group relative flex items-center gap-3 rounded-lg border border-default bg-white px-4 py-3 hover:bg-elevated/50 transition-colors"
+            class="group relative flex items-center gap-3 rounded-lg border border-default bg-card px-4 py-3 hover:bg-elevated/50 transition-colors"
           >
             <UCheckbox
               :model-value="selectedFormIds.has(form.id)"
@@ -706,7 +710,7 @@ function reactivateFormsSelected() {
                 <UIcon name="i-lucide-form" class="size-4 text-primary" />
                 <span
                   v-if="statusDotColor(form.status)"
-                  class="absolute -top-0.5 -right-0.5 size-2 rounded-full ring-1 ring-white"
+                  class="absolute -top-0.5 -right-0.5 size-2 rounded-full ring-1 ring-card"
                   :style="{ background: statusDotColor(form.status)! }"
                 />
               </div>
@@ -719,7 +723,7 @@ function reactivateFormsSelected() {
                 </div>
                 <p class="text-sm text-muted mt-0.5 truncate">{{ form.description }}</p>
                 <p class="text-xs text-dimmed mt-1">
-                  {{ form.status === 'draft' ? 'Last saved' : 'Updated' }} {{ form.updatedAt }}
+                  {{ form.status === 'draft' ? 'Last saved' : 'Updated' }} {{ formatDateTime(form.updatedAt) }}
                 </p>
               </div>
             </NuxtLink>
@@ -817,10 +821,10 @@ function reactivateFormsSelected() {
       <template #footer>
         <div class="flex justify-end gap-2 w-full">
           <UButton color="neutral" variant="outline" @click="deleteTarget = null">
-            Cancel
+            Keep it
           </UButton>
           <UButton color="error" variant="solid" icon="i-lucide-trash-2" @click="confirmDelete">
-            Delete
+            Delete {{ deleteTarget?.type === 'form' ? 'form' : 'template' }}
           </UButton>
         </div>
       </template>

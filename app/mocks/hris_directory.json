@@ -1,0 +1,1258 @@
+[
+  {
+    "id": "EMP-04821",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Marisol Ferrer",
+    "position": "Client Success Manager",
+    "dept": "Client Success",
+    "client": "Northwind Retail",
+    "email": "m.ferrer@goteam.io",
+    "contact_number": "+63 917 555 0142",
+    "personal_email": "marisol.ferrer88@gmail.com",
+    "alt_contact_name": "Liza Ferrer",
+    "alt_contact_number": "+63 917 555 0199",
+    "leadership_coach": "Jerome Cruz - Team Lead",
+    "address": "142 Salinas Drive, Barangay Lahug, Cebu City, 6000 Cebu",
+    "address_mode": "remote",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-09-25",
+    "sep": "2026-09-30",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Pro 14\" M3"
+      },
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse"
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C"
+      }
+    ]
+  },
+  {
+    "id": "EMP-03310",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "10:00",
+      "end": "19:00"
+    },
+    "name": "Kevin Ong",
+    "position": "Software Engineer",
+    "dept": "Engineering",
+    "client": "Internal",
+    "email": "k.ong@goteam.io",
+    "contact_number": "+63 917 555 0210",
+    "personal_email": "",
+    "alt_contact_name": "",
+    "alt_contact_number": "",
+    "leadership_coach": "Miguel Ramos - Engineering Manager",
+    "address": "88 Jose Abad Santos Ave, Barangay Tondo, Manila, 1012 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Contract End",
+    "suggested_reason": "end-of-contract",
+    "lwd": "2026-10-01",
+    "sep": "2026-10-05",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad X1 Carbon Gen 11"
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell UltraSharp 27\" U2723QE"
+      },
+      {
+        "name": "Docking Station",
+        "model": "Lenovo ThinkPad USB-C Dock Gen 2"
+      },
+      {
+        "name": "Keyboard & Mouse",
+        "model": "Logitech MK540"
+      }
+    ]
+  },
+  {
+    "id": "EMP-05102",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "08:00",
+      "end": "17:00"
+    },
+    "name": "Andrea Villar",
+    "position": "People & Culture Associate",
+    "dept": "People & Culture",
+    "client": "Internal",
+    "email": "a.villar@goteam.io",
+    "contact_number": "",
+    "personal_email": "andrea.v.villar@yahoo.com",
+    "alt_contact_name": "Ramon Villar",
+    "alt_contact_number": "+63 917 555 0341",
+    "leadership_coach": "Sophia Reyes - HRBP",
+    "address": "27 Quimpo Blvd, Barangay Talomo, Davao City, 8000 Davao del Sur",
+    "address_mode": "remote",
+    "case_type": "Unexplained Absence Case",
+    "suggested_reason": "unexplained-absence",
+    "lwd": "2026-09-21",
+    "sep": "2026-09-28",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      },
+      {
+        "name": "Webcam",
+        "model": "Logitech Brio 505"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 40"
+      }
+    ]
+  },
+  {
+    "id": "EMP-02214",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "07:00",
+      "end": "16:00"
+    },
+    "name": "Rafael Tan",
+    "position": "Financial Analyst",
+    "dept": "Finance",
+    "client": "Meridian Logistics",
+    "email": "r.tan@goteam.io",
+    "contact_number": "+63 917 555 0455",
+    "personal_email": "rtan.finance@gmail.com",
+    "alt_contact_name": "Grace Tan",
+    "alt_contact_number": "+63 917 555 0460",
+    "leadership_coach": "Patricia Villanueva - Finance Manager",
+    "address": "212 United Nations Ave, Barangay Malate, Manila, 1004 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Immediate Resignation",
+    "suggested_reason": "immediate-resignation",
+    "lwd": "2026-09-16",
+    "sep": "2026-09-16",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Pro 13\" M2"
+      },
+      {
+        "name": "External SSD",
+        "model": "Samsung T7 1TB"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 67W USB-C"
+      }
+    ]
+  },
+  {
+    "id": "EMP-01187",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "22:00",
+      "end": "07:00"
+    },
+    "name": "Josef Cruz",
+    "position": "Operations Supervisor",
+    "dept": "Operations",
+    "client": "Meridian Logistics",
+    "email": "j.cruz@goteam.io",
+    "contact_number": "+63 917 555 0623",
+    "personal_email": "",
+    "alt_contact_name": "Elena Cruz",
+    "alt_contact_number": "+63 917 555 0630",
+    "leadership_coach": "Andres Fernandez - Operations Manager",
+    "address": "56 Diversion Road, Barangay Mandurriao, Iloilo City, 5000 Iloilo",
+    "address_mode": "remote",
+    "case_type": "Recall from Leave",
+    "suggested_reason": "recalled",
+    "lwd": "2026-09-20",
+    "sep": "2026-09-22",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad T14 Gen 4"
+      },
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H 24\""
+      },
+      {
+        "name": "Docking Station",
+        "model": "Dell WD19S"
+      },
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      },
+      {
+        "name": "USB Hub",
+        "model": "Anker 7-in-1 USB-C Hub"
+      }
+    ]
+  },
+  {
+    "id": "EMP-10420",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Jasmine Aquino",
+    "position": "Client Success Associate",
+    "dept": "Client Success",
+    "client": "Northwind Retail",
+    "email": "j.aquino@goteam.io",
+    "contact_number": "+63 918 555 1031",
+    "personal_email": "jasmine.aquino10@gmail.com",
+    "alt_contact_name": "Rosa Aquino",
+    "alt_contact_number": "+63 919 555 1062",
+    "leadership_coach": "Jerome Cruz - Team Lead",
+    "address": "100 Ortigas Avenue, Barangay Ugong, Pasig City, 1604 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-10-02",
+    "sep": "2026-10-05",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad T14"
+      },
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H"
+      },
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse"
+      }
+    ]
+  },
+  {
+    "id": "EMP-10557",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "08:00",
+      "end": "17:00"
+    },
+    "name": "Miguel Bonifacio",
+    "position": "Software Engineer",
+    "dept": "Engineering",
+    "client": "Meridian Logistics",
+    "email": "m.bonifacio@goteam.io",
+    "contact_number": "+63 918 555 1128",
+    "personal_email": "miguel.bonifacio11@gmail.com",
+    "alt_contact_name": "Eduardo Bonifacio",
+    "alt_contact_number": "+63 919 555 1159",
+    "leadership_coach": "Annika Reyes - Team Lead",
+    "address": "107 Quimpo Boulevard, Barangay Talomo, Davao City, 8000 Davao del Sur",
+    "address_mode": "remote",
+    "case_type": "Contract End",
+    "suggested_reason": "end-of-contract",
+    "lwd": "2026-10-05",
+    "sep": "2026-10-09",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      },
+      {
+        "name": "Mouse",
+        "model": "Logitech M331"
+      },
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C"
+      }
+    ]
+  },
+  {
+    "id": "EMP-10694",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "10:00",
+      "end": "19:00"
+    },
+    "name": "Patricia Castillo",
+    "position": "Operations Analyst",
+    "dept": "Operations",
+    "client": "Internal",
+    "email": "p.castillo@goteam.io",
+    "contact_number": "+63 918 555 1225",
+    "personal_email": "patricia.castillo12@gmail.com",
+    "alt_contact_name": "Marites Castillo",
+    "alt_contact_number": "+63 919 555 1256",
+    "leadership_coach": "Paolo Mendoza - Manager",
+    "address": "114 Katipunan Avenue, Barangay Loyola Heights, Quezon City, 1108 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Recall from Leave",
+    "suggested_reason": "recalled",
+    "lwd": "2026-10-08",
+    "sep": "2026-10-13",
+    "assets": [
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      },
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      }
+    ]
+  },
+  {
+    "id": "EMP-10831",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "07:00",
+      "end": "16:00"
+    },
+    "name": "Rodel Delos Reyes",
+    "position": "Accounts Associate",
+    "dept": "Finance",
+    "client": "Harbor Health",
+    "email": "r.delosreyes@goteam.io",
+    "contact_number": "+63 918 555 1322",
+    "personal_email": "rodel.delosreyes13@gmail.com",
+    "alt_contact_name": "Rolando Delos Reyes",
+    "alt_contact_number": "+63 919 555 1353",
+    "leadership_coach": "Grace Lim - Team Lead",
+    "address": "121 Shaw Boulevard, Barangay Wack-Wack, Mandaluyong City, 1550 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Immediate Resignation",
+    "suggested_reason": "immediate-resignation",
+    "lwd": "2026-10-11",
+    "sep": "2026-10-11",
+    "assets": [
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse"
+      },
+      {
+        "name": "Docking Station",
+        "model": "Dell WD19S"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Lenovo 65W USB-C"
+      }
+    ]
+  },
+  {
+    "id": "EMP-10968",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "22:00",
+      "end": "07:00"
+    },
+    "name": "Corazon Esguerra",
+    "position": "HR Generalist",
+    "dept": "People & Culture",
+    "client": "Summit Telecom",
+    "email": "c.esguerra@goteam.io",
+    "contact_number": "+63 918 555 1419",
+    "personal_email": "corazon.esguerra14@gmail.com",
+    "alt_contact_name": "Celia Esguerra",
+    "alt_contact_number": "+63 919 555 1450",
+    "leadership_coach": "Victor Soriano - Manager",
+    "address": "128 Rizal Avenue, Barangay Poblacion, Cagayan de Oro City, 9000 Misamis Oriental",
+    "address_mode": "remote",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-10-14",
+    "sep": "2026-10-21",
+    "assets": [
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C"
+      },
+      {
+        "name": "Webcam",
+        "model": "Logitech C920"
+      },
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      }
+    ]
+  },
+  {
+    "id": "EMP-11105",
+    "shift": {
+      "days": "Tue to Sat",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Dennis Fajardo",
+    "position": "QA Analyst",
+    "dept": "Quality Assurance",
+    "client": "Internal",
+    "email": "d.fajardo@goteam.io",
+    "contact_number": "+63 918 555 1516",
+    "personal_email": "dennis.fajardo15@gmail.com",
+    "alt_contact_name": "Benjie Fajardo",
+    "alt_contact_number": "+63 919 555 1547",
+    "leadership_coach": "Jerome Cruz - Team Lead",
+    "address": "135 MacArthur Highway, Barangay Dolores, San Fernando City, 2000 Pampanga",
+    "address_mode": "remote",
+    "case_type": "Unexplained Absence Case",
+    "suggested_reason": "unexplained-absence",
+    "lwd": "2026-10-17",
+    "sep": "2026-10-20",
+    "assets": [
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      },
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      }
+    ]
+  },
+  {
+    "id": "EMP-11242",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Maricel Gutierrez",
+    "position": "IT Support Specialist",
+    "dept": "IT Support",
+    "client": "Northwind Retail",
+    "email": "m.gutierrez@goteam.io",
+    "contact_number": "+63 918 555 1613",
+    "personal_email": "maricel.gutierrez16@gmail.com",
+    "alt_contact_name": "Rosa Gutierrez",
+    "alt_contact_number": "+63 919 555 1644",
+    "leadership_coach": "Annika Reyes - Team Lead",
+    "address": "142 Ortigas Avenue, Barangay Ugong, Pasig City, 1604 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Contract End",
+    "suggested_reason": "end-of-contract",
+    "lwd": "2026-10-20",
+    "sep": "2026-10-24",
+    "assets": [
+      {
+        "name": "Laptop Charger",
+        "model": "Lenovo 65W USB-C"
+      },
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad T14"
+      },
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H"
+      }
+    ]
+  },
+  {
+    "id": "EMP-11379",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "08:00",
+      "end": "17:00"
+    },
+    "name": "Allan Hernandez",
+    "position": "Account Executive",
+    "dept": "Sales",
+    "client": "Meridian Logistics",
+    "email": "a.hernandez@goteam.io",
+    "contact_number": "+63 918 555 1710",
+    "personal_email": "allan.hernandez17@gmail.com",
+    "alt_contact_name": "Eduardo Hernandez",
+    "alt_contact_number": "+63 919 555 1741",
+    "leadership_coach": "Paolo Mendoza - Manager",
+    "address": "149 Governor Pack Road, Barangay Kayang, Baguio City, 2600 Benguet",
+    "address_mode": "remote",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-10-23",
+    "sep": "2026-10-28",
+    "assets": [
+      {
+        "name": "Webcam",
+        "model": "Logitech C920"
+      },
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      },
+      {
+        "name": "Mouse",
+        "model": "Logitech M331"
+      },
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      }
+    ]
+  },
+  {
+    "id": "EMP-11516",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "10:00",
+      "end": "19:00"
+    },
+    "name": "Beatriz Ignacio",
+    "position": "Client Success Associate",
+    "dept": "Client Success",
+    "client": "Internal",
+    "email": "b.ignacio@goteam.io",
+    "contact_number": "+63 918 555 1807",
+    "personal_email": "beatriz.ignacio18@gmail.com",
+    "alt_contact_name": "Marites Ignacio",
+    "alt_contact_number": "+63 919 555 1838",
+    "leadership_coach": "Grace Lim - Team Lead",
+    "address": "156 Katipunan Avenue, Barangay Loyola Heights, Quezon City, 1108 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Recall from Leave",
+    "suggested_reason": "recalled",
+    "lwd": "2026-10-26",
+    "sep": "2026-11-01",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      }
+    ]
+  },
+  {
+    "id": "EMP-11653",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "07:00",
+      "end": "16:00"
+    },
+    "name": "Carlo Jimenez",
+    "position": "Software Engineer",
+    "dept": "Engineering",
+    "client": "Harbor Health",
+    "email": "c.jimenez@goteam.io",
+    "contact_number": "+63 918 555 1904",
+    "personal_email": "carlo.jimenez19@gmail.com",
+    "alt_contact_name": "Rolando Jimenez",
+    "alt_contact_number": "+63 919 555 1935",
+    "leadership_coach": "Victor Soriano - Manager",
+    "address": "163 Shaw Boulevard, Barangay Wack-Wack, Mandaluyong City, 1550 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Immediate Resignation",
+    "suggested_reason": "immediate-resignation",
+    "lwd": "2026-10-29",
+    "sep": "2026-10-29",
+    "assets": [
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H"
+      },
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse"
+      },
+      {
+        "name": "Docking Station",
+        "model": "Dell WD19S"
+      }
+    ]
+  },
+  {
+    "id": "EMP-11790",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "22:00",
+      "end": "07:00"
+    },
+    "name": "Divina Katigbak",
+    "position": "Operations Analyst",
+    "dept": "Operations",
+    "client": "Summit Telecom",
+    "email": "d.katigbak@goteam.io",
+    "contact_number": "+63 918 555 2001",
+    "personal_email": "divina.katigbak20@gmail.com",
+    "alt_contact_name": "Celia Katigbak",
+    "alt_contact_number": "+63 919 555 2032",
+    "leadership_coach": "Jerome Cruz - Team Lead",
+    "address": "170 Diversion Road, Barangay Mandurriao, Iloilo City, 5000 Iloilo",
+    "address_mode": "remote",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-11-01",
+    "sep": "2026-11-04",
+    "assets": [
+      {
+        "name": "Mouse",
+        "model": "Logitech M331"
+      },
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C"
+      },
+      {
+        "name": "Webcam",
+        "model": "Logitech C920"
+      }
+    ]
+  },
+  {
+    "id": "EMP-11927",
+    "shift": {
+      "days": "Tue to Sat",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Edgardo Lacson",
+    "position": "Accounts Associate",
+    "dept": "Finance",
+    "client": "Internal",
+    "email": "e.lacson@goteam.io",
+    "contact_number": "+63 918 555 2098",
+    "personal_email": "edgardo.lacson21@gmail.com",
+    "alt_contact_name": "Benjie Lacson",
+    "alt_contact_number": "+63 919 555 2129",
+    "leadership_coach": "Annika Reyes - Team Lead",
+    "address": "177 Alabang-Zapote Road, Barangay Alabang, Muntinlupa City, 1780 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Contract End",
+    "suggested_reason": "end-of-contract",
+    "lwd": "2026-11-04",
+    "sep": "2026-11-08",
+    "assets": [
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      },
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      }
+    ]
+  },
+  {
+    "id": "EMP-12064",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Frances Magsaysay",
+    "position": "HR Generalist",
+    "dept": "People & Culture",
+    "client": "Northwind Retail",
+    "email": "f.magsaysay@goteam.io",
+    "contact_number": "+63 918 555 2195",
+    "personal_email": "frances.magsaysay22@gmail.com",
+    "alt_contact_name": "Rosa Magsaysay",
+    "alt_contact_number": "+63 919 555 2226",
+    "leadership_coach": "Paolo Mendoza - Manager",
+    "address": "184 Ortigas Avenue, Barangay Ugong, Pasig City, 1604 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-11-07",
+    "sep": "2026-11-12",
+    "assets": [
+      {
+        "name": "Docking Station",
+        "model": "Dell WD19S"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Lenovo 65W USB-C"
+      },
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad T14"
+      }
+    ]
+  },
+  {
+    "id": "EMP-12201",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "08:00",
+      "end": "17:00"
+    },
+    "name": "Gilbert Navarro",
+    "position": "QA Analyst",
+    "dept": "Quality Assurance",
+    "client": "Meridian Logistics",
+    "email": "g.navarro@goteam.io",
+    "contact_number": "+63 918 555 2292",
+    "personal_email": "gilbert.navarro23@gmail.com",
+    "alt_contact_name": "Eduardo Navarro",
+    "alt_contact_number": "+63 919 555 2323",
+    "leadership_coach": "Grace Lim - Team Lead",
+    "address": "191 MacArthur Highway, Barangay Dolores, San Fernando City, 2000 Pampanga",
+    "address_mode": "remote",
+    "case_type": "Unexplained Absence Case",
+    "suggested_reason": "unexplained-absence",
+    "lwd": "2026-11-10",
+    "sep": "2026-11-16",
+    "assets": [
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C"
+      },
+      {
+        "name": "Webcam",
+        "model": "Logitech C920"
+      },
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      },
+      {
+        "name": "Mouse",
+        "model": "Logitech M331"
+      }
+    ]
+  },
+  {
+    "id": "EMP-12338",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "10:00",
+      "end": "19:00"
+    },
+    "name": "Hazel Ocampo",
+    "position": "IT Support Specialist",
+    "dept": "IT Support",
+    "client": "Internal",
+    "email": "h.ocampo@goteam.io",
+    "contact_number": "+63 918 555 2389",
+    "personal_email": "hazel.ocampo24@gmail.com",
+    "alt_contact_name": "Marites Ocampo",
+    "alt_contact_number": "+63 919 555 2420",
+    "leadership_coach": "Victor Soriano - Manager",
+    "address": "198 Katipunan Avenue, Barangay Loyola Heights, Quezon City, 1108 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-10-04",
+    "sep": "2026-10-11",
+    "assets": [
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      },
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      }
+    ]
+  },
+  {
+    "id": "EMP-12475",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "07:00",
+      "end": "16:00"
+    },
+    "name": "Ian Pascual",
+    "position": "Account Executive",
+    "dept": "Sales",
+    "client": "Harbor Health",
+    "email": "i.pascual@goteam.io",
+    "contact_number": "+63 918 555 2486",
+    "personal_email": "ian.pascual25@gmail.com",
+    "alt_contact_name": "Rolando Pascual",
+    "alt_contact_number": "+63 919 555 2517",
+    "leadership_coach": "Jerome Cruz - Team Lead",
+    "address": "205 Shaw Boulevard, Barangay Wack-Wack, Mandaluyong City, 1550 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Contract End",
+    "suggested_reason": "end-of-contract",
+    "lwd": "2026-10-07",
+    "sep": "2026-10-10",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad T14"
+      },
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H"
+      },
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse"
+      }
+    ]
+  },
+  {
+    "id": "EMP-12612",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "22:00",
+      "end": "07:00"
+    },
+    "name": "Joanna Quizon",
+    "position": "Client Success Associate",
+    "dept": "Client Success",
+    "client": "Summit Telecom",
+    "email": "j.quizon@goteam.io",
+    "contact_number": "+63 918 555 2583",
+    "personal_email": "joanna.quizon26@gmail.com",
+    "alt_contact_name": "Celia Quizon",
+    "alt_contact_number": "+63 919 555 2614",
+    "leadership_coach": "Annika Reyes - Team Lead",
+    "address": "212 Mabolo Street, Barangay Mabolo, Cebu City, 6000 Cebu",
+    "address_mode": "remote",
+    "case_type": "Recall from Leave",
+    "suggested_reason": "recalled",
+    "lwd": "2026-10-10",
+    "sep": "2026-10-14",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      },
+      {
+        "name": "Mouse",
+        "model": "Logitech M331"
+      },
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C"
+      }
+    ]
+  },
+  {
+    "id": "EMP-12749",
+    "shift": {
+      "days": "Tue to Sat",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Kristoffer Ramos",
+    "position": "Software Engineer",
+    "dept": "Engineering",
+    "client": "Internal",
+    "email": "k.ramos@goteam.io",
+    "contact_number": "+63 918 555 2680",
+    "personal_email": "kristoffer.ramos27@gmail.com",
+    "alt_contact_name": "Benjie Ramos",
+    "alt_contact_number": "+63 919 555 2711",
+    "leadership_coach": "Paolo Mendoza - Manager",
+    "address": "219 Alabang-Zapote Road, Barangay Alabang, Muntinlupa City, 1780 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Immediate Resignation",
+    "suggested_reason": "immediate-resignation",
+    "lwd": "2026-10-13",
+    "sep": "2026-10-13",
+    "assets": [
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      },
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      }
+    ]
+  },
+  {
+    "id": "EMP-12886",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Lourdes Salvador",
+    "position": "Operations Analyst",
+    "dept": "Operations",
+    "client": "Northwind Retail",
+    "email": "l.salvador@goteam.io",
+    "contact_number": "+63 918 555 2777",
+    "personal_email": "lourdes.salvador28@gmail.com",
+    "alt_contact_name": "Rosa Salvador",
+    "alt_contact_number": "+63 919 555 2808",
+    "leadership_coach": "Grace Lim - Team Lead",
+    "address": "226 Ortigas Avenue, Barangay Ugong, Pasig City, 1604 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-10-16",
+    "sep": "2026-10-22",
+    "assets": [
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse"
+      },
+      {
+        "name": "Docking Station",
+        "model": "Dell WD19S"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Lenovo 65W USB-C"
+      }
+    ]
+  },
+  {
+    "id": "EMP-13023",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "08:00",
+      "end": "17:00"
+    },
+    "name": "Mario Tolentino",
+    "position": "Accounts Associate",
+    "dept": "Finance",
+    "client": "Meridian Logistics",
+    "email": "m.tolentino@goteam.io",
+    "contact_number": "+63 918 555 2874",
+    "personal_email": "mario.tolentino29@gmail.com",
+    "alt_contact_name": "Eduardo Tolentino",
+    "alt_contact_number": "+63 919 555 2905",
+    "leadership_coach": "Victor Soriano - Manager",
+    "address": "233 Session Road, Barangay Kayang, Baguio City, 2600 Benguet",
+    "address_mode": "remote",
+    "case_type": "Contract End",
+    "suggested_reason": "end-of-contract",
+    "lwd": "2026-10-19",
+    "sep": "2026-10-26",
+    "assets": [
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      },
+      {
+        "name": "Laptop Charger",
+        "model": "Apple 96W USB-C"
+      },
+      {
+        "name": "Webcam",
+        "model": "Logitech C920"
+      },
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      }
+    ]
+  },
+  {
+    "id": "EMP-13160",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "10:00",
+      "end": "19:00"
+    },
+    "name": "Nerissa Ubaldo",
+    "position": "HR Generalist",
+    "dept": "People & Culture",
+    "client": "Internal",
+    "email": "n.ubaldo@goteam.io",
+    "contact_number": "+63 918 555 2971",
+    "personal_email": "nerissa.ubaldo30@gmail.com",
+    "alt_contact_name": "Marites Ubaldo",
+    "alt_contact_number": "+63 919 555 3002",
+    "leadership_coach": "Jerome Cruz - Team Lead",
+    "address": "240 Katipunan Avenue, Barangay Loyola Heights, Quezon City, 1108 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-10-22",
+    "sep": "2026-10-25",
+    "assets": [
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      },
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      }
+    ]
+  },
+  {
+    "id": "EMP-13297",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "07:00",
+      "end": "16:00"
+    },
+    "name": "Oscar Valdez",
+    "position": "QA Analyst",
+    "dept": "Quality Assurance",
+    "client": "Harbor Health",
+    "email": "o.valdez@goteam.io",
+    "contact_number": "+63 918 555 3068",
+    "personal_email": "oscar.valdez31@gmail.com",
+    "alt_contact_name": "Rolando Valdez",
+    "alt_contact_number": "+63 919 555 3099",
+    "leadership_coach": "Annika Reyes - Team Lead",
+    "address": "247 MacArthur Highway, Barangay Dolores, San Fernando City, 2000 Pampanga",
+    "address_mode": "remote",
+    "case_type": "Unexplained Absence Case",
+    "suggested_reason": "unexplained-absence",
+    "lwd": "2026-10-25",
+    "sep": "2026-10-29",
+    "assets": [
+      {
+        "name": "Laptop Charger",
+        "model": "Lenovo 65W USB-C"
+      },
+      {
+        "name": "Laptop",
+        "model": "Lenovo ThinkPad T14"
+      },
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H"
+      }
+    ]
+  },
+  {
+    "id": "EMP-13434",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "22:00",
+      "end": "07:00"
+    },
+    "name": "Pilar Zamora",
+    "position": "IT Support Specialist",
+    "dept": "IT Support",
+    "client": "Summit Telecom",
+    "email": "p.zamora@goteam.io",
+    "contact_number": "+63 918 555 3165",
+    "personal_email": "pilar.zamora32@gmail.com",
+    "alt_contact_name": "Celia Zamora",
+    "alt_contact_number": "+63 919 555 3196",
+    "leadership_coach": "Paolo Mendoza - Manager",
+    "address": "254 Lacson Street, Barangay Mandalagan, Bacolod City, 6100 Negros Occidental",
+    "address_mode": "remote",
+    "case_type": "Recall from Leave",
+    "suggested_reason": "recalled",
+    "lwd": "2026-10-28",
+    "sep": "2026-11-02",
+    "assets": [
+      {
+        "name": "Webcam",
+        "model": "Logitech C920"
+      },
+      {
+        "name": "Laptop",
+        "model": "MacBook Air 13\" M2"
+      },
+      {
+        "name": "Mouse",
+        "model": "Logitech M331"
+      },
+      {
+        "name": "Headset",
+        "model": "Plantronics Blackwire 3220"
+      }
+    ]
+  },
+  {
+    "id": "EMP-13571",
+    "shift": {
+      "days": "Tue to Sat",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Ramon Abad",
+    "position": "Account Executive",
+    "dept": "Sales",
+    "client": "Internal",
+    "email": "r.abad@goteam.io",
+    "contact_number": "+63 918 555 3262",
+    "personal_email": "ramon.abad33@gmail.com",
+    "alt_contact_name": "Benjie Abad",
+    "alt_contact_number": "+63 919 555 3293",
+    "leadership_coach": "Grace Lim - Team Lead",
+    "address": "261 Alabang-Zapote Road, Barangay Alabang, Muntinlupa City, 1780 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Voluntary Resignation",
+    "suggested_reason": "resignation",
+    "lwd": "2026-10-31",
+    "sep": "2026-11-06",
+    "assets": [
+      {
+        "name": "Laptop",
+        "model": "Dell Latitude 5440"
+      },
+      {
+        "name": "Monitor",
+        "model": "Dell P2422H"
+      },
+      {
+        "name": "Headset",
+        "model": "Jabra Evolve2 65"
+      },
+      {
+        "name": "Docking Station",
+        "model": "CalDigit TS4"
+      },
+      {
+        "name": "Keyboard",
+        "model": "Logitech K380"
+      }
+    ]
+  },
+  {
+    "id": "EMP-13708",
+    "shift": {
+      "days": "Mon to Fri",
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "name": "Sheila Bautista",
+    "position": "Client Success Associate",
+    "dept": "Client Success",
+    "client": "Northwind Retail",
+    "email": "s.bautista@goteam.io",
+    "contact_number": "+63 918 555 3359",
+    "personal_email": "sheila.bautista34@gmail.com",
+    "alt_contact_name": "Rosa Bautista",
+    "alt_contact_number": "+63 919 555 3390",
+    "leadership_coach": "Victor Soriano - Manager",
+    "address": "268 Ortigas Avenue, Barangay Ugong, Pasig City, 1604 Metro Manila",
+    "address_mode": "onsite",
+    "case_type": "Contract End",
+    "suggested_reason": "end-of-contract",
+    "lwd": "2026-11-03",
+    "sep": "2026-11-10",
+    "assets": [
+      {
+        "name": "Monitor",
+        "model": "LG 24MK430H"
+      },
+      {
+        "name": "Mouse",
+        "model": "Apple Magic Mouse"
+      },
+      {
+        "name": "Docking Station",
+        "model": "Dell WD19S"
+      }
+    ]
+  }
+]

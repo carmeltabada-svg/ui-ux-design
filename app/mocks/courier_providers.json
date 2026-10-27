@@ -1,0 +1,4 @@
+[
+  { "id": "jrs-express", "name": "JRS Express", "priority": "recommended", "account_manager": "Nico Dalisay", "account_manager_email": "nico.dalisay@jrs-express.com.ph", "corporate_account": true, "account_number": "4471-2209-13", "status": "active", "tracking_website_url": "https://www.jrs-express.com" },
+  { "id": "lbc-express", "name": "LBC Express", "priority": "alternate", "account_manager": "Carlo Reyes", "account_manager_email": "carlo.reyes@lbcexpress.com", "corporate_account": true, "account_number": "0192-8834-01", "status": "active", "tracking_website_url": "https://www.lbcexpress.com" }
+]

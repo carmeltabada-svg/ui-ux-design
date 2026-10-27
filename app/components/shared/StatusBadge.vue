@@ -11,7 +11,7 @@ const props = defineProps<Props>()
 const style = computed(() => {
   if (props.status === 'active') return { background: 'rgb(0,127,69)', color: '#fff', borderColor: 'rgb(0,127,69)' }
   if (props.status === 'retired') return { background: 'rgb(137,75,0)', color: '#fff', borderColor: 'rgb(137,75,0)' }
-  return { background: '#fff', color: '#64748b', borderColor: '#cbd5e1' }
+  return { background: 'var(--color-card)', color: 'var(--ui-text-muted)', borderColor: 'var(--ui-border-accented)' }
 })
 </script>
 

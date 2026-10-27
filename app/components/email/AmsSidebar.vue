@@ -3,6 +3,8 @@
 // found inside the compiled design-system bundle referenced by
 // "Assets Sidebar (standalone).html" — NAV_ITEMS, icons, footer user card, and
 // the --sidebar-* tokens are copied verbatim from that source.
+import { ticketsNeedingAttention } from '~/data/ticketTrackers'
+
 interface NavItem {
   id: string
   label: string
@@ -22,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'tech-packs', label: 'Tech Packs', icon: 'i-lucide-package' },
   { id: 'purchase-orders', label: 'Purchase Orders', icon: 'i-lucide-file-text' },
   { id: 'it-workspace', label: 'IT Workspace', icon: 'i-lucide-wrench' },
-  { id: 'ticket-tracker', label: 'Ticket Tracker', icon: 'i-lucide-ticket-check' },
+  { id: 'ticket-tracker', label: 'Ticket Tracker', icon: 'i-lucide-ticket-check', to: '/ticket-tracker' },
   { id: 'master-data', label: 'Master Data', icon: 'i-lucide-database', to: '/master-data' },
   { id: 'templates', label: 'Templates', icon: 'i-lucide-mail', to: '/templates' },
   {
@@ -57,20 +59,30 @@ const props = withDefaults(defineProps<Props>(), {
 // falls back to the route path when no explicit `active` prop is passed, so
 // the highlighted nav item stays correct as new routed pages are added
 const route = useRoute()
-const active = computed(() => props.active ?? (route.path.startsWith('/master-data') ? 'master-data' : 'templates'))
+const active = computed(() => props.active ?? (
+  route.path.startsWith('/master-data')
+    ? 'master-data'
+    : route.path.startsWith('/ticket-tracker') ? 'ticket-tracker' : 'templates'
+))
 
 const formsOpen = ref(active.value === 'forms' || active.value === 'gate-pass')
+
+// Tickets with an unacknowledged HRIS/R24-driven change - a live count, not
+// a prop, since TICKETS is a shared reactive store already imported
+// directly wherever it's needed elsewhere in this app.
+const ticketUpdateCount = computed(() => ticketsNeedingAttention().length)
 
 const NuxtLinkComp = resolveComponent('NuxtLink')
 </script>
 
 <template>
   <aside
-    class="hidden lg:flex flex-col shrink-0 h-screen sticky top-0 border-r border-default bg-white"
+    class="hidden lg:flex flex-col shrink-0 h-screen sticky top-0 border-r border-default bg-card"
     style="width: 240px; min-width: 240px;"
   >
     <div class="h-(--ui-header-height) shrink-0 flex items-center gap-1.5 px-4">
-      <img src="/img/logofull-default.svg" alt="GoTeam Assets Logo" class="h-8 w-auto mx-auto">
+      <img src="/img/logofull-default.svg" alt="GoTeam Assets Logo" class="h-8 w-auto mx-auto dark:hidden">
+      <img src="/img/logofull-white.svg" alt="GoTeam Assets Logo" class="h-8 w-auto mx-auto hidden dark:block">
     </div>
 
     <nav class="flex-1 overflow-y-auto flex flex-col gap-px fade-scroll-y" style="padding: 8px 16px;">
@@ -80,7 +92,7 @@ const NuxtLinkComp = resolveComponent('NuxtLink')
             type="button"
             class="flex items-center gap-1.5 w-full rounded-md text-left transition-colors"
             style="height: 32px; padding: 6px 10px;"
-            :class="active === item.id ? 'bg-[rgb(239,246,255)] text-primary' : 'text-muted hover:bg-elevated hover:text-default'"
+            :class="active === item.id ? 'bg-ams-nav text-blue-700' : 'text-muted hover:bg-elevated hover:text-default'"
             @click="formsOpen = !formsOpen"
           >
             <UIcon :name="item.icon" class="size-[18px] shrink-0" />
@@ -101,7 +113,7 @@ const NuxtLinkComp = resolveComponent('NuxtLink')
               type="button"
               class="flex items-center gap-1.5 w-full rounded-md text-left transition-colors"
               style="height: 32px; padding: 6px 10px;"
-              :class="active === child.id ? 'bg-[rgb(239,246,255)] text-primary' : 'text-muted hover:bg-elevated hover:text-default'"
+              :class="active === child.id ? 'bg-ams-nav text-blue-700' : 'text-muted hover:bg-elevated hover:text-default'"
             >
               <UIcon :name="child.icon" class="size-[18px] shrink-0" />
               <span class="flex-1 min-w-0 truncate text-sm font-medium">{{ child.label }}</span>
@@ -116,10 +128,17 @@ const NuxtLinkComp = resolveComponent('NuxtLink')
           :type="item.to ? undefined : 'button'"
           class="flex items-center gap-1.5 w-full rounded-md text-left transition-colors"
           style="height: 32px; padding: 6px 10px;"
-          :class="active === item.id ? 'bg-[rgb(239,246,255)] text-primary' : 'text-muted hover:bg-elevated hover:text-default'"
+          :class="active === item.id ? 'bg-ams-nav text-blue-700' : 'text-muted hover:bg-elevated hover:text-default'"
         >
           <UIcon :name="item.icon" class="size-[18px] shrink-0" />
           <span class="flex-1 min-w-0 truncate text-sm font-medium">{{ item.label }}</span>
+          <span
+            v-if="item.id === 'ticket-tracker' && ticketUpdateCount"
+            class="shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 text-center bg-error/10 text-red-700"
+            style="min-width: 18px;"
+          >
+            {{ ticketUpdateCount }}
+          </span>
         </component>
       </template>
 
@@ -127,13 +146,13 @@ const NuxtLinkComp = resolveComponent('NuxtLink')
         type="button"
         class="flex items-center gap-1.5 w-full rounded-md text-left transition-colors"
         style="height: 32px; padding: 6px 10px;"
-        :class="active === 'offboarding' ? 'bg-[rgb(239,246,255)] text-primary' : 'text-muted hover:bg-elevated hover:text-default'"
+        :class="active === 'offboarding' ? 'bg-ams-nav text-blue-700' : 'text-muted hover:bg-elevated hover:text-default'"
       >
         <UIcon name="i-lucide-package-check" class="size-[18px] shrink-0" />
         <span class="flex-1 min-w-0 truncate text-sm font-medium">Offboarding Retrievals</span>
         <span
           v-if="offboardingCount"
-          class="shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 text-center bg-[rgb(239,246,255)] text-primary"
+          class="shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 text-center bg-ams-nav text-blue-700"
           style="min-width: 18px;"
         >
           {{ offboardingCount }}
@@ -144,7 +163,7 @@ const NuxtLinkComp = resolveComponent('NuxtLink')
         type="button"
         class="flex items-center gap-1.5 w-full rounded-md text-left transition-colors"
         style="height: 32px; padding: 6px 10px;"
-        :class="active === 'role-access-control' ? 'bg-[rgb(239,246,255)] text-primary' : 'text-muted hover:bg-elevated hover:text-default'"
+        :class="active === 'role-access-control' ? 'bg-ams-nav text-blue-700' : 'text-muted hover:bg-elevated hover:text-default'"
       >
         <UIcon name="i-lucide-shield-check" class="size-[18px] shrink-0" />
         <span class="flex-1 min-w-0 truncate text-sm font-medium">Role Access Control</span>
@@ -154,13 +173,13 @@ const NuxtLinkComp = resolveComponent('NuxtLink')
         type="button"
         class="flex items-center gap-1.5 w-full rounded-md text-left transition-colors"
         style="height: 32px; padding: 6px 10px;"
-        :class="active === 'client-request-releases' ? 'bg-[rgb(239,246,255)] text-primary' : 'text-muted hover:bg-elevated hover:text-default'"
+        :class="active === 'client-request-releases' ? 'bg-ams-nav text-blue-700' : 'text-muted hover:bg-elevated hover:text-default'"
       >
         <UIcon name="i-lucide-hand-coins" class="size-[18px] shrink-0" />
         <span class="flex-1 min-w-0 truncate text-sm font-medium">Client Request Releases</span>
         <span
           v-if="clientRequestCount"
-          class="shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 text-center bg-[rgb(239,246,255)] text-primary"
+          class="shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 text-center bg-ams-nav text-blue-700"
           style="min-width: 18px;"
         >
           {{ clientRequestCount }}
@@ -170,10 +189,10 @@ const NuxtLinkComp = resolveComponent('NuxtLink')
 
     <div
       class="flex items-center gap-2.5 border-t shrink-0"
-      style="height: 55px; padding: 10px 12px 12px; border-color: rgb(241,245,249);"
+      style="height: 55px; padding: 10px 12px 12px; border-color: var(--ams-nav-border);"
     >
       <div class="flex items-center justify-center size-8 rounded-full bg-elevated shrink-0">
-        <span class="text-xs font-bold text-muted">{{ userInitials }}</span>
+        <span class="text-xs font-bold text-slate-600">{{ userInitials }}</span>
       </div>
       <div class="flex flex-col gap-0.5 min-w-0">
         <span class="text-sm font-semibold text-highlighted truncate">{{ userName }}</span>

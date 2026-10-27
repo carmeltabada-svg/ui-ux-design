@@ -4,7 +4,9 @@
 // on the next switch or reload. This is the real per-template store so
 // switching templates (and creating new ones) actually persists.
 import { reactive } from 'vue'
-import { TEMPLATES } from './templates'
+import { TEMPLATES, setBaseTemplates } from './templates'
+import type { EmailTemplateRecord } from '~/api/types'
+import { deepClone } from '~/utils/deepClone'
 
 /** The signed-in user, used to attribute version-history entries created in
  * this session - a seeded template's first version is attributed to
@@ -54,12 +56,27 @@ export const CUSTOM_TEMPLATE_IDS = reactive<string[]>([])
  * themselves at runtime (those are the static source data, shared by every
  * session), so a deletion is tracked here instead and every reader of "the
  * list of templates" (see templates/index.vue's `allEmailKeys`) filters
- * against it. Session-only, same as the rest of `TEMPLATE_RUNTIME` - email
- * templates have no localStorage mirror the way forms do (see
- * formStorage.client.ts), so this doesn't need to persist either. */
+ * against it. Sent to the server as a delete (see syncedStores.ts). */
 export const DELETED_TEMPLATE_KEYS = reactive<Set<string>>(new Set())
 
 export const TEMPLATE_RUNTIME: Record<string, TemplateRuntime> = reactive({})
+
+/** One saved version of an email template (recorded on Save). */
+export interface TemplateSnapshot {
+  id: string
+  label: string
+  actor: string
+  date: string
+  subject: string
+  body: string
+  cc: Recipient[]
+  bcc: Recipient[]
+  attachment: string
+  attachmentFormId?: string
+}
+
+/** Version history per template id. Lives here (not in the editor page) so it survives leaving the page. Saved with its template (see syncedStores.ts). */
+export const TEMPLATE_HISTORY: Record<string, TemplateSnapshot[]> = reactive({})
 
 /** Permanently removes a template from the list for this session - unlike
  * Retire (a status, still in the list, still reachable), this drops it
@@ -73,6 +90,7 @@ export function deleteTemplate(key: string) {
   const customIndex = CUSTOM_TEMPLATE_IDS.indexOf(key)
   if (customIndex !== -1) CUSTOM_TEMPLATE_IDS.splice(customIndex, 1)
   delete TEMPLATE_RUNTIME[key]
+  delete TEMPLATE_HISTORY[key]
 }
 
 export function ensureTemplateRuntime(key: string): TemplateRuntime {
@@ -89,30 +107,36 @@ export function ensureTemplateRuntime(key: string): TemplateRuntime {
       status: seed ? 'active' : 'draft',
       attachment: seed?.attachment ?? 'none',
       attachmentFormId: seed?.attachmentFormId,
-      lastSavedAt: seed ? 'Aug 24, 2026' : undefined,
+      lastSavedAt: seed ? '2026-08-24T04:00:00.000Z' : undefined,
       nameManuallySet: !!seed
     }
   }
   return TEMPLATE_RUNTIME[key]!
 }
 
+/** Replaces every template with what the api layer returned: the template as it is now, and its saved versions. */
+export function applyTemplateRecords(records: EmailTemplateRecord[]) {
+  for (const key of Object.keys(TEMPLATE_RUNTIME)) delete TEMPLATE_RUNTIME[key]
+  for (const key of Object.keys(TEMPLATE_HISTORY)) delete TEMPLATE_HISTORY[key]
+  CUSTOM_TEMPLATE_IDS.splice(0, CUSTOM_TEMPLATE_IDS.length)
+  DELETED_TEMPLATE_KEYS.clear()
+  setBaseTemplates(records.filter(r => r.system).map(r => ({
+    key: r.key, name: r.runtime.name, mode: r.runtime.mode, when: r.runtime.description,
+    attachment: r.runtime.attachment, attachmentFormId: r.runtime.attachmentFormId, subject: r.runtime.subject, body: r.runtime.body
+  })))
+  for (const r of records) {
+    TEMPLATE_RUNTIME[r.key] = r.runtime
+    if (r.history.length) TEMPLATE_HISTORY[r.key] = r.history
+    if (!r.system) CUSTOM_TEMPLATE_IDS.push(r.key)
+  }
+}
+
 /** Creates a new template and returns its id - starts blank/draft/untitled, no modal needed. */
 export function createTemplate(): string {
   const id = crypto.randomUUID()
   CUSTOM_TEMPLATE_IDS.push(id)
-  TEMPLATE_RUNTIME[id] = {
-    name: 'Untitled',
-    mode: 'onsite',
-    description: '',
-    subject: '',
-    body: '',
-    cc: [{ email: 'itasset@go.team', locked: true }],
-    bcc: [],
-    status: 'draft',
-    attachment: 'none',
-    lastSavedAt: undefined,
-    nameManuallySet: false
-  }
+  // An id with no seed entry gets the blank draft defaults.
+  ensureTemplateRuntime(id)
   return id
 }
 
@@ -128,7 +152,7 @@ export function duplicateTemplate(sourceKey: string): string {
   const id = crypto.randomUUID()
   CUSTOM_TEMPLATE_IDS.push(id)
   TEMPLATE_RUNTIME[id] = {
-    ...JSON.parse(JSON.stringify(source)),
+    ...deepClone(source),
     name: `${source.name} (copy)`,
     status: 'draft',
     lastSavedAt: undefined,
