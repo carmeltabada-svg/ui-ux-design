@@ -17,7 +17,7 @@ has two implementations:
 
 `apiMode` in `nuxt.config.ts` (`runtimeConfig.public`) picks one. Set
 `NUXT_PUBLIC_API_MODE=http` and `NUXT_PUBLIC_API_BASE=/api` to use the backend. No page
-changes. Every response passes through `camelizeKeys()` and every request body through
+changes. Every response passes through `camelizeKeys()` (tickets also through `ticketFromResource` in `mappers.ts`, which renames a few fields and reshapes the checklist) and every request body through
 `snakeizeKeys()` (`app/api/keys.ts`), so pages never see snake_case.
 
 `app/api/http.ts` follows the paths and shapes proposed in DATA_CONTRACT.md. It has not been
@@ -77,7 +77,7 @@ page  ->  await confirmAssets(ticket)                          (data/ticketTrack
 
 - **The list of actions is the endpoint specification.** `TicketActionName` in
   `app/api/types.ts` names them, and the `ACTIONS` table at the bottom of
-  `app/api/ticketActions.ts` lists each with the arguments it takes. 51 actions: checklist
+  `app/api/ticketActions.ts` lists each with the arguments it takes. 52 actions: checklist
   edits, stage moves, assets, IT lock, courier branch, sends, calls, reminders, evidence,
   charging, inspection, closing, reopening, taking over, cancelling, changing path.
 - **The functions above that table are the rules the server owns.** Each takes a ticket,
@@ -90,7 +90,7 @@ page  ->  await confirmAssets(ticket)                          (data/ticketTrack
   `{ ok, error }` (`finalizeChecklist`, `changeReasonAndMode`, `takeOverTicket`,
   `cancelRetrieval`), which still return that value.
 - **The browser no longer writes history or notifications.** It used to call `pushHistory()`
-  and `raiseNotification()` itself. Those are now only called by the server rules.
+  and `raiseNotification()` itself. Pages and components no longer call them. Only the server rules (`ticketActions.ts`, `mock.ts`) and the prototype only demo and scan code (`scanTicketAlerts`, `simulateHrisLwdUpdate`, `simulateBranchReply`) still do.
 - **Draft edits** (the charging case's dates, amounts and notes, a dismissed reminder) go
   through one action, `updateTicketFields`, which accepts a fixed list of fields and refuses
   anything else. The form shows the edit at once, typed text is sent shortly after typing
@@ -130,7 +130,7 @@ Never a requirement. See DATA_CONTRACT.md section 3.4.
   the persona switch (`ams:demo:currentUser`, `setCurrentUser`) and "Viewing as".
 - The demo events: `simulateHrisLwdUpdate`, `simulateBranchReply`, `pushDemoNotification`,
   `pushDemoNotificationSet`, `clearAllTickets`.
-- The timed jobs that the browser runs only because there is no server: `scanTicketAlerts`
+- The timed jobs that the browser runs only because there is no server (in `data/ticketTrackers.ts`, started from `components/email/TopNavbar.vue`, so removing them also means editing that file): `scanTicketAlerts`
   (raises overdue and due-soon alerts) and the morning digest functions. They belong on the
   server. The browser should only call `GET /notifications` on a timer.
 - The mock database for tickets and notifications (`plugins/ticketStorage.client.ts`,
@@ -158,3 +158,9 @@ Never a requirement. See DATA_CONTRACT.md section 3.4.
 If the app is server rendered in production, load data per request rather than into module
 level stores, or turn off server rendering for authenticated routes. The stores are shared
 across requests on the server, so per user data must not be loaded into them there.
+
+## Sending an email (a fourth kind of write)
+
+Besides ticket actions, editor autosaves and master data, stage emails go through `api().emails.send`, which `http.ts` sends as `POST /tickets/{n}/emails` and which answers `{ data: { ticket, email } }` (a refusal is a 422). The request is `SendEmailRequest` (`stage`, `kind`, `templateKey`, `formId`, `to`, `cc`, `bcc`, `idempotencyKey`, `outcome?`, `manual?`). The server renders, sends, stores a `SentEmail` snapshot, writes the stage's history and returns the ticket plus the email; a repeated `idempotencyKey` returns the first send. See INTEGRATIONS.md section 1 and DATA_CONTRACT 7.4.
+
+**Prototype only, delete at handoff:** `emails.send` in `mock.ts` (a 700 ms delay and the `failNextSend` and `allowUnresolvedSends` switches in `utils/demoSettings.ts`). Do **not** delete the rendering rules in `utils/ticketMessage.ts`: they are the reference for the server port, and the page still uses them for previews.

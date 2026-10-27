@@ -173,7 +173,11 @@ One row per retrieval ticket.
 | `checklist_nudge_dismissed` | boolean | `checklistNudgeDismissed` |
 
 **IT lock**: `it_lock_scheduled_confirmed` (bool), `it_lock_scheduled_for` (timestamp, null),
-`it_lock_executed_confirmed` (bool), `it_lock_needs_reschedule` (bool).
+`it_lock_executed_confirmed` (bool), `it_lock_needs_reschedule` (bool). The meaning changed: the IT lock is a notice to IT, not a scheduled job. `it_lock_scheduled_confirmed` now means "IT was notified" (`notify-it-lock`), `it_lock_scheduled_for` is the Last Working Day IT was told, and `it_lock_executed_confirmed` is legacy: no action sets it, so it can be dropped.
+
+**Contact number correction**: the officer can correct the contact number for one ticket (`set-contact-number`). Store it as `contact_number_override` (string, null) on the ticket; setting it resets the contact number verified flag. The alternate contact name and number are copied onto the ticket.
+
+**Checklist completion**: `finalize-checklist` records who completed the checklist and when (`checklist_reviewed_by_id`, `checklist_reviewed_at`). A `checklist_review_note` (optional) exists in the prototype data, but the UI no longer sends one.
 
 **HRIS change flags**: `hris_update_pending` (bool), `hris_update_changed_at`,
 `hris_update_acknowledged_at` (timestamps, null).
@@ -208,7 +212,7 @@ Add `deleted_at` only if tickets may be removed. The product does not delete tic
 | `ticket_assets` | `ticket_id`, `position`, `name` (catalog category), `model`, `type`, `serial`, `asset_tag`, `checked` (bool), `remarks`, `resolution` (`returned`, `charge`, `open`, null) | `Ticket.assets[]` |
 | `ticket_checklist_items` | `ticket_id`, `position`, `text`, `required` (bool), `done` (bool), `done_by_id` (null), `done_at` (null) | `checklistItems[]`, `checklistDone[]`, `checklistOptional[]`, `checklistDoneBy[]` (four parallel arrays) |
 | `ticket_gate_releases` | `ticket_id`, `gate_number` (1..3), `note`, `released_at`, `released_by_id` | `gateNotes`, `gateReleaseDates`, `gatesReleased` |
-| `ticket_call_attempts` | `ticket_id`, `attempted_at`, `outcome` (`no_answer`, `answered_confirmed`), `by_id` | `callAttempts[]` |
+| `ticket_call_attempts` | `ticket_id`, `attempted_at`, `outcome` (the front end sends and expects `No answer` and `Answered - confirmed`; store those or map them at the boundary), `by_id` | `callAttempts[]` |
 | `ticket_sms_sent` | `ticket_id`, `code` (`SMS-1A`...), `sent_at`, `by_id`. Unique on (`ticket_id`, `code`) | `smsSent` |
 | `ticket_target_date_changes` | `ticket_id`, `previous_date` (null), `new_date`, `reason`, `was_overdue` (bool), `by_id`, `changed_at` | `targetDateHistory[]` |
 | `ticket_handovers` | `ticket_id`, `from_user_id`, `to_user_id`, `note`, `handed_over_at` | `handovers[]` |
@@ -256,7 +260,7 @@ events.
 | Table | Columns | Source |
 |---|---|---|
 | `courier_providers` | `slug` (unique, `jrs-express`), `name`, `priority` (`recommended`, `alternate`), `account_manager`, `account_manager_email`, `corporate_account` (bool), `account_number`, `status` (`active`, `inactive`), `tracking_website_url` | `CourierProvider` |
-| `courier_branches` | `courier_provider_id`, `name`, `address`, `city` | `CourierBranch`. The prototype's own note says production needs a courier API or an upload for this list |
+| `courier_branches` | `courier_provider_id`, `name`, `address`, `city`, `contact_person`, `contact_numbers`, `lat` (decimal, null), `lon` (decimal, null) | `CourierBranch`. The prototype's own note says production needs a courier API or an upload for this list |
 | `checklist_templates` | `name`, `created_at`, `updated_at` | `ChecklistTemplate` |
 | `checklist_template_tasks` | `checklist_template_id`, `position`, `text`, `required` (bool) | `ChecklistTemplate.tasks[]` |
 | `checklist_template_defaults` | `checklist_template_id`, `reason` (null = any), `mode` (null = any). A path belongs to one template: unique on (`reason`, `mode`) | `defaultFor` (`'resignation:remote'`, `'*'`) |
@@ -291,7 +295,7 @@ shows the first message under `errors`, else `message`, as is.
 | `email_template_versions` | `email_template_id`, `label`, `actor_id`, `saved_at`, `subject`, `body`, `attachment_form_id`, `recipients` (json) | `TemplateSnapshot` |
 | `retrieval_forms` | `slug` (unique, `return-ack-onsite`), `name`, `description`, `mode`, `status`, `theme_color`, `background` (json: `{type, value}`), `page_size`, `margins` (json: top, right, bottom, left), `category`, `show_submit_button` (bool), `content` (`longText`, the editor document), `name_manually_set`, `deleted_at` | `RetrievalForm` + `RETRIEVAL_FORM_CONTENT` |
 | `retrieval_form_versions` | `retrieval_form_id`, `label`, `actor_id`, `saved_at`, `snapshot` (json) | `FORM_VERSIONS` |
-| `form_submissions` | `retrieval_form_id`, `ticket_id` (null), `values` (json), `signed_at`, `signature_path` (null), `ip_address` | the `ams:formSubmissions:v1` mirror |
+| `form_submissions` | `retrieval_form_id`, `ticket_id` (null), `values` (json), `signed_at`, `signature_path` (null), `ip_address` | the `ams:formSubmissions:v1` mirror (the front end does not call a submissions endpoint today and only stores a signed at time, so this is a proposal for the public form) |
 
 **Resource shapes the front end expects** (see `app/mocks/email_templates.json` and
 `app/mocks/retrieval_forms.json`):
@@ -318,12 +322,12 @@ Use Laravel's built in database notifications (`notifications` table: `id` uuid,
 
 Map from `AppNotification`: `data` carries `ticket_number`, `title`, `description`, `kind`
 (`NotificationKind`), `action` (bool), `dedupe_key`, `delivery` (`now` or `digest`).
-`dedupe_key` must be unique per notifiable so an alert is never raised twice. The morning
+The front end reads the dedupe key as `key` and the ticket as `ticket_id` (the ticket's `id`, not its number), and also expects `read` (bool), `recipient`, `at` and `emailed_to`; map `read_at` to `read`. `dedupe_key` must be unique per notifiable so an alert is never raised twice. The morning
 digest and the emailed copy are server jobs. The prototype only simulates them.
 
 ### 4.7 Users
 `assignee`, `actor`, `by` are all users. Use Laravel's `users` table. The demo
-`AssetTeamMember { name, email }` list and the demo persona switch are replaced by the
+`AssetTeamMember { name, email, fullName, id }` (the short `name`, for example "D. Reyes", is the actor key; `id` is the employee id) list and the demo persona switch are replaced by the
 authenticated user and a role (Asset Team member). Roles and permissions are in
 `DEV_HANDOFF.md` §10.3.
 
@@ -393,7 +397,7 @@ acknowledgment link.
 
 Everything else an operator does to an open ticket is an **action** (7.2).
 
-### 7.2 Ticket actions
+### 7.2 Ticket actions (52 actions)
 Every change to an existing ticket is `POST /api/tickets/{ticket_number}/actions/{action}`.
 The body holds the arguments below. The server checks the rules, applies the change, writes
 the history line (as the signed in user, in the same transaction), and answers with
@@ -419,13 +423,14 @@ only `app/api/http.ts` changes.
 | `confirm-assets` | none | none |
 | `confirm-courier-branch` | `provider_id`, `branch_name`, `branch_address`, `capture_method`, `substituted` | none |
 | `confirm-in-transit` | `tracking_number`, `tracking_link` | none |
-| `confirm-it-lock-execution` | none | none |
-| `confirm-it-lock-scheduling` | none | none |
 | `confirm-referred-to-payroll` | none | `boolean` |
+| `notify-it-lock` | none | none. Sets `it_lock_scheduled_confirmed` (IT was notified) and `it_lock_scheduled_for` (the Last Working Day IT was told), clears `it_lock_needs_reschedule`, and advances only if the ticket is at A4 |
+| `skip-it-notice` | none | none. Records "Continued without notifying IT" and advances only if the ticket is at A4 |
+| `set-contact-number` | `number` (string or null) | none. Sets the per ticket contact number and resets the number verified flag |
 | `confirm-sms-sent-for` | `code`, `label` | none |
 | `continue-after-calls` | none | none |
 | `continue-after-charging` | none | none |
-| `finalize-checklist` | `note_text` | `{ ok: true } / { ok: false, error: string }` |
+| `finalize-checklist` | `note_text` (optional, never sent by the current UI) | `{ ok: true } / { ok: false, error: string }` |
 | `go-back-stage` | none | none |
 | `go-forward-stage` | none | none |
 | `issue-gate-pass` | `input`, `kind` | `GatePass` |
@@ -494,28 +499,29 @@ Notes:
 | `form_id` | string, nullable | The form to attach |
 | `to`, `cc`, `bcc` | string[] | The page sends the team member (or the courier account manager at B9) and the template's CC and BCC |
 | `idempotency_key` | uuid | One per attempt. A retry of the same attempt reuses it. A repeat returns the first result |
-| `outcome` | string, optional | Only for `charging` |
+| `outcome` | string | Required when `kind` is `charging` |
+| `manual` | boolean, optional | The operator sent this email themselves from outside the system (their own mailbox) and is recording it. The server does not send, skips the unfilled placeholder check, still applies the stage bookkeeping, writes the extra history line "Recorded as sent from outside the system (manual send by <name>)" and stores the email with `sent_external = true` |
 
 The server loads the ticket, template and form, **renders them from the ticket's own data** (rules in
 TEMPLATES_SPEC section 6; the reference implementation is `app/utils/ticketMessage.ts`), and answers
-**422** with a message when a placeholder cannot be filled or a recipient is missing. It sends, stores a
+**422** with a message when a placeholder cannot be filled (not when `manual` is true) or a recipient is missing. It sends, stores a
 snapshot (the `emails` table below), applies the stage's bookkeeping (the history entry and flags, as the
 recorder actions do) in one transaction, and answers `{ "data": { "ticket": { ... }, "email": { ... } } }`.
 A failed delivery answers an error, changes nothing on the ticket, and should store a failed `emails` row.
 
 `emails` (one row per attempt): `id`, `ticket_id`, `kind`, `stage`, `template_key`, `form_id`, `to`, `cc`, `bcc`
 (json), `subject`, `html`, `form_html` (the rendered message and attachment as sent), `status`
-(`queued`, `sent`, `failed`), `error`, `sent_by_id`, `sent_at` (UTC timestamp), `provider_message_id`,
+(`queued`, `sent`, `failed`), `error`, `sent_external` (bool, true for a manual send; the front end reads it as `sentExternally`), `sent_by_id`, `sent_at` (UTC timestamp), `provider_message_id`,
 `idempotency_key` (unique per ticket).
 
-### 7.3 History and notifications
+### 7.5 History and notifications
 | Method and path | Purpose |
 |---|---|
 | `GET /api/tickets/{ticket_number}/history` | Paged, filter by `category`. (The prototype reads history from the ticket itself.) |
 | `GET /api/notifications` | The signed in user's notifications, newest first. The browser reloads them after every action and may poll. Alerts that depend on time (overdue, due soon) and the morning digest are the server's scheduled jobs |
 | `POST /api/notifications/read` | Body `ids`. Marks them read. Laravel database notifications fit |
 
-### 7.4 Master data, templates and forms
+### 7.6 Master data, templates and forms
 | Resource | Paths |
 |---|---|
 | Courier providers and branches | `GET /api/courier-providers`, `GET /api/courier-branches` |
@@ -524,7 +530,7 @@ A failed delivery answers an error, changes nothing on the ticket, and should st
 | Checklist templates | `GET`, `POST`, `PATCH /api/checklist-templates/{id}`, `DELETE /api/checklist-templates/{id}`. A rejected write is a 422 whose first message the page shows |
 | Email templates | `GET /api/email-templates`, `PUT /api/email-templates/{key}`, `DELETE /api/email-templates/{key}` |
 | Retrieval forms | `GET /api/retrieval-forms`, `PUT /api/retrieval-forms/{id}`, `DELETE /api/retrieval-forms/{id}` |
-| Form submissions | `POST /api/retrieval-forms/{slug}/submissions` |
+| Form submissions (a proposal, not called by the front end today) | `POST /api/retrieval-forms/{slug}/submissions` |
 
 The two editors save as you work. The browser sends one `PUT` for each form or template that
 changed, a moment after the last edit, and one `DELETE` for each one removed. It never sends
@@ -541,7 +547,7 @@ The id of a record created in the app is a UUID chosen by the browser, so a `PUT
 The developer may split `versions` / `history` into their own table and append to it
 (section 4.5).
 
-### 7.5 Public acknowledgment link (no login)
+### 7.7 Public acknowledgment link (no login)
 `GET /api/acknowledgments/{token}` returns only what the page prints, and
 `POST /api/acknowledgments/{token}` records the signature. Rate limit both. The token is
 `acknowledgment_token`. The link closes on the acknowledgment due date.
@@ -652,15 +658,15 @@ changing it later is cheap. Nothing here is a requirement until the developer co
 
 | # | Decision | Default used now | Where a change lands |
 |---|---|---|---|
-| 1 | Who owns the stage rules (next stage, target date, gate requirements) | The server owns them. The prototype keeps its own copy only so the demo works, and treats it as a preview, not the authority | The stage engine in `app/constants/` stays or goes. Pages read results, not rules |
+| 1 | Who owns the stage rules (next stage, target date, gate requirements) | The server owns them. The prototype keeps its own copy only so the demo works, and treats it as a preview, not the authority | The stage engine in `app/data/ticketTrackers.ts` stays or goes. Pages read results, not rules |
 | 2 | R24 data: stored or live | **Revised.** Team member data comes from the AMS; R24 fields (last working day, separation date, shift, suggested reason) are fetched per ticket and not stored, except `lwd_seen` to detect changes | The `lwd_seen` column and one R24 mapper in `app/api/` |
 | 3 | JSON naming | snake_case from Laravel, converted to camelCase at one boundary in `app/api/` | That one converter |
 | 4 | Soft deletes | On email templates and retrieval forms. Tickets are never deleted | `deleted_at` columns |
 | 5 | Ticket number and reference format | `ticket_number` auto-increment. `APR-YY-NNNNN` generated by the server | Server only. The front end only displays them |
 | 6 | Rich text sanitising | Server sanitises `content` on save. The front end also escapes on render | Server only |
 | 7 | Courier branch directory | A `courier_branches` table loaded by upload or manual entry | The table and one endpoint |
-| 8 | Email sending and the morning digest | Out of scope for this module (copy and paste only), as in `DEV_HANDOFF.md` §10.4 | None in the front end |
-| 9 | Realtime updates | Refresh on focus. The prototype's simulated reply detection is demo only | `app/prototype/` is deleted |
+| 8 | Email sending and the morning digest | Ticket stage emails are sent by the server through `POST /tickets/{n}/emails` (7.4), as in `DEV_HANDOFF.md` §10.4. SMS stays copy and paste. The morning digest is a server job. Delivery wiring inside the Templates editors is out of scope | The send operation in `app/api` |
+| 9 | Realtime updates | Refresh on focus. The prototype's simulated reply detection is demo only | The simulation functions in `app/data/ticketTrackers.ts` and the Simulation Control in `TopNavbar.vue` are deleted |
 | 10 | Role permissions | Any signed in Asset Team member may act on any ticket. Takeover is recorded | Server policies. The front end hides nothing by role |
 
 Everything above can be revisited in one short conversation after the demo. If an answer

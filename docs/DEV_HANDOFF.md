@@ -19,9 +19,10 @@ marked **All** when it is cross-cutting, so a module ticket can pull only what a
 
 **This file is the index, the traps and the checklist.** The detailed specifications live in two companion files, written from the code:
 
-- [TICKET_WORKFLOW.md](./TICKET_WORKFLOW.md): the Ticket Tracker. Data model, reason by mode rules, every stage (A3 to A13, B8 to B11), the 51 server actions, what the server enforces and what it does not, history strings the UI depends on, list and create view, notifications, SMS.
+- [TICKET_WORKFLOW.md](./TICKET_WORKFLOW.md): the Ticket Tracker. Data model, reason by mode rules, every stage (A3 to A13, B8 to B11), the 52 server actions, what the server enforces and what it does not, history strings the UI depends on, list and create view, notifications, SMS.
 - [TEMPLATES_SPEC.md](./TEMPLATES_SPEC.md): Templates and Master Data. List page, email and form models, builder behavior, `/form-preview`, the 66 placeholders and how they resolve, the contracts between templates and tickets, the checklist editor.
 
+- [TOKEN_DATA_MAPPING.html](./TOKEN_DATA_MAPPING.html): all 66 placeholders, where the prototype gets each value, and whether production supplies it (Yes, No or Open). It does not claim production field names or types: those are for the developer to fill in. Filterable, opens in any browser.
 - [INTEGRATIONS.md](./INTEGRATIONS.md): everything that crosses the boundary to a real system. Email sending in the retrieval flow (readiness gaps and a recommended contract), the SMS decision, the R24 (HRIS) data list, time zones and timestamps, the e-signature recommendations, print to PDF, dark mode status.
 
 ## Table of contents
@@ -47,10 +48,22 @@ marked **All** when it is cross-cutting, so a module ticket can pull only what a
 
 ## What changed since last round
 
+**Final pass, 14 to 27 October 2026** (merged to `main` by pull requests 1 and 2 on 27 October; `retrieval` and `templates` are kept as backup branches):
+
+- **Ticket list.** A compact header with three chips (Open, Due soon, Overdue) that filter the table, an "Assigned to me" toggle, a fixed page header with one scroll area below it, a table as tall as its rows, and 10, 15 or 25 rows per page (the Auto size and 50 are gone).
+- **Ticket workspace.** The right rail is 388px wide. The IT access lock is a notice to IT and never a gate (`notifyItLock`, `skipItNotice`). The "Show Custodian card" cue on asset confirmation. The contact number can be edited. The button hierarchy is primary solid, secondary outline, tertiary ghost. The closure dropdown defaults an item in a charging case to "In charging case".
+- **Sending.** "Mark as sent outside the system" on the notice, overdue and charging steps (a `manual` flag on `emails.send`). Copy and Download EML on the email preview and on the closure modal, through one helper (`downloadEmlFile`, which strips line breaks from the subject).
+- **Checklist.** The review concept is gone: the button is "Complete checklist" and the banner "Checklist completed". The data field `checklistReview` and the action `finalizeChecklist` are kept as the completion record.
+- **Data.** JRS (391) and LBC (1,399) branch lists, 30 sample team members, Asset Team full names and ids. J&T Express was removed. Saved copies of shipped email templates get the employee id in the subject on load.
+- **Behavior added to every page.** Open menus close when the page scrolls (`plugins/closeMenusOnScroll.client.ts`) and a visible keyboard focus ring in both themes.
+- **Delivery.** `main` is the source of truth. The dashboard is not in it.
+- **Removed, and must not come back:** the IT lock scheduling and execution confirmations, the reviewer note, the Endorsement Recorded Date limit, the Auto page size.
+
+**Earlier round:**
 - **Dark mode.** Light, Dark or System (the default) from a toggle in the navbar. Documents that stand for paper stay light (`ams-paper`). Tokens, contrast values and the rules are in `AMS_DESIGN_SYSTEM.md` section 1.5 and `INTEGRATIONS.md` section 7.
 - **The Dev Doc now covers the whole module in depth.** Added [TICKET_WORKFLOW.md](./TICKET_WORKFLOW.md) and [TEMPLATES_SPEC.md](./TEMPLATES_SPEC.md), corrected the sections that still described a Templates-only, no-backend prototype (sections 1, 3.2, 5, 6.2, 7, 8, 10), and added the backend rules the prototype does not enforce (Known Trap 9 and section 10.9). The audit behind this was a read of the code, not a browser run.
 - **Scope grew from the Templates builder to the whole retrieval module** (tickets, create view, master data), with a data layer that a backend can replace file by file (see [BACKEND_SWAP.md](./BACKEND_SWAP.md) and [DATA_CONTRACT.md](./DATA_CONTRACT.md)).
-- **Every read and write of data goes through `app/api`** (`mock` or `http`, chosen by `NUXT_PUBLIC_API_MODE`). Pages read stores and call async actions; the stage rules for the 51 ticket actions live in `api/ticketActions.ts` as the stand-in server.
+- **Every read and write of data goes through `app/api`** (`mock` or `http`, chosen by `NUXT_PUBLIC_API_MODE`). Pages read stores and call async actions; the stage rules for the 52 ticket actions live in `api/ticketActions.ts` as the stand-in server.
 - **One text standard across all modules**: labels 12px regular `text-default`, values 14px regular `text-highlighted`, helper text `text-helper`, placeholders and empty states `text-placeholder`, a 4px spacing scale, the selected option blue with a blue check in every select and dropdown, and "Optional" as a badge.
 - **UI changes**: the create ticket view is grouped into section cards with headings; Take over ticket is disabled for the current assignee; the ready pulse also covers the final review, branch confirmation and the charging email.
 - **Removed, and must not come back**: page-side writes of ticket history and notifications (`pushHistory`, `raiseNotification` in pages); the whole-blob `localStorage` mirrors for forms and templates; the `retrieval.vue` layout; uppercase field labels; the text "(optional)".
@@ -104,7 +117,7 @@ flowchart TD
     A[Open template list] --> B[Open/create email template]
     B --> C[Edit body in Tiptap<br/>BodyField.vue]
     C --> D{Insert node?}
-    D -->|Image| E[EmailImageNodeView<br/>role: plain/header/footer]
+    D -->|Image| E[EmailImageNodeView<br/>role: none/header/footer]
     D -->|Button| F[ButtonLink node<br/>data-href only, no live href]
     D -->|Table/Callout/Banner| G[Other custom nodes]
     E --> C
@@ -112,7 +125,7 @@ flowchart TD
     G --> C
     C --> H[Toolbar align/format<br/>context-aware: text vs image vs button]
     H --> I[Export / Copy to Outlook]
-    I --> J[buildEmailExportHtml.ts pipeline]
+    I --> J[buildEmailExportHtml() in emailExportHtml.ts]
     J --> K[tableize fills/buttons,<br/>font-tag wrapping, mso-highlight]
     K --> L[Outlook-safe HTML string]
 ```
@@ -152,7 +165,7 @@ should match but intentionally don't.
 ### 3.1 Priority traps (read these first)
 
 1. **[All] `npx vue-tsc --noEmit -p .` checks nothing.** The root `tsconfig.json` has `"files": []`. The real check is `npx vue-tsc --noEmit -p .nuxt/tsconfig.app.json` (run `npx nuxt prepare` first). A "0 errors" from the old command is meaningless.
-2. **[Data layer] The stage rules are mock-server code, not front-end code.** `api/ticketActions.ts` (the 51 actions) and `api/mock.ts` stand in for the backend and are deleted at handoff; the server must own those rules. Do not re-add page-side writes of ticket fields, history or notifications.
+2. **[Data layer] The stage rules are mock-server code, not front-end code.** `api/ticketActions.ts` (the 52 actions) and `api/mock.ts` stand in for the backend and are deleted at handoff; the server must own those rules. Do not re-add page-side writes of ticket fields, history or notifications.
 3. **[Data layer] Ticket actions are not serialized per ticket.** In http mode two quick actions on one ticket can each compute from the row before the other's result and overwrite it. Serialize per ticket on the client or send a version (ETag) and refuse stale writes on the server.
 4. **[Ticket Tracker] The `localStorage` ticket mirror is the mock's database only.** `utils/ticketStorage.ts` is switched off when `apiMode` is `http` (`setTicketMirrorEnabled`). Turning it on against a real backend lets a stale browser snapshot overwrite what the server returned.
 5. **[Ticket Tracker, Data layer] Date-only strings (`2026-10-13`) parse as UTC.** Use `parseLocalDate` and `localISO`. Two real bugs came from `new Date(createdAt)` (wrong year on 1 January west of UTC) and `new Date().toISOString()` passed to a date-only formatter ("Invalid Date").
@@ -161,7 +174,7 @@ should match but intentionally don't.
 8. **[Templates] The email Subject at 16px and the form editor's document labels are intentional overrides** (Outlook parity, and a printed document). Do not normalize them to the app's 14px and 12px styles.
 **More ticket and template traps (9 to 13).** Found in the later read of the code. The eight above stay the priority set used in the walkthrough, the QA Doc and the Jira ticket; these five are also real.
 
-9. **[Ticket Tracker, Data layer] The prototype server enforces very little.** No authorization; most of the 51 actions work at any stage; the create rules (unexplained absence must be remote, endorsement required and dated before separation, recall date, override notes), the 3-call and 2-reminder caps, evidence and tracking validation, and gate order live only in the UI. The full list is in TICKET_WORKFLOW section 6.2. Re-enforce them on the server.
+9. **[Ticket Tracker, Data layer] The prototype server enforces very little.** No authorization; most of the 52 actions work at any stage; the create rules (unexplained absence must be remote, the endorsement and its date required only on gated paths, recall date, override notes), the 3-call and 2-reminder caps, evidence and tracking validation, and gate order live only in the UI. The full list is in TICKET_WORKFLOW section 6.2. Re-enforce them on the server.
 10. **[Ticket Tracker] The workspace reads state back by matching history text** (for example `Courier endorsement sent`, `Overdue reminder sent (T16)`, `Post-Retrieval Charging resolved`). A backend that writes different strings breaks banners, reminder status and closure checks. Keep the formats (TICKET_WORKFLOW section 6.3) or add structured fields. History times are UTC ISO instants now, formatted for the viewer at display time.
 11. **[Ticket Tracker] Two client-to-server gaps still lose data.** `confirmAssets` sends no asset data (ticks and remarks are edited on the local ticket only); evidence and quotation files are browser blob URLs that die on reload. (The third gap, sends that carried no template or recipient, is closed: every stage email now goes through one send operation, TICKET_WORKFLOW section 6.4. It does not deliver real email.)
 12. **[Ticket Tracker] Known defect: while a shipment is delayed the whole stage card disappears.** In the workspace template the stage card is a `v-else-if` of the "Shipment delayed" banner, so a remote ticket more than 14 days in transit shows only the banner (no Mark Equipment Received, no Back or Forward). Found by reading the template; not reproduced in a browser.
@@ -295,6 +308,11 @@ don't):
 - **[Data layer]** Don't move the stage rules into the pages or the http client "so the front end can work offline". The server owns them (Known Trap 2).
 - **[Ticket Tracker]** Don't restore a browser-side counter for ticket numbers, references or gate pass numbers. The server assigns them; the mock derives them from existing tickets.
 - **[All]** Don't write the text "(optional)" or uppercase field labels. Optional is the outlined neutral badge; section labels are the only uppercase text.
+- **[Ticket Tracker]** Don't make the IT access lock (stage A4) a gate, and don't add a scheduling or execution confirmation. Locking access is IT's job. The stage is a notice to IT, with "Continue without notifying IT" as an equal way on.
+- **[Master Data, Ticket Tracker]** Don't bring back a reviewer step, a reviewer note or the word "review" on the offboarding checklist. The button is "Complete checklist". The `noteText` argument on `finalizeChecklist` is an unused leftover; the real server should not accept or store a reviewer note.
+- **[Ticket Tracker]** Don't restore a date limit on the Endorsement Recorded Date. It was removed on purpose.
+- **[Ticket Tracker]** Don't add J&T Express. JRS and LBC are the couriers.
+- **[All]** Don't add the dashboard to the retrieval module's branches. It lives on its own branch and is not part of this handoff.
 
 ## 5. Edge Cases & Solutions
 
@@ -310,7 +328,7 @@ don't):
 | Very long/unbroken text in a table cell in the Outlook export | `tableizeMarks()`/`tableizeFillBlocks()` wrap cell content in real `<table>`/`<td>` structure precisely because plain flow layout doesn't reliably contain overflow in Outlook |
 
 | **[Ticket Tracker]** Creating a ticket for someone who already has an open ticket | Create is blocked with a banner naming the open ticket and a link to it; the server enforces the same rule |
-| **[Ticket Tracker]** Endorsement Recorded Date on or after the Separation Date | Create is blocked ("must be before the Separation Date"); the date picker's `max` also stops it |
+| **[Ticket Tracker]** Endorsement Recorded Date on or after the Separation Date | Allowed. The date has no minimum or maximum (the old before the Separation Date rule was removed on purpose); only a gated path requires the endorsement and its date to be filled in |
 | **[Ticket Tracker]** The viewer is already the assignee and opens Take over | Item is dimmed with a tooltip; clicking shows "Already your ticket"; no form opens |
 | **[Ticket Tracker]** An action is refused by the server | The page shows the server's message (a toast, or inline in the modal); it never shows a stale success |
 | **[Ticket Tracker]** Reload after creating or editing a ticket | The data persists (mock database); in http mode it comes from the server. The demo seed tickets are re-created in order after a reset |
@@ -359,12 +377,12 @@ don't):
   preview and submit states, print) is in TEMPLATES_SPEC sections 4 and 5.
 
 ### 6.3 Ticket Tracker
-The full specification is [TICKET_WORKFLOW.md](./TICKET_WORKFLOW.md): data model (section 2), reason by mode matrix (3), derived values (4), stage by stage behavior (5), the 51 actions and what the server must enforce (6), list, create and workspace chrome (7), notifications and jobs (8), SMS (9). The bullets below are the short version.
+The full specification is [TICKET_WORKFLOW.md](./TICKET_WORKFLOW.md): data model (section 2), reason by mode matrix (3), derived values (4), stage by stage behavior (5), the 52 actions and what the server must enforce (6), list, create and workspace chrome (7), notifications and jobs (8), SMS (9). The bullets below are the short version.
 
-- **List** (`ticket-tracker/index.vue`): filters, search, selection, paging; creates go through the same api as everything else.
+- **List** (`ticket-tracker/index.vue`): a compact header with Open, Due soon and Overdue chips that filter the table, an Assigned to me toggle, search and filters, row selection with export, and page sizes 10, 15 or 25 (default 10); creates go through the same api as everything else.
 - **Create** (`ticket-tracker/create.vue`): five section cards: Team member, Case details, Dates, Assignment, Summary. The form stays inert until a team member is picked. Reason and Mode are pre-filled from the offboarding case and need an override note if changed. The Summary card shows the deadline rule the server will apply.
 - **Workspace** (`ticket-tracker/[id].vue`): a stage engine (setup, branch and endorsement, notice and confirmation, transit, return and evidence, closure). Each stage's primary button is guarded: a blocked click explains why with a toast. The ready pulse fires once, when the operator completes the step, never at page load and never on steps that only ask to continue.
-- **Actions**: 51 named actions, each one request to `api().tickets.act(ticketNumber, name, args)`. `ACTIONS` at the bottom of `api/ticketActions.ts` is the endpoint specification; the typed wrappers are at the bottom of `data/ticketTrackers.ts`.
+- **Actions**: 52 named actions, each one request to `api().tickets.act(ticketNumber, name, args)`. `ACTIONS` at the bottom of `api/ticketActions.ts` is the endpoint specification; the typed wrappers are at the bottom of `data/ticketTrackers.ts`.
 
 ### 6.4 Master Data
 Details and the checklist server rules are in TEMPLATES_SPEC section 8. Only Offboarding Checklists is live; Courier Providers, Policy Library and Asset Team Contact Block are placeholder cards, and couriers, HRIS and Asset Team users are read-only fixtures.
@@ -399,7 +417,7 @@ integration effort.
 | `vue3-colorpicker` | ^2.3.0 | Background/theme color pickers | Third-party Vue 3 component, listed in `vite.optimizeDeps` for dev-server perf (see `nuxt.config.ts` comment) — if it's ever replaced, remove it from that list too. |
 | `vue-draggable-plus` | ^0.6.1 | Drag reordering of checklist items in the ticket workspace | Wraps SortableJS. The move up and move down menu is the keyboard path; keep it when porting. |
 | `microdiff` | ^1.6.0 | Structural diffing for version history | Small, dependency-free diff lib — used to compute what changed between saved form/template versions. |
-| `@playwright/test` (dev) | ^1.63.0 | E2E tests | `tests/e2e/` — run before/after any structural change to the forms builder; one existing test (`form-duplicate...`) specifically guards duplicate-form content-carryover behavior. |
+| `@playwright/test` (dev) | ^1.63.0 | E2E tests | `tests/e2e/` — run before/after any structural change to the forms builder; `form-duplicate` is meant to guard duplicate-form content carryover but is one of the stale specs (see section 15) until it is pointed at a seeded form. Only `ticket-smoke` and `ticket-send-and-time` pass today. |
 | `@iconify-json/lucide` | ^1.2.127 | Icon set | The only icon set actually used (`i-lucide-*` classes throughout). `@iconify-json/simple-icons` was removed — it was never referenced. |
 
 **Overall integration feasibility:** the front end is a complete, internally
@@ -481,6 +499,8 @@ This is an **internal, desktop-first AMS tool**. Page-level horizontal scroll wa
 | Create ticket Dates cards (endorsement pair, Last Working Day and Separation Date) | One column, then two columns | switches at 640px (`sm`) |
 | Page header, filters, tables | No page-level horizontal scroll at 375, 768 or 1302 | all |
 | Ticket workspace | No page-level horizontal scroll at 375, 768 or 1302 | all |
+| Ticket workspace right rail | Stacked full width below 1024px; 388px wide, collapsible and sticky from 1024px | `lg` |
+| Ticket list | A fixed page header (about 500 of 812px on a phone, see section 15); the table scrolls sideways inside its card with four sticky columns; filters stack below 640px; the paging footer stacks below 768px | `sm`, `md` |
 | **Known gap** Email template editor header | Overflows the page by about 166px at 375px (the action buttons do not wrap) | below ~640px |
 | Forms and email editors (multi-pane toolbars, side-by-side preview) | Desktop-oriented; not designed for phones | scope separately if needed |
 
@@ -626,7 +646,7 @@ gaps and the recommended contract are in INTEGRATIONS.md section 1.
 - [ ] **[Ticket Tracker]** Make `confirmAssets` carry `checked` and `remarks` per asset; add file upload for evidence and the quotation. (Sends now carry template, recipients and a key; the server must render, send and store, see 10.4.)
 - [ ] **[Ticket Tracker]** Fix the stage card hiding while a shipment is delayed (Known Trap 12)
 - [ ] **[Ticket Tracker]** Decide: `changeReasonAndMode` should update `gateCount`, the checklist and the stage mapping (TICKET_WORKFLOW section 5); allocate gate pass numbers and ticket references atomically on the server
-- [ ] **[Ticket Tracker]** Send real email and SMS from the server (the prototype records "sent" as a history line; SMS is copy and paste), and add a server-side placeholder check (the guard is client-only)
+- [ ] **[Ticket Tracker]** Send real email and SMS from the server (in the prototype every send goes through `api().emails.send`, which renders the message, stores a `SentEmail` snapshot and writes the history line, and no mail leaves the browser; SMS is copy and paste), and keep the server-side placeholder check the mock already runs
 - [ ] **[Templates]** Add a usage check (or a refusal) to delete and retire, a lock or warning when editing an attached or used form, and decide the single source of truth for which form a send attaches (TEMPLATES_SPEC section 7)
 - [ ] **[Templates]** Define the form submission model (field id to value, files, signature), the recipient-facing form URL and token, and replace the `ams:formSubmissions:v1` and `ams:formPreviewValues:*` browser handoffs
 - [ ] **[Templates]** Let the server own timestamps, authors and version ids for templates and forms; consider version-append endpoints instead of whole-record `PUT`
@@ -652,11 +672,35 @@ and key decisions are in that document.
 
 ## 12. Simulator scaffolding
 
+Scenario now has a **High volume** option (about 35 tickets, for paging) next to Standard data and First-timer. The flask menu also holds Push Simulated Reply, Notification types, Morning digest, Run Alert Check, Act as, Allow sending with unresolved placeholders, Fail the next email send, Show the prototype controls bar and Clear All Tickets. The end user guide (`AMS Retrieval User Guide.html`) explains each one.
+
 The strip at the top of the app (State, Viewing as, Scenario, Situation), the flask popover in the navbar ("Simulate an employee record update"), the persona switch and the "Clear all tickets" action are **verification scaffolding, not production features**. Use them to reach every state, role and scenario, then leave them out of production.
 
-Demo-only code that goes with them: `simulateHrisLwdUpdate`, `simulateBranchReply`, `pushDemoNotification`, `pushDemoNotificationSet`, `clearAllTickets`, `repairRestoredTicket`, and `utils/ticketStorage.ts` (the mock's ticket database). The `ams:demo:*` storage keys belong to the same group.
+Demo-only code that goes with them: `simulateHrisLwdUpdate`, `simulateBranchReply`, `pushDemoNotification`, `pushDemoNotificationSet`, `clearAllTickets`, `repairRestoredTicket`, and `utils/ticketStorage.ts` (the mock's ticket database), `components/shared/SimulatorBar.vue`, `utils/demoSettings.ts` (`simState`, `simScenario`, `simSituation`, `allowUnresolvedSends`, `failNextSend`), the flask popover in `components/email/TopNavbar.vue`, the High volume builder (`buildHighVolumeRows`, the `demo-hv-*` rows) in `ticket-tracker/index.vue`, and the `failNextSend` and `allowUnresolvedSends` branches in `api/mock.ts`. The `ams:demo:*` storage keys belong to the same group.
 
 ## 13. Verification status
+
+### 13.1 Final pass, 27 October 2026
+
+Run on `retrieval-ui-polish`, then on the two pull-request branches (`retrieval-sync`, `templates-sync`) that were merged into `main`.
+
+| Check | Result |
+|---|---|
+| Type check (`npx vue-tsc --noEmit -p .nuxt/tsconfig.app.json`) | 0 errors on `retrieval-ui-polish`, `retrieval-sync` and `templates-sync`, each run on its own |
+| Simplify | Four review angles (reuse, simplification, efficiency, altitude) on the final commits. Applied: one shared `downloadEmlFile` (the template editor now uses it too), `useCopyFlash` instead of two hand written copy timers, a shared `flashElement`, an `employeeIdNumber` helper, and the old Auto page size code removed. Skipped, listed in section 15 |
+| Code review (high) | 9 findings. Fixed: the closure no longer lists a skipped IT notice as outstanding, the list page stays in range when rows shrink, a misplaced doc comment. The other six are in section 15 |
+| Security (by hand; the packaged skill cannot read `origin/HEAD`) | The only new `v-html` lines add a `ref` to bindings that already existed (the preview text is escaped by `highlightForTicket`). The diff adds no storage keys, no `console.log` and no `any`. The new links are an internal URL helper and the EML file download. The closure email escapes the name and address |
+| Merge safety | One new global plugin (`closeMenusOnScroll.client.ts`) and a global focus ring rule in `main.css`; both are in section 15 and 14. No generic global class names |
+| Tests (Playwright, on `retrieval-sync`) | `ticket-smoke` and `ticket-send-and-time` pass, 5 of 5: create a ticket and keep it across a reload, then cancel with a confirm; a refused send changes nothing and the same button retries it; stored times show correctly in Asia/Manila, UTC and America/Los_Angeles. The seven form specs fail because they open the form `aof-commitment`, which is no longer seeded (stale, the base branch has the same note) |
+| Dates in more than one time zone | The diff adds no new date code. The three zones above are covered by `ticket-send-and-time`. The date only logic still uses `parseLocalDate` and `localISO` |
+| Widths | Ticket list and workspace at 375, 768 and 1366px: no horizontal scroll, no console errors. On a phone the fixed page header takes about 500 of 812px (section 15) |
+| Accessibility | axe-core 4.10.2 (WCAG 2.0, 2.1 and 2.2, A and AA, light and dark): 0 violations on the ticket list, create view and email editor. Ticket detail: five unlabeled checkboxes and two unlabeled selects fixed; three structural items remain (section 15). The `wcag-accessibility-audit` skill was not run as a separate audit |
+| Performance (production build, Chrome DevTools trace) | Ticket list desktop LCP about 1.0 s, CLS 0. Ticket detail on throttled mobile about 3.55 s, over budget. Not re-measured on the merged `main` |
+| Production build | The static demo (`AMS_STATIC_DEMO=1 nuxt generate`) built from `main` (`9d906ed`), deployed and opened: ticket list, a ticket and Templates load with no console errors. `nuxt build` (server) was not re-run on `main` after the merge |
+| Documentation cross-check | Every document in this package was compared claim by claim with the code on 27 October 2026 by read-only passes (TICKET_WORKFLOW, TEMPLATES_SPEC, DEV_HANDOFF, DATA_CONTRACT, INTEGRATIONS, BACKEND_SWAP, QA_HANDOFF, PRD, IMPLEMENTATION_PHASES, README, HANDOFF_TICKET, HANDOFF_WALKTHROUGH, WCAG_DARK_AUDIT, DATA_EXPORT_GUIDE, TOKEN_DATA_MAPPING and the user guide), and the contradictions were corrected. This was a read of the code, not a browser run. Not fixed: three smaller DATA_CONTRACT items (the example ticket JSON is abbreviated, audit_trail_id has no column, the email template resource shape), and most of the WCAG_DARK_AUDIT per finding statuses |
+| Not exercised in a browser | The closure flow (Close Ticket defaults, Copy and Download EML, Reopen), the A5 "Show Custodian card" click, "Mark as sent outside the system" on notice, overdue and charging, and "Continue without notifying IT". A scripted click on Close Ticket opened no dialog; that was not investigated |
+
+### 13.2 Earlier pass (as of `fbf0eb3` on `checkpoint`)
 
 What was checked, and what was not, as of the last commit (`fbf0eb3` on `checkpoint`):
 
@@ -671,14 +715,14 @@ What was checked, and what was not, as of the last commit (`fbf0eb3` on `checkpo
 | Dark mode, contrast (own scanner, see below) | Every text node on 13 routes at 375, 768 and 1302 px in dark, plus 19 opened menus, popovers, drawers and modals at 1302 px and a walk of all six stages of tickets 422 to 426 at 1302 px: no failure except disabled controls (exempt) and the create view's dimmed sections (open item) |
 | Dark mode, light regression | Computed color, background, border, outline, shadow and opacity of every element on 14 routes at 1302 px, light, compared with `HEAD` (2f0791e) served from a separate worktree: 0 differences. The two inserted elements (theme toggle, second logo) shift the order by one, and one adjacent pair of spans was matched out of order by the comparison and ignored |
 | Dark mode, focus ring | 40 keyboard tab stops on each of 6 pages in dark: every ring at least 3:1 after the fix (before it was 1.6:1) |
-| Dark mode, production build | `nuxt build` of a copy of the tree (before the two selector fixes and the editor change) finished with exit 0. Two later builds of the final tree bundled the client and server and prerendered, then stalled in the last Nitro packaging step on this machine and were stopped, so **the final tree has no completed production build**. Re-run `npx nuxt build` before merging |
+| Dark mode, production build (superseded by 13.1 for the final tree) | `nuxt build` of a copy of the tree (before the two selector fixes and the editor change) finished with exit 0. Two later builds of the final tree bundled the client and server and prerendered, then stalled in the last Nitro packaging step on this machine and were stopped, so **the final tree has no completed production build**. Re-run `npx nuxt build` before merging |
 | Dark mode, tests | `ticket-smoke` and `ticket-send-and-time` pass in light and with `colorScheme: dark` (5 of 5 each) |
 | Accessibility | Lighthouse on the production build (ticket list, desktop): 88. Three real failures fixed (invalid `aria-expanded` on a wrapper div, three unnamed filter selects, one low-contrast email text) and re-checked in the DOM, not re-scored. The full WCAG 2.2 audit skill was **not** run; screen readers and the editors were **not** tested |
 | Performance (production build, Chrome DevTools trace) | Ticket list desktop: LCP ~1.0 s, CLS 0.00. Ticket detail on throttled mobile (4x CPU, Slow 4G): LCP ~3.55 s (over the 2.5 s budget), CLS 0.00 — see section 15 for the cause and the fix. Client JS over the 300 KB budget on the detail route (framework vendor ~421 KB gz plus the page's own ~207 KB gz) |
 | Smoke test (`tests/e2e/ticket-smoke.spec.ts`) | Passes: create, reload, Take over disabled, Cancel retrieval dismissed and confirmed |
 | Older Playwright specs | 7 fail. They open the form `aof-commitment`, which no longer exists at `HEAD` or in the commit before this work (stale, not a regression) |
 | Widths | No page-level horizontal scroll at 375, 768 and 1302 px, except the email editor header at 375 (about 166px) |
-| Dates across timezones | **Not run.** Node on Windows ignores `TZ`; the date code uses `parseLocalDate` and `localISO` |
+| Dates across timezones | Superseded by 13.1: `ticket-send-and-time` covers Asia/Manila, UTC and America/Los_Angeles. The date code uses `parseLocalDate` and `localISO` |
 | Companion specs (TICKET_WORKFLOW.md, TEMPLATES_SPEC.md) | Written from a read of the code by four parallel read-only passes (workspace first half, workspace second half, ticket rules and actions, templates module), then spot-checked against the source for the Shipment delayed card, the `Inspection routed` lookup, the `Deduction initiated` string, `colorMode` and FormKit usage. **Not run in a browser.** Statements marked UNVERIFIED in those files are inferred. About 12 workspace script ranges (template and placeholder helpers, rail scroll code) were not read |
 | Not exercised in a browser | gate release, target date rebaseline, address override, shipment details, in transit, branch request and reply, change reason and mode (success), take over (success), quotation, referred to payroll, the email editor's Save and version flow |
 
@@ -687,7 +731,9 @@ What was checked, and what was not, as of the last commit (`fbf0eb3` on `checkpo
 - **Console 404 for `/_payload.json`** on the node production build (Lighthouse "errors in console"). The static demo is unaffected; decide payload extraction for your deploy target.
 - **Hydration mismatch warnings** (breadcrumb children, an `is-overflowing` class from the scroll-fade plugin) exist at `HEAD` too and are cosmetic.
 - **Module-level state**, all mock or demo: `ticketStorage.ts` (`lastKnown`, `mirrorEnabled`, `saveTimer`), `api/index.ts` (`client`), `api/mock.ts` (`checklistCache`), `ticketTrackers.ts` (`demoCursor`).
-- **`any` casts** in `tiptapExtensions.ts` (Tiptap command typings) and `components/shared/Select.vue`.
+- **`any` casts** in `tiptapExtensions.ts` (Tiptap command typings), `components/shared/Select.vue`, `ticket-tracker/create.vue` (`employeeQuery`) and `ticket-tracker/[id].vue` (the checklist input ref and the drag event).
+- **Global behavior:** `plugins/closeMenusOnScroll.client.ts` (a document level scroll listener and a body MutationObserver, module level state) and the `:root ... :focus-visible` rule in `assets/css/main.css` (both themes). The demo refs in `utils/demoSettings.ts` are module level too.
+- **Dependencies used but not declared:** `@tiptap/pm` (imported in `BodyField.vue`, `tiptapExtensions.ts` and `EmailImageNodeView.vue`) and `@internationalized/date` (`DatePicker.vue`) arrive through other packages. Add them to `package.json` when porting.
 - **Seed tickets renumber** after a created ticket is reloaded in the mock (numbers come from the database in production).
 - **Placeholder and empty-state color is below AA (3.5:1) in the light theme by decision.** Dark passes AA (5.9:1).
 
@@ -705,19 +751,31 @@ Real findings that are larger than a cleanup, with the cost of leaving them:
 | Create view Summary values are semibold, against the "values are regular" rule | Visual inconsistency |
 | Per-instance selected-option styles now duplicate the global config | Two places to change one color |
 | Email editor header overflows at 375px; touch targets below 44px | Not phone-ready |
-| Seven stale Playwright specs (form `aof-commitment`) | They fail for everyone until rewritten |
+| Seven stale tests in two specs, `form-document-nested` and `form-duplicate` (form `aof-commitment`) | They fail for everyone until rewritten |
 | Email Subject edit input is 14px while its read view is 16px | Mode changes the Subject's size |
-| **Ticket-detail LCP on throttled mobile: ~3.55 s** (4x CPU, Slow 4G, production build; desktop is fine at ~1.0 s, CLS 0 everywhere). Cause is the client-only render of the 6,500-line `pages/ticket-tracker/[id].vue` — its `<script setup>` (≈100 computeds/refs/watchers) runs on mount before first paint; not Tiptap (that route does not load it) and not network. Already applied: the drag library and the email-preview modal are lazy-loaded out of the initial chunk. **Real fix (a dedicated refactor):** lift the page's state into a `useTicketWorkspace(id)` composable, then extract the right rail, the stage blocks and the Activity Log into components rendered with `hydrate-on-visible` / `hydrate-on-idle` so their setup+render leave the critical path. Do it section by section with re-testing — the rail alone touches ~40 refs/handlers and the DOM-measurement/collapse logic is fragile to move. Note: the dashboard's Unovis chart chunk (~928 KB raw) is prefetched on every page via the dashboard nav link — it is not executed on the ticket page but wastes transfer; it disappears when the dashboard is excluded. The skeleton→content swap defeats the trace tool's LCP detection, so measure with a manual mark or field RUM | Slow first load on a throttled phone; fine on desktop |
+| **Ticket-detail LCP on throttled mobile: ~3.55 s** (4x CPU, Slow 4G, production build; desktop is fine at ~1.0 s, CLS 0 everywhere). Cause is the client-only render of the 7,200-line `pages/ticket-tracker/[id].vue` — its `<script setup>` (≈100 computeds/refs/watchers) runs on mount before first paint; not Tiptap (that route does not load it) and not network. Already applied: the drag library and the email-preview modal are lazy-loaded out of the initial chunk. **Real fix (a dedicated refactor):** lift the page's state into a `useTicketWorkspace(id)` composable, then extract the right rail, the stage blocks and the Activity Log into components rendered with `hydrate-on-visible` / `hydrate-on-idle` so their setup+render leave the critical path. Do it section by section with re-testing — the rail alone touches ~40 refs/handlers and the DOM-measurement/collapse logic is fragile to move. The skeleton→content swap defeats the trace tool's LCP detection, so measure with a manual mark or field RUM | Slow first load on a throttled phone; fine on desktop |
 | Real email delivery behind the send operation, failed-attempt storage and the recipient form link (INTEGRATIONS.md section 1). The front end and mock side are built | The ticket flow shows "sent" only from the mock until the dev builds the server |
 | The 08:00 digest, `scanTicketAlerts` and `createdAt` still use the browser's local day; no per-user time zone is stored (INTEGRATIONS.md section 4). Stored instants are UTC and display in the viewer's zone now | A server job needs a time zone per Asset Team member |
 | Serial numbers and asset tags are generated in the mock; the real ones are in the AMS asset records (INTEGRATIONS.md section 3.3) | Printed documents would show invented ids |
 | The mock embeds one full employee record in every ticket, mixing AMS data and R24 data; the decision is AMS first, R24 only for what the AMS lacks, not stored (INTEGRATIONS.md section 3) | The data layer must be split into two sources |
-| Light theme focus ring is Nuxt UI's primary at 25% opacity (about 1.4:1 on white). Dark was fixed in `main.css`; delete the `.dark` prefix on the `:focus-visible` rule to fix light too | Keyboard focus is hard to see in light (WCAG 2.4.7, 1.4.11) |
 | Light theme contrast failures found by the dark audit's scanner: avatar initials `#386be6` on `#ebf0fc` (4.2:1), white on the red `Send Overdue Reminder` button (3.8:1), `text-placeholder` 3.5:1 by decision | Known light failures, untouched |
 | Create view dims every section with `opacity` (0.3 to 0.5) until a team member is picked, and the primary button is dimmed without `aria-disabled` | Headings and labels in the dimmed sections fail 4.5:1 in both themes, and a screen reader is not told the button is unavailable |
 | A text color a user picks inside a form or email document is inline and does not follow the theme | Dark navy text chosen in light reads poorly on the dark page |
 | Dark mode: not checked | Screen reader testing, forced colors mode, Lighthouse (the DevTools browser was in use by another session), the toast and the Close Ticket, Rows per page, Confirm Evidence Complete and Background popovers (could not be opened by the script), the walk of ticket stages at 375 and 768 px, and a second human look at every screen |
 | Stage card hidden while a shipment is delayed (Known Trap 12) | A delayed remote ticket cannot be advanced from the page |
+| About 590 KB of mock JSON (the branch lists) is imported and re-keyed in `loadMasterData`, which the master data plugin awaits before first render on every page | Slower first paint everywhere for data one stage needs. Load the branches when the branch stage opens |
+| `plugins/closeMenusOnScroll.client.ts` sends a synthetic Escape on any page scroll while a `role=menu` or `role=listbox` exists, and watches the whole body | Covers a stacking problem (the menu painting over the sticky header) with behavior; fix the layering instead (z-index or the Nuxt UI popper content). It could close a modal if a menu role stays mounted |
+| `manual` is a flag on `emails.send` that skips the placeholder guard and the failure simulation | Two behaviors behind one boolean; a real server should have its own operation (for example `recordExternalSend`) that never mails and always sets `sentExternally` |
+| The list tiles read day counts by matching a regex on the countdown label (`daysIn`), and `summary`, `summaryTiles` and `subline` derive the same sets | A wording change to the label turns the stats into 0. Return a numeric `days` from `deadlineInfo` and derive once |
+| The High volume scenario (35 names, clones, fake ids) sits in `ticket-tracker/index.vue` and re-clones on every recompute | Fixture logic in a production page; move it to the mock layer |
+| Reviewer note plumbing is dead (`finalizeChecklist` `noteText`, `checklistReview.note`) | Code the real backend must still port for nothing |
+| The Create Ticket menu order changed (Onboarding before Replacement) | Confirm it was intended |
+| On a phone the fixed page header of the ticket list takes about 500 of 812px | Little room for the list. Let the whole page scroll below the `md` width |
+| Courier branches are a one time snapshot (JRS 391 from the JRS feed, LBC 1,399 from LBC's store locator, used once with permission). The LBC data has no pickup flags and the JRS flags are all false; the nearest suggestion matches city text, not distance | Needs a real branch feed or upload |
+| Structural accessibility items on ticket detail: nested interactive rail headers and asset rows, 16px checkboxes, `#386be6` small text at 4.16:1 | Known WCAG 2.2 failures, untouched |
+| "Notify IT" records a notice only. No message reaches IT | Wire `notifyItLock` to whatever IT uses (email or a ticket queue) |
+| Not exercised in a browser at handoff: the closure flow (Close Ticket defaults, Copy and Download EML, Reopen), the A5 "Show Custodian card" click, "Mark as sent outside the system" on notice, overdue and charging, and "Continue without notifying IT". A scripted click on Close Ticket opened no dialog and was not investigated. The server `nuxt build` and the full `wcag-accessibility-audit` were also not run on merged `main` | A bug in these paths would first show in QA. QA cases 68 to 76 cover them |
+| Shared files on `main` carry both modules (the api layer, ticket data and the navbar are needed by the Templates editors too) | Reviewing the Templates pull request shows retrieval files it needs to compile |
 | Retired template banner says it can't be edited, but editing is not blocked | The copy misleads authors |
 | Form version View modal renders only legacy sections | No content preview of a past form version |
 | `changeReasonAndMode` leaves `gateCount`, the checklist and the stage index unchanged | A path change can land on the wrong stage or keep the wrong gate count |

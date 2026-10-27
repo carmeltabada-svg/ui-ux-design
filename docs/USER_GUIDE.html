@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMS Retrieval User Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+<style>
+/* ───── Color tokens ───── */
+:root {
+  --bg: #F8F9FC;
+  --fg: #1a1d23;
+  --fg-secondary: #4b5563;
+  --muted: #6b7280;
+  --accent: #386BE6;
+  --accent-hover: #2c5abf;
+  --accent-soft: #EBF0FD;
+  --accent-softer: #F4F7FE;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --border: #E5E7EB;
+  --border-light: #F3F4F6;
+  --green: #059669;
+  --green-soft: #ECFDF5;
+  --green-border: #A7F3D0;
+  --orange: #D97706;
+  --orange-soft: #FFFBEB;
+  --orange-border: #FDE68A;
+  --red: #DC2626;
+  --red-soft: #FEF2F2;
+  --red-border: #FECACA;
+  --purple: #7C3AED;
+  --purple-soft: #F5F3FF;
+  --teal: #0D9488;
+  --teal-soft: #F0FDFA;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --radius: 10px;
+  --radius-lg: 14px;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --sidebar-w: 260px;
+  --header-h: 64px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1117;
+    --fg: #e5e7eb;
+    --fg-secondary: #9ca3af;
+    --muted: #9ca3af;
+    --accent: #6B8EF0;
+    --accent-hover: #8BA5F5;
+    --accent-soft: #1e2a4a;
+    --accent-softer: #151d35;
+    --surface: #1a1d27;
+    --surface-raised: #22262f;
+    --border: #2d3140;
+    --border-light: #232733;
+    --green: #34d399;
+    --green-soft: #0a2e1f;
+    --green-border: #065f46;
+    --orange: #fbbf24;
+    --orange-soft: #2a1f0a;
+    --orange-border: #92400e;
+    --red: #f87171;
+    --red-soft: #2a0a0a;
+    --red-border: #991b1b;
+    --purple: #a78bfa;
+    --purple-soft: #1a1033;
+    --teal: #2dd4bf;
+    --teal-soft: #0a2e2a;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1117;
+  --fg: #e5e7eb;
+  --fg-secondary: #9ca3af;
+  --muted: #9ca3af;
+  --accent: #6B8EF0;
+  --accent-hover: #8BA5F5;
+  --accent-soft: #1e2a4a;
+  --accent-softer: #151d35;
+  --surface: #1a1d27;
+  --surface-raised: #22262f;
+  --border: #2d3140;
+  --border-light: #232733;
+  --green: #34d399;
+  --green-soft: #0a2e1f;
+  --green-border: #065f46;
+  --orange: #fbbf24;
+  --orange-soft: #2a1f0a;
+  --orange-border: #92400e;
+  --red: #f87171;
+  --red-soft: #2a0a0a;
+  --red-border: #991b1b;
+  --purple: #a78bfa;
+  --purple-soft: #1a1033;
+  --teal: #2dd4bf;
+  --teal-soft: #0a2e2a;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+
+/* ───── Reset & base ───── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  line-height: 1.65;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ───── Skip link ───── */
+.skip-link {
+  position: absolute; top: -100px; left: 16px;
+  background: var(--accent); color: #fff; padding: 8px 16px;
+  border-radius: 0 0 8px 8px; font-weight: 600; z-index: 9999;
+  text-decoration: none; font-size: 14px;
+}
+.skip-link:focus { top: 0; }
+
+/* ───── Progress bar ───── */
+.progress-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--border); z-index: 1001;
+}
+.progress-fill {
+  height: 100%; background: var(--accent);
+  transition: width 0.4s ease; width: 0%;
+}
+
+/* ───── Header ───── */
+.site-header {
+  position: fixed; top: 3px; left: 0; right: 0; height: var(--header-h);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  z-index: 1000; display: flex; align-items: center;
+  padding: 0 24px; gap: 16px;
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+.header-logo {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
+.header-logo svg { width: 20px; height: 20px; }
+.header-title { font-weight: 700; font-size: 16px; letter-spacing: -0.02em; white-space: nowrap; }
+.header-subtitle { font-size: 12px; color: var(--muted); display: none; }
+@media (min-width: 640px) { .header-subtitle { display: block; } }
+.header-spacer { flex: 1; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Theme toggle */
+.theme-toggle {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; color: var(--muted);
+  transition: all 0.2s;
+}
+.theme-toggle:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.theme-toggle svg { width: 18px; height: 18px; }
+
+/* Mobile menu button */
+.menu-toggle {
+  display: none; width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; align-items: center; justify-content: center;
+  color: var(--muted);
+}
+@media (max-width: 899px) { .menu-toggle { display: flex; } }
+.menu-toggle svg { width: 18px; height: 18px; }
+
+/* ───── Sidebar / TOC ───── */
+.sidebar {
+  position: fixed; top: calc(var(--header-h) + 3px); left: 0;
+  width: var(--sidebar-w); height: calc(100vh - var(--header-h) - 3px);
+  overflow-y: auto; padding: 20px 16px 40px;
+  background: var(--surface); border-right: 1px solid var(--border);
+  z-index: 999; transition: transform 0.3s ease;
+}
+@media (max-width: 899px) {
+  .sidebar { transform: translateX(-100%); box-shadow: var(--shadow-lg); }
+  .sidebar.open { transform: translateX(0); }
+}
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  z-index: 998;
+}
+@media (max-width: 899px) {
+  .sidebar-overlay.open { display: block; }
+}
+
+.toc-section-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted); padding: 16px 12px 6px;
+}
+.toc-section-label:first-child { padding-top: 0; }
+.toc-link {
+  display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+  border-radius: 7px; color: var(--fg-secondary); text-decoration: none;
+  font-size: 13px; font-weight: 500; transition: all 0.15s;
+  cursor: pointer; line-height: 1.4;
+}
+.toc-link:hover { background: var(--accent-softer); color: var(--accent); }
+.toc-link.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.toc-link .toc-icon {
+  width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.toc-link .toc-check {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--border); margin-left: auto; transition: background 0.3s;
+}
+.toc-link.visited .toc-check { background: var(--green); }
+
+/* Role tabs in sidebar */
+.role-tabs {
+  display: flex; gap: 4px; padding: 12px 12px 4px; flex-wrap: wrap;
+}
+.role-tab {
+  font-size: 11px; font-weight: 600; padding: 4px 10px;
+  border-radius: 20px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.role-tab:hover { border-color: var(--accent); color: var(--accent); }
+.role-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ───── Main content ───── */
+.main-content {
+  margin-left: var(--sidebar-w); padding: 24px 32px 80px;
+  max-width: calc(var(--sidebar-w) + 800px);
+  min-height: 100vh;
+  padding-top: calc(var(--header-h) + 28px);
+}
+@media (max-width: 899px) {
+  .main-content { margin-left: 0; padding: 16px 16px 80px; padding-top: calc(var(--header-h) + 20px); }
+}
+
+/* ───── Section cards ───── */
+.section {
+  margin-bottom: 48px;
+  scroll-margin-top: calc(var(--header-h) + 20px);
+}
+.section-header {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-bottom: 20px;
+}
+.section-icon {
+  width: 44px; height: 44px; border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 20px;
+}
+.section-icon.blue { background: var(--accent-soft); color: var(--accent); }
+.section-icon.green { background: var(--green-soft); color: var(--green); }
+.section-icon.orange { background: var(--orange-soft); color: var(--orange); }
+.section-icon.purple { background: var(--purple-soft); color: var(--purple); }
+.section-icon.teal { background: var(--teal-soft); color: var(--teal); }
+.section-icon.red { background: var(--red-soft); color: var(--red); }
+
+.section-title {
+  font-size: 22px; font-weight: 800; letter-spacing: -0.03em;
+  line-height: 1.2; margin-bottom: 2px;
+}
+.section-why {
+  font-size: 14px; color: var(--muted); font-weight: 400; line-height: 1.5;
+}
+
+/* ───── Cards ───── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px 24px;
+  margin: 16px 0; box-shadow: var(--shadow-sm);
+}
+.card-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.card-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 3px 8px; border-radius: 5px;
+}
+.badge-blue { background: var(--accent-soft); color: var(--accent); }
+.badge-green { background: var(--green-soft); color: var(--green); }
+.badge-orange { background: var(--orange-soft); color: var(--orange); }
+.badge-purple { background: var(--purple-soft); color: var(--purple); }
+.badge-teal { background: var(--teal-soft); color: var(--teal); }
+
+.card-title { font-weight: 700; font-size: 15px; }
+p { margin: 8px 0; font-size: 15px; line-height: 1.65; color: var(--fg-secondary); }
+strong { color: var(--fg); font-weight: 600; }
+
+/* ───── Callout boxes ───── */
+.callout {
+  border-radius: var(--radius); padding: 14px 18px; margin: 14px 0;
+  font-size: 14px; line-height: 1.6; display: flex; gap: 12px;
+  align-items: flex-start;
+}
+.callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.callout p { margin: 0; font-size: 14px; }
+.callout-tip { background: var(--green-soft); border: 1px solid var(--green-border); color: var(--fg); }
+.callout-warn { background: var(--orange-soft); border: 1px solid var(--orange-border); color: var(--fg); }
+.callout-danger { background: var(--red-soft); border: 1px solid var(--red-border); color: var(--fg); }
+.callout-info { background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); color: var(--fg); }
+.callout-aha { background: var(--purple-soft); border: 1px solid color-mix(in srgb, var(--purple) 25%, transparent); color: var(--fg); }
+
+/* ───── Accordion ───── */
+.accordion { margin: 14px 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.accordion + .accordion { margin-top: -1px; border-top: 1px solid var(--border); border-radius: 0; }
+.accordion:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+.accordion:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+.accordion:only-child { border-radius: var(--radius); }
+.accordion-group { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 14px 0; }
+.accordion-group .accordion { border-radius: 0; margin: 0; border-left: 0; border-right: 0; border-bottom: 0; }
+.accordion-group .accordion:first-child { border-top: 0; }
+
+.accordion-trigger {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; background: var(--surface); border: none;
+  cursor: pointer; font-family: var(--font); font-size: 14px;
+  font-weight: 600; color: var(--fg); text-align: left;
+  transition: background 0.15s;
+  min-height: 48px;
+}
+.accordion-trigger:hover { background: var(--accent-softer); }
+.accordion-trigger .chevron {
+  width: 18px; height: 18px; flex-shrink: 0; color: var(--muted);
+  transition: transform 0.25s ease; margin-left: auto;
+}
+.accordion[open] .accordion-trigger .chevron { transform: rotate(180deg); }
+.accordion-body {
+  padding: 0 18px 18px; font-size: 14px; line-height: 1.65;
+  color: var(--fg-secondary);
+}
+.accordion-body p { font-size: 14px; }
+.accordion-body ul, .accordion-body ol { padding-left: 20px; margin: 8px 0; }
+.accordion-body li { margin-bottom: 6px; font-size: 14px; }
+
+/* ───── Steps ───── */
+.steps { counter-reset: step; margin: 16px 0; padding: 0; list-style: none; }
+.step-item {
+  display: flex; gap: 16px; padding: 14px 0; position: relative;
+}
+.step-item + .step-item { border-top: 1px solid var(--border-light); }
+.step-number {
+  counter-increment: step;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent);
+  font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.step-number::before { content: counter(step); }
+.step-content { flex: 1; padding-top: 4px; }
+.step-content strong { display: block; margin-bottom: 2px; font-size: 14px; }
+.step-content p { margin: 0; font-size: 13px; }
+
+/* ───── Checklist ───── */
+.checklist { margin: 14px 0; padding: 0; list-style: none; }
+.checklist-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-radius: 8px;
+  transition: background 0.15s; cursor: pointer;
+  min-height: 44px;
+}
+.checklist-item:hover { background: var(--accent-softer); }
+.checklist-item.checked { opacity: 0.6; }
+.checklist-item.checked .checklist-label { text-decoration: line-through; }
+.check-box {
+  width: 20px; height: 20px; border-radius: 5px;
+  border: 2px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; margin-top: 1px;
+}
+.checklist-item.checked .check-box {
+  background: var(--green); border-color: var(--green);
+}
+.check-box svg { width: 12px; height: 12px; color: #fff; opacity: 0; transition: opacity 0.2s; }
+.checklist-item.checked .check-box svg { opacity: 1; }
+.checklist-label { font-size: 14px; padding-top: 1px; color: var(--fg-secondary); }
+
+/* ───── Status indicators ───── */
+.status-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px; margin: 14px 0;
+}
+.status-pill {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 13px;
+}
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ───── Token badge ───── */
+.token { font-family: 'Inter', monospace; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.token-green { background: var(--green-soft); color: var(--green); border: 1px solid var(--green-border); }
+.token-yellow { background: var(--orange-soft); color: var(--orange); border: 1px solid var(--orange-border); }
+.token-red { background: var(--red-soft); color: var(--red); border: 1px solid var(--red-border); }
+
+/* ───── Template group chips ───── */
+.group-chips {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0;
+}
+.group-chip {
+  padding: 8px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface);
+  font-size: 13px; font-weight: 500;
+}
+.group-chip strong { font-size: 18px; display: block; margin-bottom: 2px; color: var(--accent); }
+
+/* ───── Lifecycle rail ───── */
+.lifecycle {
+  display: flex; gap: 0; margin: 20px 0; overflow-x: auto;
+  padding-bottom: 8px;
+}
+.lifecycle-step {
+  flex: 1; min-width: 100px; text-align: center; position: relative;
+  padding: 12px 8px 8px;
+}
+.lifecycle-step::before {
+  content: ''; position: absolute; top: 24px; left: 0; right: 0;
+  height: 3px; background: var(--border);
+}
+.lifecycle-step:first-child::before { left: 50%; }
+.lifecycle-step:last-child::before { right: 50%; }
+.lifecycle-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 3px solid var(--border); background: var(--surface);
+  margin: 0 auto 8px; position: relative; z-index: 1;
+  transition: all 0.3s;
+}
+.lifecycle-step.active .lifecycle-dot { border-color: var(--accent); background: var(--accent); }
+.lifecycle-step.done .lifecycle-dot { border-color: var(--green); background: var(--green); }
+.lifecycle-label { font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.3; }
+.lifecycle-step.active .lifecycle-label { color: var(--accent); }
+.lifecycle-step.done .lifecycle-label { color: var(--green); }
+
+/* ───── SVG mockups ───── */
+.mockup-container {
+  background: var(--accent-softer); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  margin: 18px 0; overflow-x: auto;
+}
+.mockup-container svg { width: 100%; height: auto; max-width: 640px; display: block; margin: 0 auto; }
+.mockup-caption {
+  text-align: center; font-size: 12px; color: var(--muted);
+  margin-top: 10px; font-style: italic;
+}
+
+/* ───── Data flow diagram ───── */
+.flow-diagram {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; flex-wrap: wrap; margin: 20px 0; padding: 20px;
+}
+.flow-box {
+  padding: 14px 20px; border-radius: var(--radius);
+  font-weight: 600; font-size: 14px; text-align: center;
+  min-width: 120px;
+}
+.flow-arrow { color: var(--muted); font-size: 20px; flex-shrink: 0; }
+
+/* ───── Role-specific content ───── */
+.role-content { display: none; }
+.role-content.active { display: block; }
+.role-all { display: block; }
+
+/* ───── Template table ───── */
+.tmpl-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+.tmpl-table th { text-align: left; padding: 10px 12px; background: var(--accent-softer); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); border-bottom: 2px solid var(--border); }
+.tmpl-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
+.tmpl-table tr:last-child td { border-bottom: none; }
+.tmpl-table .mode-badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
+.mode-onsite { background: var(--teal-soft); color: var(--teal); }
+.mode-remote { background: var(--purple-soft); color: var(--purple); }
+
+/* ───── Glossary ───── */
+.glossary-term { font-weight: 700; color: var(--accent); }
+
+/* ───── Responsive ───── */
+@media (max-width: 640px) {
+  .section-title { font-size: 18px; }
+  .section-icon { width: 36px; height: 36px; font-size: 16px; }
+  .card { padding: 16px; }
+  .lifecycle { flex-wrap: wrap; gap: 4px; }
+  .lifecycle-step { min-width: 70px; }
+  .flow-diagram { flex-direction: column; }
+  .flow-arrow { transform: rotate(90deg); }
+  .group-chips { flex-direction: column; }
+  .tmpl-table { font-size: 12px; }
+  .tmpl-table th, .tmpl-table td { padding: 8px; }
+}
+
+/* ───── Print ───── */
+@media print {
+  .sidebar, .site-header, .progress-bar, .menu-toggle, .theme-toggle, .sidebar-overlay { display: none !important; }
+  .main-content { margin-left: 0 !important; padding: 0 !important; }
+  .accordion-body { display: block !important; }
+}
+</style>
+
+<style>
+/* Links that open the live demo. */
+.demo-only { display: block; }
+.demo-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; margin-right: 8px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
+.demo-link::after { content: "97"; }
+.demo-only .demo-link { margin-top: 0; }
+.demo-link:hover { background: var(--accent); color: #fff; }
+.demo-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.header-demo { display: none; margin-top: 0; }
+@media (min-width: 640px) { .header-demo { display: inline-flex; } }
+.checklist-item[data-check] { cursor: pointer; }
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<!-- Progress bar -->
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- Header -->
+<header class="site-header">
+  <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+  </button>
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
+  </div>
+  <div>
+    <div class="header-title">AMS Retrieval User Guide</div>
+    <div class="header-subtitle">GoTeam Asset Management System</div>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-actions"><a class="demo-link header-demo" href="https://ams-retrieval-demo.netlify.app/" target="_blank" rel="noopener">Open the demo</a>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
+</header>
+
+
+<!-- Sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar" aria-label="Table of contents">
+  <div class="toc-section-label">Your role</div>
+  <div class="role-tabs">
+    <button class="role-tab active" data-role="all" onclick="switchRole('all')">Everyone</button>
+    <button class="role-tab" data-role="officer" onclick="switchRole('officer')">Asset Officer</button>
+    <button class="role-tab" data-role="supervisor" onclick="switchRole('supervisor')">Supervisor</button>
+    <button class="role-tab" data-role="stakeholder" onclick="switchRole('stakeholder')">Stakeholder</button>
+  </div>
+
+  <div class="toc-section-label">Getting started</div>
+  <a class="toc-link" href="#welcome" data-section="welcome">
+    <span class="toc-icon" style="background:var(--accent-soft);color:var(--accent)">&#x1F44B;</span>
+    Welcome
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#quickstart" data-section="quickstart">
+    <span class="toc-icon" style="background:var(--green-soft);color:var(--green)">&#x26A1;</span>
+    Your first 10 minutes
+    <span class="toc-check"></span>
+  </a>
+
+  <div class="toc-section-label">Using the demo</div>
+  <a class="toc-link" href="#controls" data-section="controls">
+    <span class="toc-icon" style="background:var(--purple-soft);color:var(--purple)">&#x1F9EA;</span>
+    The controls
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#missions" data-section="missions">
+    <span class="toc-icon" style="background:var(--orange-soft);color:var(--orange)">&#x1F3AF;</span>
+    Guided missions
+    <span class="toc-check"></span>
+  </a>
+
+  <div class="toc-section-label">Core modules</div>
+  <a class="toc-link" href="#tickets" data-section="tickets">
+    <span class="toc-icon" style="background:var(--orange-soft);color:var(--orange)">&#x1F3AB;</span>
+    Ticket Tracker
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#stages" data-section="stages">
+    <span class="toc-icon" style="background:var(--teal-soft);color:var(--teal)">&#x1F6E4;</span>
+    Stage by stage
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#templates" data-section="templates">
+    <span class="toc-icon" style="background:var(--accent-soft);color:var(--accent)">&#x2709;</span>
+    Email Templates
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#forms" data-section="forms">
+    <span class="toc-icon" style="background:var(--green-soft);color:var(--green)">&#x1F4CB;</span>
+    Retrieval Forms
+    <span class="toc-check"></span>
+  </a>
+
+  <div class="toc-section-label">Putting it together</div>
+  <a class="toc-link" href="#connection" data-section="connection">
+    <span class="toc-icon" style="background:var(--purple-soft);color:var(--purple)">&#x1F517;</span>
+    How They Connect
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#workflow" data-section="workflow">
+    <span class="toc-icon" style="background:var(--teal-soft);color:var(--teal)">&#x1F6A6;</span>
+    Typical Workflow
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#reasons" data-section="reasons">
+    <span class="toc-icon" style="background:var(--orange-soft);color:var(--orange)">&#x1F4C5;</span>
+    Reasons and deadlines
+    <span class="toc-check"></span>
+  </a>
+
+  <div class="toc-section-label">Reference</div>
+  <a class="toc-link" href="#troubleshooting" data-section="troubleshooting">
+    <span class="toc-icon" style="background:var(--red-soft);color:var(--red)">&#x1F527;</span>
+    Troubleshooting
+    <span class="toc-check"></span>
+  </a>
+  <a class="toc-link" href="#glossary" data-section="glossary">
+    <span class="toc-icon" style="background:var(--accent-soft);color:var(--accent)">&#x1F4D6;</span>
+    Glossary
+    <span class="toc-check"></span>
+  </a>
+</nav>
+
+<!-- Main content -->
+<main class="main-content" id="main">
+
+<!-- ════════════════════════════ WELCOME ════════════════════════════ -->
+<div class="section" id="welcome">
+  <div class="section-header">
+    <div class="section-icon blue">&#x1F44B;</div>
+    <div>
+      <h1 class="section-title">Welcome to the Retrieval prototype</h1>
+      <p class="section-why">Try the whole retrieval process, from creating a ticket to closing it, and break it on purpose to see how it copes.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p>This is a working prototype of how the Asset Team gets equipment back from a team member who is leaving, recalled or absent. You can do everything a real operator would do, from creating a ticket to closing it. Nothing is really sent, nobody is really emailed, and anything you change stays in your own browser.</p>
+    <div class="group-chips">
+      <div class="group-chip"><strong>20</strong>Email templates for every retrieval scenario</div>
+      <div class="group-chip"><strong>5</strong>Retrieval forms that team members sign</div>
+      <div class="group-chip"><strong>14</strong>Stages from checklist to closure</div>
+      <div class="group-chip"><strong>12</strong>Guided missions to follow</div>
+    </div>
+    <div class="callout callout-aha">
+      <span class="callout-icon">&#x1F4A1;</span>
+      <div><p><strong>The big idea:</strong> Fill in the case once when you create a ticket. Every email and form for that case uses the same values. No copy and pasting, no mismatched names, no forgotten fields.</p></div>
+    </div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Four things to know before you start</h3>
+  <div class="card">
+    <ol class="steps">
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Nothing leaves this page</strong><p>Nothing leaves this page. Emails, texts and notices to IT are recorded as if sent, so you can see what would happen.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Your work stays in your browser</strong><p>Your work is saved in this browser only. Another person opening the link sees their own copy, and clearing your browser data starts you fresh.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>You cannot break it</strong><p>You cannot break it. If a ticket gets into a state you do not like, use Clear All Tickets in the flask menu at the top of the screen and start again.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Two sets of controls</strong><p>Two sets of controls let you create situations on demand: the dark Prototype controls bar, and the flask icon in the top bar. Both are explained under Controls.</p></div></li>
+    </ol>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Where things are</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0;">
+    <div class="card" style="margin:0;"><div class="card-title">Ticket Tracker</div><p style="font-size:14px;margin-top:6px;">Every retrieval ticket. Start here. Create tickets, open them and work them stage by stage.</p><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open Ticket Tracker</a></div>
+    <div class="card" style="margin:0;"><div class="card-title">Templates</div><p style="font-size:14px;margin-top:6px;">The emails and forms the system sends at each stage. Open one to see how it is written and what placeholders it uses.</p><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/templates" target="_blank" rel="noopener">Open Templates</a></div>
+    <div class="card" style="margin:0;"><div class="card-title">Master Data</div><p style="font-size:14px;margin-top:6px;">Settings behind the tickets. Offboarding Checklists is the live one. Clicking any other card shows a message that it isn't wired up yet.</p><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/master-data" target="_blank" rel="noopener">Open Master Data</a></div>
+  </div>
+
+  <div class="role-content role-all" data-role="officer">
+    <div class="callout callout-info"><span class="callout-icon">&#x1F464;</span><div><p><strong>For Asset Officers:</strong> Do the guided missions in order. They follow a real ticket from creation to closure and cover every screen you will use every day.</p></div></div>
+  </div>
+  <div class="role-content" data-role="supervisor">
+    <div class="callout callout-info"><span class="callout-icon">&#x1F464;</span><div><p><strong>For Supervisors:</strong> Start with the Ticket Tracker, then the missions on overdue tickets, Post-Retrieval Charging and Take over, change, cancel and reopen. They show what you will review and approve.</p></div></div>
+  </div>
+  <div class="role-content" data-role="stakeholder">
+    <div class="callout callout-info"><span class="callout-icon">&#x1F464;</span><div><p><strong>For Stakeholders (P&amp;C, Payroll, Legal):</strong> Read How They Connect and the Post-Retrieval Charging stage, then try the charging mission. It shows what arrives in your inbox and what the system does not do (it never posts deductions).</p></div></div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════ QUICKSTART ════════════════════════════ -->
+
+<div class="section" id="quickstart">
+  <div class="section-header">
+    <div class="section-icon green">&#x26A1;</div>
+    <div>
+      <h2 class="section-title">Your first 10 minutes</h2>
+      <p class="section-why">Short on time? These six steps show you the most.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <ul class="checklist" data-checklist="quickstart">
+      <li class="checklist-item" data-check="qs-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the Ticket Tracker and press the Overdue chip, then press it again to clear it.</span></li>
+      <li class="checklist-item" data-check="qs-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open ticket 423 (Rafael Tan) and read the red overdue notice, the Target Date and the right hand panel.</span></li>
+      <li class="checklist-item" data-check="qs-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the flask icon in the top bar and press Push One of Every Type, then open the bell.</span></li>
+      <li class="checklist-item" data-check="qs-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Create a ticket: Create Ticket, Retrieval, choose a team member and watch the form fill itself in.</span></li>
+      <li class="checklist-item" data-check="qs-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open your new ticket and press through the first three stages: checklist, IT access lock and asset confirmation.</span></li>
+      <li class="checklist-item" data-check="qs-6" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Reach the notice stage, press the eye icon to preview the email, then Send.</span></li>
+    </ul>
+  </div>
+  <div class="demo-only" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+    <a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open the Ticket Tracker</a>
+    <a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker/423" target="_blank" rel="noopener">Open ticket 423</a>
+    
+  </div>
+  <div class="callout callout-tip"><span class="callout-icon">&#x1F4A1;</span><div><p>Your ticks are saved in this browser, so you can close this guide and come back where you left off.</p></div></div>
+</div>
+
+
+<!-- ════════════════════════════ CONTROLS ════════════════════════════ -->
+
+<div class="section" id="controls">
+  <div class="section-header">
+    <div class="section-icon purple">&#x1F9EA;</div>
+    <div>
+      <h2 class="section-title">The controls</h2>
+      <p class="section-why">Two sets of controls create situations that would take days to happen for real. They are for this demo only.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p>The system around you is a prototype, so it comes with tools to test it quickly. You will find them in two places. Try both: they are the fastest way to see how the system copes with problems.</p>
+    <div class="demo-only" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+      
+      
+    </div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">1. The Prototype controls bar</h3>
+  <p class="section-why" style="margin-bottom:8px;">The dark strip across the very top of the app. Four dropdowns change how the screens behave. If it is hidden, switch it back on in the flask menu.</p>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">State</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Shows how the screen behaves when things are slow, missing or broken.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Switch to Loading to see the loading screens, Not found to see what a missing ticket looks like, and Error to see the error page. Switch back to Populated to carry on.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Viewing as</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Chooses which Asset Team member you are acting as: D. Reyes, J. Santos or M. Bautista.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Switch person, then turn on Assigned to me in the Ticket Tracker. Open a ticket that belongs to someone else and take it over from the menu at the top right of the ticket.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Scenario</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Changes how much data there is.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> First-timer, no tickets shows the empty list a brand new user sees. High volume fills the list with about 35 tickets so you can try paging and the Show 10, 15 or 25 control.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Situation</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Creates a problem in the data on purpose.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Choose No contact number, then open a ticket and look at the Custodian card. Try to confirm contact details and see how the system guides you to fix it.</p></div></div></div>
+    </details>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">2. The flask menu (Simulation Control)</h3>
+  <p class="section-why" style="margin-bottom:8px;">The flask icon in the top bar, next to the sun and moon button and the bell. It makes things happen to your tickets, the way the outside world would.</p>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Push Simulated Update</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Pretends the employee record changed a team member's Last Working Day. Optionally pick the ticket and the new date.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Push an update, then open that ticket. A banner says the Last Working Day changed, the Target Date moves, and the IT Access Lock card says IT needs the new date.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Push Simulated Reply</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Stands in for the team member answering an email.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> First create a remote ticket assigned to you, choose Email reply at Branch confirmation and send the request. Then press Push Simulated Reply: a reply notification arrives and the ticket is flagged. None of the five sample tickets is waiting for a reply.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Notification types</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Sends any kind of notification to the bell, or one of every kind at once.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Choose Push One of Every Type, then open the bell at the top. Unread items come first, and each one opens the ticket it is about. Some items are dated a few days back, so look under Today, This week and This month.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Morning digest</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Overdue, due soon, checklist, shipment and quotation alerts are bundled into one email at 8:00 AM. Everything else is emailed at once.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> First press Push One of Every Type, so there is something waiting. Then press Send Digest Now, then View last digest to read what would have been emailed. With nothing waiting it only says "Nothing waiting".</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Run Alert Check</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The system checks for overdue and due soon tickets every minute. This runs the check now.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> After changing a ticket's dates, run it and watch the bell.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Act as</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Same idea as Viewing as: switch the Asset Team member.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Create a ticket and assign it to someone else. Switch to that person and look for the notification.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Allow sending with unresolved placeholders</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Normally the system refuses to send an email that still has a blank placeholder such as a missing date. This lets it through.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Leave it off to see the refusal and the Placeholder Check. Turn it on when you want to push a ticket through quickly.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Fail the next email send</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The mail server refuses the next send, once.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Turn it on, press Send on any notice, and read the Email not sent banner. Press the same button again to retry. Nothing was recorded by the failed attempt.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Show the prototype controls bar</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Shows or hides the dark strip at the very top of the app.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Hide it for a clean look at the real screens. Bring it back here any time.</p></div></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Clear All Tickets</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>After you confirm, deletes every ticket (the five samples too) and every notification, leaving an empty list. Reloading the page should bring the sample tickets back.</p><div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this:</strong> Use it when the system says a team member already has an open ticket, or whenever you want a clean slate.</p></div></div></div>
+    </details>
+  </div>
+<div class="callout callout-warn"><span class="callout-icon">&#x26A0;</span><div><p><strong>Stuck?</strong> If you cannot create a ticket because the team member already has one, open the flask menu and press Clear All Tickets. It asks you to confirm, then removes every ticket and notification. Reload the page to get the sample tickets back.</p></div></div>
+</div>
+
+
+<!-- ════════════════════════════ MISSIONS ════════════════════════════ -->
+
+<div class="section" id="missions">
+  <div class="section-header">
+    <div class="section-icon orange">&#x1F3AF;</div>
+    <div>
+      <h2 class="section-title">Guided missions</h2>
+      <p class="section-why">12 short tasks that walk the whole retrieval process. Do them in any order and tick the steps as you go.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p>Each mission takes about five minutes. Together they cover creating a ticket, every stage through closure, the courier route for remote tickets, charging, and what happens when things go wrong.</p>
+    <div class="callout callout-info" style="margin-top:12px;"><span class="callout-icon">&#x2705;</span><div><p>Your ticks are saved in this browser. The bar at the very top of the page shows how much of the guide you have read.</p></div></div>
+  </div>
+  <div class="accordion-group">
+
+    <details class="accordion" open>
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">1</span>Tour the Ticket Tracker<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Get your bearings before opening anything. <span style="color:var(--muted);">About 3 minutes.</span></p>
+      <ul class="checklist" data-checklist="tour-list" style="margin-top:12px;">
+        <li class="checklist-item" data-check="tour-list-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Read the headline at the top. It tells you how many tickets need attention.</span></li>
+        <li class="checklist-item" data-check="tour-list-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press the Open, Due soon and Overdue chips. Each one filters the table. Press it again to clear.</span></li>
+        <li class="checklist-item" data-check="tour-list-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Hover a chip to see the breakdown by Onsite, Remote and Mine.</span></li>
+        <li class="checklist-item" data-check="tour-list-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Type a name in the search box, then try the status chips, the Type and Deployment filters, and Assigned to me.</span></li>
+        <li class="checklist-item" data-check="tour-list-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Scroll the table sideways. The first five columns stay in place.</span></li>
+        <li class="checklist-item" data-check="tour-list-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Change Show to 10, 15 or 25 at the bottom.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">The page header never scrolls, everything under it does.</li><li style="margin:4px 0;">Overdue tickets carry a red countdown, tickets due within 3 days carry an orange one.</li><li style="margin:4px 0;">A closed ticket has no countdown.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">2</span>Read a ticket that is overdue<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>See everything a ticket shows at once, in a ticket where something is wrong. <span style="color:var(--muted);">About 5 minutes.</span></p>
+      <ul class="checklist" data-checklist="read-ticket" style="margin-top:12px;">
+        <li class="checklist-item" data-check="read-ticket-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open ticket 423 (Rafael Tan, onsite, overdue).</span></li>
+        <li class="checklist-item" data-check="read-ticket-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Look at the phases across the top (four on an onsite ticket, six on a remote one) and the step you are on.</span></li>
+        <li class="checklist-item" data-check="read-ticket-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Read the red overdue notice and the Target Date.</span></li>
+        <li class="checklist-item" data-check="read-ticket-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the Custodian, Assets Confirmed, Target Date and IT Access Lock cards in the panel on the right.</span></li>
+        <li class="checklist-item" data-check="read-ticket-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the menu with the three dots at the top right and choose Activity Log.</span></li>
+        <li class="checklist-item" data-check="read-ticket-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open Gate Passes to see the GoTeam and Building gate passes for this ticket and whether each has been issued.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">The Activity Log lists every action with who did it and when, in your own time zone.</li><li style="margin:4px 0;">The Target Date card keeps a history of every date change and the reason.</li><li style="margin:4px 0;">Gate passes and the P&amp;C approval gates are different things. Neither stops you from continuing.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker/423" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">3</span>Create a retrieval ticket<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The start of every retrieval. The form fills most of itself. <span style="color:var(--muted);">About 5 minutes.</span></p>
+      <ul class="checklist" data-checklist="create-ticket" style="margin-top:12px;">
+        <li class="checklist-item" data-check="create-ticket-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press Create Ticket, then Retrieval. (You can also use the link here.)</span></li>
+        <li class="checklist-item" data-check="create-ticket-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Choose a team member in Find team member ("Type a name or employee ID..."). The list shows employee number and email.</span></li>
+        <li class="checklist-item" data-check="create-ticket-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">See how the reason, deployment type and dates fill in by themselves.</span></li>
+        <li class="checklist-item" data-check="create-ticket-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Change the reason or the deployment type. The form asks you to explain the change in a note.</span></li>
+        <li class="checklist-item" data-check="create-ticket-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Pick Unexplained Absence and notice that the deployment type is forced to Remote.</span></li>
+        <li class="checklist-item" data-check="create-ticket-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Choose an assignee, read the Summary card, then create the ticket.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">The Summary card shows the deadline, how it was worked out, and which email will go out.</li><li style="margin:4px 0;">Paths with approval gates show a P&amp;C Acknowledgement section marked Optional.</li><li style="margin:4px 0;">A team member who already has an open ticket is blocked, with a link to that ticket.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker/create" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">4</span>Work the first three stages<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Checklist, IT notice and asset confirmation: the setup before anything is sent. <span style="color:var(--muted);">About 6 minutes.</span></p>
+      <ul class="checklist" data-checklist="setup-stages" style="margin-top:12px;">
+        <li class="checklist-item" data-check="setup-stages-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the ticket you just created.</span></li>
+        <li class="checklist-item" data-check="setup-stages-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On the checklist, tick a few tasks. Switch one between Required and Optional. Add a task of your own.</span></li>
+        <li class="checklist-item" data-check="setup-stages-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Try Complete checklist before every required task is done and read the message.</span></li>
+        <li class="checklist-item" data-check="setup-stages-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Finish the required tasks and complete the checklist. Continue.</span></li>
+        <li class="checklist-item" data-check="setup-stages-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On the IT access lock stage, press Notify IT and continue. (Or try Continue without notifying IT on another ticket.)</span></li>
+        <li class="checklist-item" data-check="setup-stages-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On asset confirmation, press Show Custodian card, tick the assets, then Confirm Assets.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Locking access is IT's job. The stage tells IT and never waits for them.</li><li style="margin:4px 0;">The Custodian card pulses to show where it is.</li><li style="margin:4px 0;">After Confirm Assets the list locks and the ticket gets a Target Date.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">5</span>Send the retrieval notice<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The main email to the team member, and every way a send can go. <span style="color:var(--muted);">About 8 minutes.</span></p>
+      <ul class="checklist" data-checklist="send-notice" style="margin-top:12px;">
+        <li class="checklist-item" data-check="send-notice-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On the notice stage, press the eye icon to preview the email. Read it, then use Copy and Download EML.</span></li>
+        <li class="checklist-item" data-check="send-notice-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press Send. If a placeholder is blank, a warning says how many to resolve. Open the Placeholder Check with the icon on the attached email or form, and press an entry to jump to where it prints.</span></li>
+        <li class="checklist-item" data-check="send-notice-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the flask menu and turn on Fail the next email send. Press Send and read the Email not sent banner. Press the same button to retry.</span></li>
+        <li class="checklist-item" data-check="send-notice-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Try Mark as sent outside the system, the button for when someone sends the email from their own Outlook.</span></li>
+        <li class="checklist-item" data-check="send-notice-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Replace or remove the attached email or form with the controls on the attachment.</span></li>
+        <li class="checklist-item" data-check="send-notice-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">After a send, a banner confirms it. Press Continue to move on.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">A refused send changes nothing, and the same button retries it.</li><li style="margin:4px 0;">Marking a send as done outside the system records it and moves on without the system sending anything.</li><li style="margin:4px 0;">Once a notice is sent, the reason and deployment type are locked.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">6</span>Log calls and send reminders<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>What happens when the team member does not respond. <span style="color:var(--muted);">About 5 minutes.</span></p>
+      <ul class="checklist" data-checklist="calls-reminders" style="margin-top:12px;">
+        <li class="checklist-item" data-check="calls-reminders-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On Call confirmation, log up to three attempts as No answer or Answered.</span></li>
+        <li class="checklist-item" data-check="calls-reminders-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Log three unanswered attempts and look for the follow up text in the right panel. Copy it and press Mark SMS sent.</span></li>
+        <li class="checklist-item" data-check="calls-reminders-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Continue to Reminders. Send or skip the midpoint reminder, then the final one.</span></li>
+        <li class="checklist-item" data-check="calls-reminders-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Notice the line "Already sent it from your own mail client?" with a quiet "Mark as sent outside the system" button, beside Send and Skip.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">An answered call marks the contact number as confirmed active.</li><li style="margin:4px 0;">There is no text message gateway. You copy the text and send it from your own phone, then confirm it here.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">7</span>Follow a remote ticket through the courier<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Remote tickets have extra stages for the courier branch and shipment. <span style="color:var(--muted);">About 8 minutes.</span></p>
+      <ul class="checklist" data-checklist="remote-path" style="margin-top:12px;">
+        <li class="checklist-item" data-check="remote-path-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open ticket 425 or 422 (remote). Compare its stage list with an onsite ticket.</span></li>
+        <li class="checklist-item" data-check="remote-path-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On branch confirmation, choose a courier and a branch. The nearest branch is suggested from the address on file. Choose how you captured it: call or email.</span></li>
+        <li class="checklist-item" data-check="remote-path-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Try the email route: send the request, then Mark Reply as Received or use the branch on file.</span></li>
+        <li class="checklist-item" data-check="remote-path-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On courier endorsement, send the email to the courier.</span></li>
+        <li class="checklist-item" data-check="remote-path-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On Confirm In Transit, add a tracking number or a link on the courier's own site and confirm.</span></li>
+        <li class="checklist-item" data-check="remote-path-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the Courier and Shipping card in the right panel and edit the tracking details.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">JRS and LBC are the available couriers, each with a long list of branches.</li><li style="margin:4px 0;">Confirming In Transit stops the overdue clock and starts a 14 day delay clock.</li><li style="margin:4px 0;">Remote tickets get extra stages that onsite tickets skip.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker/425" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">8</span>Receive the equipment, charge if needed, then close<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The last third of a ticket, including the money side. <span style="color:var(--muted);">About 10 minutes.</span></p>
+      <ul class="checklist" data-checklist="receipt-charging-close" style="margin-top:12px;">
+        <li class="checklist-item" data-check="receipt-charging-close-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On the Overdue stage (ticket 423 is already there), try Send Overdue Reminder (only when overdue) and Mark Equipment Received.</span></li>
+        <li class="checklist-item" data-check="receipt-charging-close-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Try Equipment won't be returned? to see the charging case open straight away.</span></li>
+        <li class="checklist-item" data-check="receipt-charging-close-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On Receipt and evidence, add a Proof-of-Receipt file and Condition Photos, then confirm.</span></li>
+        <li class="checklist-item" data-check="receipt-charging-close-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On Post-Retrieval Charging, choose Not Applicable, or Item Damaged or Not Returned. Work through the six steps of Case Details and pick an outcome.</span></li>
+        <li class="checklist-item" data-check="receipt-charging-close-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On Returned Item Check and routing, pick Standard, Condition or Completeness Issue, or Suspected Tampering or Loss, then press Confirm Inspection &amp; Routing. A Settlement Election skips this stage.</span></li>
+        <li class="checklist-item" data-check="receipt-charging-close-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On Closure, read Before you close, then press Review &amp; Close Ticket. Set each item to Returned, Send to charging or Keep Open.</span></li>
+        <li class="checklist-item" data-check="receipt-charging-close-6" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">In the Close Ticket window tick "Send the team member a detailed closure copy", press "View contents to be sent", use Copy or Download EML, then confirm.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">There are four charging outcomes: No Charge, Quotation Pending, Determination &amp; Charge, and Settlement Election. Each has its own email, and all except No Charge also have a form.</li><li style="margin:4px 0;">The system does not post deductions. It records a handoff to Payroll.</li><li style="margin:4px 0;">An item already in a charging case defaults to In charging case when you close.</li><li style="margin:4px 0;">The Before you close checks are advice. None of them stops you.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">9</span>Break things on purpose<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>See the empty, slow and failing states a real user will hit. <span style="color:var(--muted);">About 5 minutes.</span></p>
+      <ul class="checklist" data-checklist="break-things" style="margin-top:12px;">
+        <li class="checklist-item" data-check="break-things-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">In the Prototype controls bar, set State to Loading, then Not found, then Error. Return to Populated.</span></li>
+        <li class="checklist-item" data-check="break-things-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Set Scenario to First-timer, no tickets and read the empty list. Then try High volume.</span></li>
+        <li class="checklist-item" data-check="break-things-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Set Situation to No contact number and open a ticket. See the Custodian card and the Add contact number button.</span></li>
+        <li class="checklist-item" data-check="break-things-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Turn on Allow sending with unresolved placeholders in the flask menu, then press Send on an email that was blocked.</span></li>
+        <li class="checklist-item" data-check="break-things-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press a disabled looking button. It stays clickable and explains why it is not ready.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Every screen has a designed loading, empty, not found and error state.</li><li style="margin:4px 0;">Buttons never just look dead. They always say why.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">10</span>Simulate the outside world<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Real tickets get changed by things that happen outside the app. <span style="color:var(--muted);">About 6 minutes.</span></p>
+      <ul class="checklist" data-checklist="outside-world" style="margin-top:12px;">
+        <li class="checklist-item" data-check="outside-world-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the flask menu. Under Simulate Employee Record Update, pick a ticket and a new Last Working Day, then press Push Simulated Update.</span></li>
+        <li class="checklist-item" data-check="outside-world-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open that ticket. Read the banner, press Acknowledge, and look at the IT Access Lock card.</span></li>
+        <li class="checklist-item" data-check="outside-world-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press Push One of Every Type under Notification types, then open the bell.</span></li>
+        <li class="checklist-item" data-check="outside-world-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press Send Digest Now and View last digest.</span></li>
+        <li class="checklist-item" data-check="outside-world-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Create a remote ticket assigned to you, send the branch request by email, then press Push Simulated Reply.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">A changed Last Working Day moves the Target Date and tells you IT needs the new date.</li><li style="margin:4px 0;">Notifications always go to the person the ticket is assigned to, never to the team member.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">11</span>Take over, change, cancel and reopen<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Plans change. See how the system handles it. <span style="color:var(--muted);">About 6 minutes.</span></p>
+      <ul class="checklist" data-checklist="manage-ticket" style="margin-top:12px;">
+        <li class="checklist-item" data-check="manage-ticket-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Switch Viewing as to another person. Open a ticket that is not theirs. From the three dots menu, choose Take over ticket and write the handover note.</span></li>
+        <li class="checklist-item" data-check="manage-ticket-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On a ticket where no notice has been sent, choose Change reason or mode and give a note.</span></li>
+        <li class="checklist-item" data-check="manage-ticket-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On a ticket where a notice was sent, try the same and read why it is locked.</span></li>
+        <li class="checklist-item" data-check="manage-ticket-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Choose Cancel retrieval, pick a reason and write a note. See the status become Cancelled.</span></li>
+        <li class="checklist-item" data-check="manage-ticket-4" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press Reopen Ticket on a closed ticket, for example ticket 426.</span></li>
+        <li class="checklist-item" data-check="manage-ticket-5" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">On any open ticket, edit the Target Date in the right panel and give a reason.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Each action asks for a note and records it in the Activity Log.</li><li style="margin:4px 0;">A cancelled ticket no longer blocks a new ticket for the same person.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/ticket-tracker" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">12</span>Look at the emails, forms and checklists<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The content behind every send. <span style="color:var(--muted);">About 6 minutes.</span></p>
+      <ul class="checklist" data-checklist="templates-master" style="margin-top:12px;">
+        <li class="checklist-item" data-check="templates-master-0" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open Templates and pick an email. Read how it is written and open the placeholder drawer.</span></li>
+        <li class="checklist-item" data-check="templates-master-1" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Press Edit, change a few words and watch the Sample preview beside the editor. Use More actions, then Download EML or Copy to clipboard, and press Save.</span></li>
+        <li class="checklist-item" data-check="templates-master-2" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open the Forms tab and open a form. Look at the fields and the signature field.</span></li>
+        <li class="checklist-item" data-check="templates-master-3" onclick="toggleCheck(this)"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="checklist-label">Open Master Data, then Offboarding Checklists. Open the checklist, add a task and set when it applies.</span></li>
+      </ul>
+      <div class="callout callout-aha" style="margin-top:12px;"><span class="callout-icon">&#x1F441;</span><div><p><strong>What to look for</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">A placeholder is a blank the system fills from the ticket, such as the name or the Target Date.</li><li style="margin:4px 0;">A ticket gets its own copy of the checklist. Later edits to the template never change open tickets.</li></ul></div></div>
+      <div class="demo-only" style="margin-top:12px;"><a class="demo-link" href="https://ams-retrieval-demo.netlify.app/#/templates" target="_blank" rel="noopener">Open in the demo</a></div></div>
+    </details>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════ TICKETS ════════════════════════════ -->
+
+<div class="section" id="tickets">
+  <div class="section-header">
+    <div class="section-icon orange">&#x1F3AB;</div>
+    <div>
+      <h2 class="section-title">Ticket Tracker</h2>
+      <p class="section-why">Your operational home base. Each ticket is one retrieval case, from first notice to final closure.</p>
+    </div>
+  </div>
+
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">The ticket list</h3>
+  <div class="card">
+    <ul class="checklist" style="cursor:default;">
+      <li class="checklist-item" style="cursor:default;"><span class="check-box" style="visibility:hidden"></span><span class="checklist-label"><strong>The headline</strong> tells you how many tickets need attention, with how many of the open tickets are yours underneath.</span></li>
+      <li class="checklist-item" style="cursor:default;"><span class="check-box" style="visibility:hidden"></span><span class="checklist-label"><strong>Three chips</strong> (Open, Due soon, Overdue) show counts and filter the table. Hover one for the breakdown by Onsite, Remote and Mine. Press again to clear.</span></li>
+      <li class="checklist-item" style="cursor:default;"><span class="check-box" style="visibility:hidden"></span><span class="checklist-label"><strong>Search and filters</strong> sit in one row: search by name or ticket number, status chips, Assigned to me, Type and Deployment.</span></li>
+      <li class="checklist-item" style="cursor:default;"><span class="check-box" style="visibility:hidden"></span><span class="checklist-label"><strong>The table</strong> is as tall as its rows. The page header stays put and everything beneath it scrolls. The first five columns stay in place when you scroll sideways. Show 10, 15 or 25 per page.</span></li>
+      <li class="checklist-item" style="cursor:default;"><span class="check-box" style="visibility:hidden"></span><span class="checklist-label"><strong>Return Deadline</strong> shows a countdown: orange within 3 days, red when overdue. Closed tickets have none.</span></li>
+      <li class="checklist-item" style="cursor:default;"><span class="check-box" style="visibility:hidden"></span><span class="checklist-label"><strong>Export selected</strong> downloads the ticked tickets as a spreadsheet file.</span></li>
+    </ul>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">The five sample tickets</h3>
+  <table class="tmpl-table">
+    <thead><tr><th>Ticket</th><th>Team member</th><th>Mode</th><th>State</th><th>Good for</th></tr></thead>
+    <tbody>
+      <tr><td>426</td><td>Kevin Ong</td><td><span class="mode-badge mode-onsite">Onsite</span></td><td>Closed</td><td>Browsing a finished ticket, Reopen Ticket</td></tr>
+      <tr><td>425</td><td>Josef Cruz</td><td><span class="mode-badge mode-remote">Remote</span></td><td>Hold Off, at Receipt and evidence</td><td>Receipt, charging and closure on a remote ticket</td></tr>
+      <tr><td>424</td><td>Andrea Villar</td><td><span class="mode-badge mode-remote">Remote</span></td><td>Overdue return, still at Courier endorsement</td><td>The remote path from the courier stages, with the notice not yet sent</td></tr>
+      <tr><td>423</td><td>Rafael Tan</td><td><span class="mode-badge mode-onsite">Onsite</span></td><td>Overdue return</td><td>A first look at an onsite ticket, the Overdue stage and overdue reminders</td></tr>
+      <tr><td>422</td><td>Marisol Ferrer</td><td><span class="mode-badge mode-remote">Remote</span></td><td>In transit (at Confirm In Transit, tracking not yet entered)</td><td>Confirming shipment yourself</td></tr>
+    </tbody>
+  </table>
+  <p class="section-why">Thirty team members are available to create new tickets for. Set Scenario to High volume in the Prototype controls bar to fill the list with about 35 tickets.</p>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Creating a ticket</h3>
+  <div class="card">
+    <ol class="steps">
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Choose the team member</strong><p>Press Create Ticket, then Retrieval. Find Team Member shows employee number and email. Everything below stays locked until you pick one.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Check what filled itself in</strong><p>The reason, deployment type (Onsite or Remote), Last Working Day and Separation Date come from the employee record. Change the reason or deployment type and the form asks for a short note explaining why.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Add what the reason needs</strong><p>Recalled needs a Recall Effective Date. Paths with approval gates need the authorizing endorsement. Unexplained Absence forces Remote.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Choose the assignee</strong><p>Each option shows a full name with employee number and email. The Summary card shows the deadline, how it was worked out, and which email will go out.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Create the ticket</strong><p>A team member who already has an open ticket is blocked, with a link to that ticket.</p></div></li>
+    </ol>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Inside a ticket</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0;">
+    <div class="card" style="margin:0;"><span class="card-badge badge-blue">Header</span><p style="font-size:14px;margin-top:8px;">Ticket number, Open or Closed, the reason, deployment type and who it is assigned to. Gate Passes, Close Ticket and a menu with Copy Ticket Link, Artifacts Summary, Activity Log, Change reason or mode, Take over ticket and Cancel retrieval.</p></div>
+    <div class="card" style="margin:0;"><span class="card-badge badge-green">Phase stepper</span><p style="font-size:14px;margin-top:8px;">Six phases on a remote ticket, four on an onsite one (Branch &amp; Endorsement and Transit are skipped). Press a reached step to revisit it. A future step says it has not been reached yet. On a phone it becomes a stage menu.</p></div>
+    <div class="card" style="margin:0;"><span class="card-badge badge-orange">Stage card</span><p style="font-size:14px;margin-top:8px;">The step you are on, with its one main button. A button that is not ready stays clickable and explains why. After a send, a banner confirms it and you press Continue.</p></div>
+    <div class="card" style="margin:0;"><span class="card-badge badge-purple">Right panel</span><p style="font-size:14px;margin-top:8px;">Custodian (with contact details to verify), Assets Confirmed, Target Date, Communications (texts), Courier and Shipping (remote), and IT Access Lock. Press the panel icon at the top right of the ticket header, next to the three dots menu (or the ] key) to hide it. It shows on large screens only.</p></div>
+    <div class="card" style="margin:0;"><span class="card-badge badge-teal">Activity Log</span><p style="font-size:14px;margin-top:8px;">Every action with who did it and when, shown in your own time zone. Open it from the three dots menu.</p></div>
+    <div class="card" style="margin:0;"><span class="card-badge badge-blue">Banners</span><p style="font-size:14px;margin-top:8px;">Above the stage card: a changed Last Working Day (press Acknowledge), a cancelled ticket, a delayed shipment and a failed send.</p></div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Changing course</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Take over a ticket<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Moves a ticket to you. A handover note is required, and the previous assignee is notified. The option is dimmed on a ticket you already own and tells you why when pressed.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Change reason or deployment type<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Allowed until a notice is sent, a call is logged or an acknowledgment is recorded. After that it is locked and says which of those locked it. A note is required, and the deadline and email are worked out again.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Cancel retrieval<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>For a resignation that was withdrawn or a recall that was reversed. Choose a reason and write a note. The ticket becomes Cancelled and stops blocking a new ticket for the same person.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Reopen<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Any closed ticket, including a cancelled one, can be reopened from the header. It returns to open at the stage it was on.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Edit the Target Date<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>In the right panel. A reason is required and every change is kept in the date history. If the ticket was overdue, the log notes that the lapse remains on record.</p></div>
+    </details>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════ STAGES ════════════════════════════ -->
+
+<div class="section" id="stages">
+  <div class="section-header">
+    <div class="section-icon teal">&#x1F6E4;</div>
+    <div>
+      <h2 class="section-title">Stage by stage</h2>
+      <p class="section-why">Every stage of a ticket, what you do in it, and what to try.</p>
+    </div>
+  </div>
+
+  <div class="card" style="overflow-x:auto;">
+    <div class="lifecycle">
+      <div class="lifecycle-step active"><div class="lifecycle-dot"></div><div class="lifecycle-label">Setup</div></div>
+      <div class="lifecycle-step "><div class="lifecycle-dot"></div><div class="lifecycle-label">Branch and Endorsement</div></div>
+      <div class="lifecycle-step "><div class="lifecycle-dot"></div><div class="lifecycle-label">Notice and Confirmation</div></div>
+      <div class="lifecycle-step "><div class="lifecycle-dot"></div><div class="lifecycle-label">Transit</div></div>
+      <div class="lifecycle-step "><div class="lifecycle-dot"></div><div class="lifecycle-label">Return and Evidence</div></div>
+      <div class="lifecycle-step "><div class="lifecycle-dot"></div><div class="lifecycle-label">Closure</div></div>
+    </div>
+    <p style="font-size:13px;text-align:center;color:var(--muted);margin-top:4px;">The six phases (an onsite ticket shows four). Onsite tickets use 11 stages. Remote tickets add the courier stages marked Remote only.</p>
+  </div>
+<div class="callout callout-info"><span class="callout-icon">&#x2139;</span><div><p>Stages can be revisited with Back and Forward. You can only move forward as far as the furthest stage you have completed. A closed ticket stays browsable but cannot be changed.</p></div></div>
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Setup</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A3</span>Offboarding checklist<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The tasks to finish before the team member leaves: handing back access cards, backing up files and so on. Every ticket gets its own copy of a checklist.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Tick a task. It records who did it.</li><li style="margin:4px 0;">Switch a task between Required and Optional.</li><li style="margin:4px 0;">Add, remove or reorder tasks. Drag a task by its grip, or click the grip (it shows on hover) for Move up and Move down.</li><li style="margin:4px 0;">Open Checklist options to use a saved checklist or save yours as a template.</li><li style="margin:4px 0;">Complete checklist once every required task is done.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> IT access lock.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A4</span>IT access lock<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>A notice to IT with the last shift time so they can lock the team member's access. This is IT's job, so the stage never waits for them.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Press Notify IT and continue.</li><li style="margin:4px 0;">Or press Continue without notifying IT.</li><li style="margin:4px 0;">Later, change the Last Working Day from the flask menu and watch the IT Access Lock card ask for the new date.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Custodian Card and asset confirmation.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A5</span>Custodian Card and asset confirmation<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Confirm which equipment the team member actually has, and check their contact details on the Custodian card.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Press Show Custodian card. The card opens and pulses.</li><li style="margin:4px 0;">Tick the assets and add remarks.</li><li style="margin:4px 0;">Verify the contact number and email, or edit the number.</li><li style="margin:4px 0;">Press Confirm Assets. The list locks and the Target Date is set.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Branch confirmation (remote) or the notice (onsite).</p></div>
+    </details>
+  </div>
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Branch and Endorsement</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">B8</span>Branch confirmation capture<span class="mode-badge mode-remote" style="margin-left:8px;">Remote only</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Remote only. Choose the courier and the branch where the team member will drop off the equipment.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Choose JRS or LBC. A nearby branch is suggested from the address.</li><li style="margin:4px 0;">Correct the address for this ticket if needed.</li><li style="margin:4px 0;">Capture by call, or by email. For email, send the request then mark the reply received, or use the branch on file.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Courier endorsement.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">B9</span>Courier endorsement<span class="mode-badge mode-remote" style="margin-left:8px;">Remote only</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Remote only. Email the courier account manager so they expect the shipment.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Send the endorsement. It goes to the courier, never to the team member.</li><li style="margin:4px 0;">Press Continue after the sent banner appears.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> The notice.</p></div>
+    </details>
+  </div>
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Notice and Confirmation</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A6</span>Generate and send notice<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The email to the team member asking for the equipment back, with an acknowledgment form attached. The email depends on the reason and the deployment type.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Preview, copy and download the email.</li><li style="margin:4px 0;">Replace or remove the email or form.</li><li style="margin:4px 0;">Send to the work email or type a personal one.</li><li style="margin:4px 0;">Use the Placeholder Check, or mark the send as done outside the system.</li><li style="margin:4px 0;">For paths with gates, record P&amp;C Acknowledgement.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Call confirmation.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A7</span>Call confirmation<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Call the team member to confirm they got the notice. Up to three attempts.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Log No answer or Answered.</li><li style="margin:4px 0;">After three unanswered calls, copy the follow up text from the right panel and mark it sent.</li><li style="margin:4px 0;">Continue.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Reminders.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A8</span>Reminders<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>A midpoint reminder and a final reminder, each sent or skipped.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Send or skip each one.</li><li style="margin:4px 0;">Use Already sent it from your own mail client if it went out outside the system.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Confirm In Transit (remote) or the Overdue stage (onsite).</p></div>
+    </details>
+  </div>
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Transit</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">B11</span>Confirm In Transit<span class="mode-badge mode-remote" style="margin-left:8px;">Remote only</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Remote only. Record the tracking number or link once the team member ships the equipment.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Enter a tracking number or a link on the courier's own site.</li><li style="margin:4px 0;">Confirm. The overdue clock stops.</li><li style="margin:4px 0;">Edit tracking details later from the Courier and Shipping card.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> The Overdue stage.</p></div>
+    </details>
+  </div>
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Return and Evidence</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A9</span>Overdue<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Waiting for the equipment. The ticket becomes Overdue Return by itself once the Target Date passes.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Send the Overdue Reminder when it is overdue.</li><li style="margin:4px 0;">Mark Equipment Received.</li><li style="margin:4px 0;">Or press Equipment won't be returned? to open a charging case straight away.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Receipt and evidence, or Post-Retrieval Charging.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A10</span>Receipt and evidence<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Upload proof the equipment arrived and photos of its condition.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Add a Proof-of-Receipt and Condition Photos (images or PDF, up to 10 MB).</li><li style="margin:4px 0;">Press Confirm Evidence Complete.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Post-Retrieval Charging.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A11</span>Post-Retrieval Charging<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Decide whether the team member is charged for damaged or missing equipment, and send the right email and form.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Choose Not Applicable, or Item Damaged or Not Returned.</li><li style="margin:4px 0;">Work through Case Details: team member, case, dates, amount, equipment, outcome.</li><li style="margin:4px 0;">Pick No Charge, Quotation Pending, Determination &amp; Charge, or Settlement Election.</li><li style="margin:4px 0;">Send the outcome, or mark it sent outside the system.</li><li style="margin:4px 0;">For a charge or settlement, mark it as referred to Payroll.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Returned Item Check.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A12</span>Returned Item Check and routing<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Route the returned equipment: standard servicing, a condition or completeness issue, or suspected tampering. A Settlement Election skips this stage.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Choose a route. It changes the ticket status through closure.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Closure.</p></div>
+    </details>
+  </div>
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Closure</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span style="color:var(--accent);font-weight:700;margin-right:6px;">A13</span>Closure<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Check everything, decide what happened to each item, and close the ticket.</p>
+      <div class="callout callout-tip" style="margin-top:12px;"><span class="callout-icon">&#x1F449;</span><div><p><strong>Try this</strong></p><ul style="margin:8px 0 0 20px;"><li style="margin:4px 0;">Read Before you close. It is advice, not a blocker.</li><li style="margin:4px 0;">Press Review &amp; Close Ticket. Set each item to Returned, Send to charging or Keep Open.</li><li style="margin:4px 0;">Tick the closure copy box, then press View contents to be sent to Copy or Download EML.</li><li style="margin:4px 0;">Reopen later if you need to.</li></ul></div></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;"><strong>Next:</strong> Closed. You can still browse every stage.</p></div>
+    </details>
+  </div>
+</div>
+
+<!-- ════════════════════════════ EMAIL TEMPLATES ════════════════════════════ -->
+<div class="section" id="templates">
+  <div class="section-header">
+    <div class="section-icon blue">&#x2709;</div>
+    <div>
+      <h2 class="section-title">Email Templates</h2>
+      <p class="section-why">20 pre-written emails covering every stage: from the initial return notice to overdue escalation and post-retrieval charging.</p>
+    </div>
+  </div>
+
+  <!-- SVG Mockup: Template Editor -->
+  <div class="mockup-container">
+    <svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simplified mockup of the email template editor screen">
+      <!-- Browser chrome -->
+      <rect x="0" y="0" width="640" height="360" rx="8" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>
+      <!-- Top bar -->
+      <rect x="0" y="0" width="640" height="36" rx="8" fill="var(--accent-softer)"/>
+      <rect x="0" y="28" width="640" height="8" fill="var(--accent-softer)"/>
+      <circle cx="16" cy="18" r="4" fill="var(--red)"/>
+      <circle cx="30" cy="18" r="4" fill="var(--orange)"/>
+      <circle cx="44" cy="18" r="4" fill="var(--green)"/>
+      <text x="320" y="22" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="600" fill="var(--muted)">Template Editor</text>
+
+      <!-- Sidebar area -->
+      <rect x="8" y="44" width="150" height="308" rx="6" fill="var(--accent-softer)" opacity="0.5"/>
+      <text x="18" y="62" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="var(--muted)">TEMPLATE LIST</text>
+      <!-- Template list items -->
+      <rect x="14" y="70" width="138" height="24" rx="4" fill="var(--accent)" opacity="0.15"/>
+      <text x="22" y="85" font-family="Inter,sans-serif" font-size="9" font-weight="600" fill="var(--accent)">T1 Resignation (Onsite)</text>
+      <rect x="14" y="98" width="138" height="24" rx="4" fill="transparent"/>
+      <text x="22" y="113" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">T2 Resignation (Remote)</text>
+      <rect x="14" y="126" width="138" height="24" rx="4" fill="transparent"/>
+      <text x="22" y="141" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">T3 Immed Resign (Onsite)</text>
+      <rect x="14" y="154" width="138" height="24" rx="4" fill="transparent"/>
+      <text x="22" y="169" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">T5 End of Contract (On...)</text>
+      <text x="22" y="196" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">...</text>
+
+      <!-- Main editor area -->
+      <rect x="170" y="44" width="462" height="308" rx="0" fill="var(--surface)"/>
+      <!-- Subject field -->
+      <text x="180" y="62" font-family="Inter,sans-serif" font-size="9" font-weight="600" fill="var(--muted)">SUBJECT</text>
+      <rect x="180" y="68" width="440" height="28" rx="4" fill="var(--accent-softer)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="190" y="86" font-family="Inter,sans-serif" font-size="10" fill="var(--fg-secondary)">Equipment Return Notice |</text>
+      <rect x="356" y="74" width="90" height="16" rx="3" fill="var(--green-soft)" stroke="var(--green-border)" stroke-width="0.5"/>
+      <text x="362" y="86" font-family="Inter,monospace" font-size="8" font-weight="600" fill="var(--green)">{{TM_FULL_NAME}}</text>
+
+      <!-- CC/BCC row -->
+      <text x="180" y="112" font-family="Inter,sans-serif" font-size="9" font-weight="600" fill="var(--muted)">CC</text>
+      <rect x="200" y="102" width="140" height="18" rx="3" fill="var(--accent-softer)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="350" y="112" font-family="Inter,sans-serif" font-size="9" font-weight="600" fill="var(--muted)">BCC</text>
+      <rect x="374" y="102" width="140" height="18" rx="3" fill="var(--accent-softer)" stroke="var(--border)" stroke-width="0.5"/>
+
+      <!-- Body area -->
+      <rect x="180" y="128" width="440" height="180" rx="6" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <!-- Rich text toolbar -->
+      <rect x="180" y="128" width="440" height="24" rx="6" fill="var(--accent-softer)"/>
+      <rect x="180" y="146" width="440" height="6" fill="var(--accent-softer)"/>
+      <text x="192" y="144" font-family="Inter,sans-serif" font-size="10" fill="var(--muted)">B  I  U  |  H1  H2  |  List  Table  |  &#x1F517;</text>
+      <!-- Body text lines -->
+      <rect x="192" y="162" width="280" height="8" rx="2" fill="var(--border)"/>
+      <rect x="192" y="178" width="380" height="8" rx="2" fill="var(--border)"/>
+      <rect x="192" y="194" width="200" height="8" rx="2" fill="var(--border)"/>
+      <!-- A placeholder token in the body -->
+      <rect x="192" y="214" width="320" height="8" rx="2" fill="var(--border)"/>
+      <rect x="192" y="230" width="70" height="14" rx="3" fill="var(--orange-soft)" stroke="var(--orange-border)" stroke-width="0.5"/>
+      <text x="198" y="240" font-family="Inter,monospace" font-size="7" font-weight="600" fill="var(--orange)">{{ASSET_TAG}}</text>
+      <rect x="268" y="232" width="180" height="8" rx="2" fill="var(--border)"/>
+
+      <!-- Action buttons -->
+      <rect x="180" y="320" width="80" height="24" rx="5" fill="var(--accent)"/>
+      <text x="202" y="335" font-family="Inter,sans-serif" font-size="10" font-weight="600" fill="#fff">Copy</text>
+      <rect x="268" y="320" width="80" height="24" rx="5" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>
+      <text x="282" y="335" font-family="Inter,sans-serif" font-size="10" font-weight="500" fill="var(--fg-secondary)">Preview</text>
+      <rect x="356" y="320" width="100" height="24" rx="5" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>
+      <text x="370" y="335" font-family="Inter,sans-serif" font-size="10" font-weight="500" fill="var(--fg-secondary)">Placeholders</text>
+
+      <!-- Annotation arrows -->
+      <!-- Arrow to template list -->
+      <line x1="84" y1="220" x2="84" y2="240" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4"/>
+      <text x="38" y="256" font-family="Inter,sans-serif" font-size="8" font-weight="600" fill="var(--accent)">Pick a template</text>
+      <text x="46" y="266" font-family="Inter,sans-serif" font-size="7" fill="var(--accent)">from the sidebar</text>
+
+      <!-- Arrow to placeholder -->
+      <path d="M 270 246 L 230 246 L 230 242" stroke="var(--orange)" stroke-width="1.5" fill="none" marker-end="url(#arrowOrange)"/>
+      <text x="274" y="250" font-family="Inter,sans-serif" font-size="8" font-weight="600" fill="var(--orange)">Yellow = needs data</text>
+    </svg>
+    <div class="mockup-caption">Simplified view of the template editor. Click a template on the left, edit on the right.</div>
+  </div>
+
+  <!-- Template groups -->
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">4 sets of templates (7 groups in the Templates list)</h3>
+
+  <div class="accordion-group">
+    <details class="accordion">
+      <summary class="accordion-trigger">
+        <span style="color:var(--accent);font-weight:700;margin-right:4px;">9</span>
+        Return Notices (Initial Contact)
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <p>The first email sent to a team member. One template per retrieval reason and return mode:</p>
+        <table class="tmpl-table">
+          <thead><tr><th>ID</th><th>Reason</th><th>Mode</th></tr></thead>
+          <tbody>
+            <tr><td>T1</td><td>Resignation</td><td><span class="mode-badge mode-onsite">Onsite</span></td></tr>
+            <tr><td>T2</td><td>Resignation</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+            <tr><td>T3</td><td>Immediate Resignation</td><td><span class="mode-badge mode-onsite">Onsite</span></td></tr>
+            <tr><td>T4</td><td>Immediate Resignation</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+            <tr><td>T5</td><td>End of Contract</td><td><span class="mode-badge mode-onsite">Onsite</span></td></tr>
+            <tr><td>T6</td><td>End of Contract</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+            <tr><td>T9</td><td>Recalled</td><td><span class="mode-badge mode-onsite">Onsite</span></td></tr>
+            <tr><td>T10</td><td>Recalled</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+            <tr><td>T11</td><td>Unexplained Absence</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">
+        <span style="color:var(--accent);font-weight:700;margin-right:4px;">6</span>
+        Reminders &amp; Overdue Notices
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <p>Sent if the team member has not acted on the initial notice:</p>
+        <table class="tmpl-table">
+          <thead><tr><th>ID</th><th>Stage</th><th>Mode</th></tr></thead>
+          <tbody>
+            <tr><td>T12</td><td>Midpoint Reminder</td><td><span class="mode-badge mode-onsite">Onsite</span></td></tr>
+            <tr><td>T13</td><td>Midpoint Reminder</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+            <tr><td>T14</td><td>Final Reminder</td><td><span class="mode-badge mode-onsite">Onsite</span></td></tr>
+            <tr><td>T15</td><td>Final Reminder</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+            <tr><td>T16</td><td>Overdue Return Notice</td><td><span class="mode-badge mode-onsite">Onsite</span></td></tr>
+            <tr><td>T17</td><td>Overdue Return Notice</td><td><span class="mode-badge mode-remote">Remote</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">
+        <span style="color:var(--accent);font-weight:700;margin-right:4px;">1</span>
+        Courier Authorization
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <p><strong>T18:</strong> Sent to the courier account manager (not the team member) to authorize a shipment under GoTeam's corporate account. Includes the authorized shipper's name, the branch, and the equipment list.</p>
+      </div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">
+        <span style="color:var(--accent);font-weight:700;margin-right:4px;">4</span>
+        Post-Retrieval Charging
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <p>Sent after equipment is received if it is damaged, missing, or the team member wants to keep it:</p>
+        <table class="tmpl-table">
+          <thead><tr><th>ID</th><th>Outcome</th></tr></thead>
+          <tbody>
+            <tr><td>T22</td><td>Assessment Complete, No Amount Charged (fair wear and tear)</td></tr>
+            <tr><td>T23</td><td>Notice of Assessment, Repair Quotation Pending</td></tr>
+            <tr><td>T24</td><td>Determination and Amount Payable (the actual deduction authority)</td></tr>
+            <tr><td>T25</td><td>Settlement of Equipment Accountability (team member elects to keep equipment)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <!-- How to use templates -->
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">How to edit and send a template</h3>
+  <div class="card">
+    <ol class="steps">
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Find your template</strong><p>Open the Templates page, search by name, filter by mode (Onsite or Remote) or status (Active, Draft, Retired), and open the template. Press Edit to change it.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Edit the subject and body</strong><p>The rich text editor works like a word processor. Bold, italic, headings, lists, tables, and links are all supported.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Insert placeholders</strong><p>Click the <strong>Placeholders</strong> button to open the drawer. Click a token to insert it at your cursor. In the ticket workspace tokens appear as colored chips: <span class="token token-green">{{TM_FULL_NAME}}</span> has data, <span class="token token-yellow">{{ASSET_TAG}}</span> is missing data. The Templates editor shows every placeholder in blue.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Set CC and BCC</strong><p>Add recipients who should be copied. P&amp;C and the team member's Leadership Coach are common CC recipients.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Preview</strong><p>Watch the Sample preview pane beside the editor: it shows the email as the recipient would see it, with sample data filling in the placeholders.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Copy or download</strong><p>Open <strong>More actions</strong>, then choose <strong>Copy to clipboard</strong> to paste into Outlook, or <strong>Download EML</strong> to save a <code>.eml</code> file for Outlook import.</p></div></li>
+    </ol>
+  </div>
+
+  <!-- Template statuses -->
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Template statuses</h3>
+  <div class="status-grid">
+    <div class="status-pill"><span class="status-dot" style="background:var(--green)"></span><strong>Active</strong>&nbsp;- Ready to use</div>
+    <div class="status-pill"><span class="status-dot" style="background:var(--orange)"></span><strong>Draft</strong>&nbsp;- Being prepared</div>
+    <div class="status-pill"><span class="status-dot" style="background:var(--muted)"></span><strong>Retired</strong>&nbsp;- Kept for records</div>
+  </div>
+
+  <!-- Placeholder troubleshooting -->
+  <div class="callout callout-warn" style="margin-top:20px;">
+    <span class="callout-icon">&#x26A0;</span>
+    <div>
+      <p><strong>Placeholder colors explained:</strong></p>
+      <p><span class="token token-green">Blue</span> = filled with data (the editor shows every placeholder in blue).</p>
+      <p><span class="token token-yellow">Orange</span> = the ticket is missing this data. Go back to the ticket and fill in the field.</p>
+      <p><span class="token token-red">Red, struck through</span> = unrecognized token. Check for typos in the placeholder code. Grey = a fixed company value.</p>
+    </div>
+  </div>
+
+  <!-- Before-sending checklist -->
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Before sending: pre-flight checklist</h3>
+  <div class="card">
+    <ul class="checklist" data-checklist="send-preflight">
+      <li class="checklist-item" data-check="send-1" onclick="toggleCheck(this)">
+        <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <span class="checklist-label">All placeholders are <span class="token token-green">green</span> (no yellow or red tokens remaining).</span>
+      </li>
+      <li class="checklist-item" data-check="send-2" onclick="toggleCheck(this)">
+        <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <span class="checklist-label">CC and BCC recipients are set (P&amp;C, Leadership Coach, supervisor as needed).</span>
+      </li>
+      <li class="checklist-item" data-check="send-3" onclick="toggleCheck(this)">
+        <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <span class="checklist-label">Subject line includes the team member's name and APR reference number.</span>
+      </li>
+      <li class="checklist-item" data-check="send-4" onclick="toggleCheck(this)">
+        <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <span class="checklist-label">Equipment table matches what is actually assigned (correct asset tags and serials).</span>
+      </li>
+      <li class="checklist-item" data-check="send-5" onclick="toggleCheck(this)">
+        <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <span class="checklist-label">The ticket's email preview confirms the email looks correct with the real data.</span>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════ FORMS ════════════════════════════ -->
+<div class="section" id="forms">
+  <div class="section-header">
+    <div class="section-icon green">&#x1F4CB;</div>
+    <div>
+      <h2 class="section-title">Retrieval Forms</h2>
+      <p class="section-why">5 ready-made documents that team members sign. Each form links to the right template automatically.</p>
+    </div>
+  </div>
+
+  <!-- SVG Mockup: Form Builder -->
+  <div class="mockup-container">
+    <svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simplified mockup of the form builder screen">
+      <rect x="0" y="0" width="640" height="300" rx="8" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>
+      <!-- Top bar -->
+      <rect x="0" y="0" width="640" height="32" rx="8" fill="var(--accent-softer)"/>
+      <rect x="0" y="24" width="640" height="8" fill="var(--accent-softer)"/>
+      <text x="320" y="20" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="600" fill="var(--muted)">Form Builder</text>
+
+      <!-- Page canvas -->
+      <rect x="160" y="44" width="320" height="244" rx="4" fill="#fff" stroke="var(--border)" stroke-width="0.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))"/>
+
+      <!-- Letterhead area -->
+      <rect x="160" y="44" width="320" height="36" fill="var(--accent-softer)"/>
+      <text x="180" y="66" font-family="Inter,sans-serif" font-size="10" font-weight="700" fill="var(--accent)">GoTeam</text>
+      <text x="215" y="66" font-family="Inter,sans-serif" font-size="8" fill="var(--muted)">Equipment Return Acknowledgment</text>
+
+      <!-- Section header -->
+      <rect x="176" y="90" width="288" height="20" rx="3" fill="var(--accent)"/>
+      <text x="186" y="104" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#fff">Section 1: Team Member Information</text>
+
+      <!-- Form fields -->
+      <text x="176" y="126" font-family="Inter,sans-serif" font-size="8" font-weight="600" fill="var(--muted)">Full Name *</text>
+      <rect x="260" y="116" width="204" height="16" rx="3" fill="var(--accent-softer)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="176" y="150" font-family="Inter,sans-serif" font-size="8" font-weight="600" fill="var(--muted)">Employee ID *</text>
+      <rect x="260" y="140" width="204" height="16" rx="3" fill="var(--accent-softer)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="176" y="174" font-family="Inter,sans-serif" font-size="8" font-weight="600" fill="var(--muted)">Client</text>
+      <rect x="260" y="164" width="204" height="16" rx="3" fill="var(--accent-softer)" stroke="var(--border)" stroke-width="0.5"/>
+
+      <!-- Signature area -->
+      <rect x="176" y="196" width="288" height="20" rx="3" fill="var(--green)" opacity="0.8"/>
+      <text x="186" y="210" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#fff">Section 3: Signature</text>
+      <rect x="176" y="224" width="160" height="50" rx="4" fill="var(--accent-softer)" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="4"/>
+      <text x="220" y="252" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">Sign here</text>
+
+      <!-- Right side controls -->
+      <rect x="500" y="50" width="130" height="24" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="510" y="66" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">Page: Letter</text>
+      <rect x="500" y="80" width="130" height="24" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="510" y="96" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">Margins: Normal</text>
+      <rect x="500" y="110" width="130" height="24" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="510" y="126" font-family="Inter,sans-serif" font-size="9" fill="var(--muted)">Theme: #386BE6</text>
+
+      <!-- Left toolbar -->
+      <rect x="10" y="50" width="136" height="236" rx="6" fill="var(--accent-softer)" opacity="0.4"/>
+      <text x="20" y="68" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="var(--muted)">FIELD TYPES</text>
+      <rect x="16" y="76" width="124" height="22" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="26" y="91" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Short Text</text>
+      <rect x="16" y="102" width="124" height="22" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="26" y="117" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Paragraph</text>
+      <rect x="16" y="128" width="124" height="22" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="26" y="143" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Checkbox</text>
+      <rect x="16" y="154" width="124" height="22" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="26" y="169" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Signature</text>
+      <rect x="16" y="180" width="124" height="22" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="0.5"/>
+      <text x="26" y="195" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">File Upload</text>
+
+      <!-- Annotation -->
+      <text x="516" y="160" font-family="Inter,sans-serif" font-size="8" font-weight="600" fill="var(--accent)">Page settings</text>
+      <text x="516" y="170" font-family="Inter,sans-serif" font-size="7" fill="var(--accent)">match Word output</text>
+    </svg>
+    <div class="mockup-caption">The form builder: drag fields from the left, edit on the canvas, set page and margin options on the right.</div>
+  </div>
+
+  <!-- Form types -->
+  <div class="accordion-group">
+    <details class="accordion" open>
+      <summary class="accordion-trigger">
+        Equipment Return Acknowledgments (2 forms)
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <p>The form a team member signs promising to return their equipment. Two variants:</p>
+        <p><strong>Onsite form:</strong> for team members returning equipment in person at the GoTeam office.</p>
+        <p><strong>Remote (Courier) form:</strong> for team members shipping equipment back. Includes a courier branch selection section and shipping cost authorization.</p>
+        <p>Both include: team member info, equipment list, contact confirmation, return commitment, equipment notes, legal declaration, and a signature box.</p>
+      </div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">
+        Post-Retrieval Charging Forms (3 forms)
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <p><strong>Authority to Deduct (Loss/Damage/Non-Return):</strong> When equipment is damaged or not returned. Requires three-party signatures (Team Member, Asset Team, P&amp;C/Payroll).</p>
+        <p><strong>Authority to Deduct (Settlement &amp; Transfer):</strong> When the team member chooses to keep the equipment and pay for it. Ownership transfers after full recovery.</p>
+        <p><strong>Notice of Assessment (Quotation Pending):</strong> Interim notice when damage is found but a repair cost is not yet known. This is not an authority to deduct and nothing is charged.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Form builder features -->
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Form builder features</h3>
+  <div class="card">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+      <div><strong>7 field types</strong><br><span style="font-size:13px;color:var(--muted);">Short text, Paragraph, Number, Checkbox, File upload, Signature, Button link (plain text is typed straight into the document)</span></div>
+      <div><strong>Drag and drop</strong><br><span style="font-size:13px;color:var(--muted);">Reorder fields and sections freely</span></div>
+      <div><strong>4 page sizes</strong><br><span style="font-size:13px;color:var(--muted);">Letter, Legal, A4, Tabloid</span></div>
+      <div><strong>4 margin presets</strong><br><span style="font-size:13px;color:var(--muted);">Normal, Narrow, Moderate, Wide (matching Microsoft Word)</span></div>
+      <div><strong>Theme color</strong><br><span style="font-size:13px;color:var(--muted);">Customize section header color to match branding</span></div>
+      <div><strong>Print-ready</strong><br><span style="font-size:13px;color:var(--muted);">GoTeam letterhead, page numbers, reference stamps</span></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════ CONNECTION ════════════════════════════ -->
+<div class="section" id="connection">
+  <div class="section-header">
+    <div class="section-icon purple">&#x1F517;</div>
+    <div>
+      <h2 class="section-title">How Templates, Forms, and Tickets Connect</h2>
+      <p class="section-why">Three modules, one source of truth. Here is how data flows between them.</p>
+    </div>
+  </div>
+
+  <!-- Data flow diagram -->
+  <div class="mockup-container" style="padding:28px 20px;">
+    <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram showing how templates, forms, and tickets connect">
+      <!-- Ticket box -->
+      <rect x="20" y="60" width="160" height="100" rx="10" fill="var(--orange-soft)" stroke="var(--orange)" stroke-width="1.5"/>
+      <text x="100" y="90" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" font-weight="700" fill="var(--orange)">Ticket</text>
+      <text x="100" y="108" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Case data: name, ID,</text>
+      <text x="100" y="120" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">equipment, dates,</text>
+      <text x="100" y="132" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">courier details</text>
+
+      <!-- Arrow: Ticket -> Template -->
+      <path d="M 180 95 L 220 95" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+      <text x="200" y="88" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="var(--accent)">fills</text>
+
+      <!-- Template box -->
+      <rect x="220" y="40" width="160" height="80" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="300" y="70" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" font-weight="700" fill="var(--accent)">Template</text>
+      <text x="300" y="88" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Email with {{PLACEHOLDERS}}</text>
+      <text x="300" y="100" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">auto-matched by reason+mode</text>
+
+      <!-- Arrow: Template -> Output -->
+      <path d="M 380 80 L 420 80" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+
+      <!-- Output box -->
+      <rect x="420" y="50" width="160" height="60" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.5"/>
+      <text x="500" y="75" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" font-weight="700" fill="var(--green)">Ready Email</text>
+      <text x="500" y="93" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Copy to Outlook or .eml</text>
+
+      <!-- Arrow: Ticket -> Form -->
+      <path d="M 180 130 L 220 150" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+      <text x="200" y="148" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="var(--accent)">fills</text>
+
+      <!-- Form box -->
+      <rect x="220" y="140" width="160" height="60" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.5"/>
+      <text x="300" y="165" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" font-weight="700" fill="var(--green)">Form</text>
+      <text x="300" y="183" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="var(--fg-secondary)">Linked as email attachment</text>
+
+      <!-- Arrow defs -->
+      <defs>
+        <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="var(--accent)"/></marker>
+        <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="var(--orange)"/></marker>
+      </defs>
+    </svg>
+    <div class="mockup-caption">Data flows from the ticket into both the email template and the attached form. Fill in once, use everywhere.</div>
+  </div>
+
+  <div class="callout callout-aha">
+    <span class="callout-icon">&#x1F4A1;</span>
+    <div>
+      <p><strong>Aha! moment:</strong> You never copy-paste a team member's name, employee ID, or asset tag into an email. The ticket holds all the case data, and every template and form reads from it. Change a date in the ticket, and every email and form for that case updates automatically.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4 style="font-size:15px;font-weight:700;margin-bottom:12px;">The connection in 5 points</h4>
+    <ol style="padding-left:20px;">
+      <li style="margin-bottom:10px;font-size:14px;"><strong>Templates</strong> hold the email content with <span class="token token-green">{{PLACEHOLDER}}</span> tokens (e.g. <code>{{TM_FULL_NAME}}</code>, <code>{{ASSET_TAG}}</code>).</li>
+      <li style="margin-bottom:10px;font-size:14px;"><strong>Forms</strong> are linked to templates as attachments (e.g. the "Resignation (Remote)" template attaches the "Equipment Return Acknowledgment (Remote)" form).</li>
+      <li style="margin-bottom:10px;font-size:14px;"><strong>Tickets</strong> hold the real case data (team member info, equipment, dates, courier details).</li>
+      <li style="margin-bottom:10px;font-size:14px;">When you open a ticket, the system <strong>automatically matches the right template</strong> based on the ticket's reason and mode.</li>
+      <li style="margin-bottom:10px;font-size:14px;">The form attached to that template also gets its placeholders filled from the same ticket data.</li>
+    </ol>
+  </div>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">&#x2728;</span>
+    <div><p><strong>One source of truth:</strong> Edit a template once in the Templates section, and every ticket using that template gets the updated version. Fill in case data once in a ticket, and every email and form for that case reflects the same values.</p></div>
+  </div>
+</div>
+
+
+
+<!-- ════════════════════════════ WORKFLOW ════════════════════════════ -->
+
+<div class="section" id="workflow">
+  <div class="section-header">
+    <div class="section-icon teal">&#x1F6A6;</div>
+    <div>
+      <h2 class="section-title">Typical Workflow</h2>
+      <p class="section-why">A real example: processing a resignation (remote) from start to finish.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="callout callout-info"><span class="callout-icon">&#x1F4CB;</span><div><p><strong>Scenario.</strong> Maria, an Asset Officer, hears that Juan dela Cruz has resigned. Juan works remotely and will ship his MacBook Pro back by courier.</p></div></div>
+    <ol class="steps" style="margin-top:16px;">
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Create the ticket</strong><p>Ticket Tracker, Create Ticket, Retrieval. Maria picks Juan. The reason, deployment type and dates fill in. She reads the Summary card, which shows the deadline and the email that will be sent, and creates the ticket.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Setup stages</strong><p>She works the offboarding checklist, presses Notify IT and continue, then confirms Juan's equipment on the Custodian card and presses Confirm Assets. The Target Date is set.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Courier branch</strong><p>Because Juan is remote, Maria picks JRS or LBC and the branch nearest his address, captured by call or email. She then sends the courier endorsement email to the courier account manager.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Send the notice</strong><p>She previews the email, checks the Placeholder Check is clear, and presses Send. If she sent it from her own Outlook instead, she would press Mark as sent outside the system.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Follow up</strong><p>She logs a call. If Juan does not answer three times she copies the follow up text from the right panel, sends it from her phone and marks it sent. The midpoint and final reminders are ready for her to send or skip.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>In transit</strong><p>Juan ships the laptop. Maria enters the tracking number on Confirm In Transit. The overdue clock stops.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Receipt and evidence</strong><p>The laptop arrives. Maria uploads the Proof-of-Receipt and Condition Photos and confirms the evidence is complete.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Charging and check</strong><p>The screen is cracked. In Post-Retrieval Charging she chooses Item Damaged or Not Returned, works through Case Details and chooses an outcome. The system sends the email and form, and she marks it referred to Payroll. She then routes the item at the Returned Item Check.</p></div></li>
+      <li class="step-item"><div class="step-number"></div><div class="step-content"><strong>Close</strong><p>She reads Before you close, sets the laptop to In charging case, sends Juan the closure copy and closes the ticket.</p></div></li>
+    </ol>
+  </div>
+<div class="callout callout-tip"><span class="callout-icon">&#x1F4AC;</span><div><p>The same flow applies to every reason. Only the email, form and deadline change. Try it yourself with mission 3, then missions 4 to 7.</p></div></div>
+</div>
+
+
+<!-- ════════════════════════════ REASONS ════════════════════════════ -->
+
+<div class="section" id="reasons">
+  <div class="section-header">
+    <div class="section-icon orange">&#x1F4C5;</div>
+    <div>
+      <h2 class="section-title">Reasons and deadlines</h2>
+      <p class="section-why">The reason a team member is leaving decides the deadline, the email and whether there are approval gates.</p>
+    </div>
+  </div>
+
+  <table class="tmpl-table">
+    <thead><tr><th>Reason</th><th>Gates</th><th>Deadline</th></tr></thead>
+    <tbody>
+      <tr><td>Resignation</td><td>None</td><td>Last Working Day for onsite, plus 3 days for remote</td></tr>
+      <tr><td>Immediate Resignation</td><td>None</td><td>The day the ticket is created, plus 3 days for remote</td></tr>
+      <tr><td>End of Contract</td><td>1</td><td>Last Working Day, plus 3 days for remote</td></tr>
+      <tr><td>Recalled</td><td>1</td><td>Recall Effective Date, plus 3 days for remote</td></tr>
+      <tr><td>Unexplained Absence</td><td>3</td><td>Remote only, Last Working Day plus 3 days</td></tr>
+    </tbody>
+  </table>
+<div class="callout callout-info"><span class="callout-icon">&#x2139;</span><div><p>Gates are approvals by P&amp;C. They are advice and never stop a stage or a send. Days are calendar days. Overdue means the Target Date has passed: the due date itself is not overdue, and confirming In Transit stops the clock.</p></div></div>
+</div>
+
+
+<!-- ════════════════════════════ TROUBLESHOOTING ════════════════════════════ -->
+
+<div class="section" id="troubleshooting">
+  <div class="section-header">
+    <div class="section-icon red">&#x1F527;</div>
+    <div>
+      <h2 class="section-title">Troubleshooting</h2>
+      <p class="section-why">Common questions and issues, answered where they happen.</p>
+    </div>
+  </div>
+
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Placeholder showing as orange?<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>An orange placeholder (in the ticket workspace) means the ticket is missing data for that field. Open the Placeholder Check with the icon on the attached email or form, press the entry and fill in the value. Common culprits are a missing Target Date, an acknowledgment due date, or an asset with no serial number or tag.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Placeholder showing as red?<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>A red, struck through placeholder is a code the system does not recognize, usually a typo such as <code>{{TM_NAME}}</code> instead of <code>{{TM_FULL_NAME}}</code>. Check the spelling against the Placeholders drawer in the template editor.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">"Resolve placeholders before sending" and I want to carry on<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Open the flask menu and turn on Allow sending with unresolved placeholders. Turn it off again to see the real guard.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">"Email not sent"<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The mail server refused the message, nothing was recorded, and the same Send button retries it. In this demo that happens only when you turn on Fail the next email send in the flask menu.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">A team member already has an open ticket<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Only one open retrieval ticket is allowed per person. Open the existing ticket from the link, cancel it, or press Clear All Tickets in the flask menu.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">A button looks grey<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Buttons that are not ready are never really disabled. Press one and a message says what to do first.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">A ticket shows as overdue<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The Target Date has passed and the equipment is not back. The overdue stage offers the overdue reminder. Confirming In Transit stops the clock, and changing the Target Date with a reason clears it.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">The wrong email is attached<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Emails are chosen from the reason and deployment type. Check them on the ticket, or replace the attached email on the notice stage. Reason and deployment type lock once a notice is sent.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">The reason or deployment type will not change<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>It is locked because a notice was sent, a call was logged, an acknowledgment was recorded, or the ticket is closed. The message names which.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">I lost my progress or my tickets<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Tickets and ticks are saved in this browser only. A different browser, a private window or cleared site data starts fresh with the sample tickets.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">The prototype controls bar is missing<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Open the flask menu and turn on Show the prototype controls bar.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Formatting looks wrong after pasting into Outlook<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Use Paste as HTML, or press Download EML on the email preview and open the file in Outlook, which keeps all formatting.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Cannot find the charging emails<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>They appear in Post-Retrieval Charging after you choose Item Damaged or Not Returned, or when you press Equipment won't be returned? on the awaiting return stage.</p></div>
+    </details>
+  </div>
+  <h3 style="font-size:16px;font-weight:700;margin:24px 0 12px;">Questions about the demo</h3>
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Does anything really get sent?<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>No. Emails, texts and notices to IT are recorded as sent so you can follow the flow. Use Download EML if you want to see the real email file.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Where is my data kept?<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>In this browser only. Another browser, another device or a private window starts with the sample tickets.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">A team member already has an open ticket and I cannot create another.<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Open the flask menu and press Clear All Tickets (it asks you to confirm), or cancel the existing ticket.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">A button looks grey. Is it broken?<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>No. Buttons that are not ready stay clickable and tell you why with a message.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">The send is refused because of a placeholder.<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Use the Placeholder Check (the icon on the attached email or form) to see which one, or turn on Allow sending with unresolved placeholders in the flask menu.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Where is the flask icon?<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>In the top bar, next to the sun and moon button and the bell. The dark strip across the very top is the Prototype controls bar, and the same flask menu can show or hide it.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger">Can I use it on a phone?<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Yes. Phone, tablet and desktop are all designed. On a phone the stage steps turn into a menu.</p></div>
+    </details>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════ GLOSSARY ════════════════════════════ -->
+
+<div class="section" id="glossary">
+  <div class="section-header">
+    <div class="section-icon blue">&#x1F4D6;</div>
+    <div>
+      <h2 class="section-title">Glossary</h2>
+      <p class="section-why">Quick definitions for the terms you will see throughout the system.</p>
+    </div>
+  </div>
+
+  <div class="accordion-group">
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">APR</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Asset Processing Request. The ticket reference number, formatted like APR-26-00422. Every retrieval case gets a unique one.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">ATD</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Authority to Deduct. The form that authorizes a payroll deduction for damaged, unreturned or kept equipment. Nothing is deducted until the team member signs it.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Return Ack</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Equipment Return Acknowledgment. The form the team member signs to confirm they got the notice and will return the equipment.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Org Constants</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Values that are the same for every ticket, such as the Asset Team email and the office address. They fill in automatically.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Retrieval ticket</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>One case of getting equipment back from one team member.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Onsite and Remote</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>Onsite means the team member returns equipment in person. Remote means they ship it through a courier branch.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Last Working Day</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The last day of work. Most deadlines count from here.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Target Date</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The date the equipment must be back. It is worked out from the reason and deployment type, and you can change it with a reason.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Overdue Return</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The Target Date has passed and the equipment is not back. Confirming In Transit pauses this.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Placeholder</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>A blank in an email or form, written like {{TM_FULL_NAME}}, that the system fills from the ticket.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Gate</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>An approval step by P&amp;C on certain paths. Gates are advice and never block you.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Custodian</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The team member who holds the equipment.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Post-Retrieval Charging</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The process for charging a team member when equipment is damaged or not returned.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">Hold Off</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>The status after the equipment is received while it is checked.</p></div>
+    </details>
+
+    <details class="accordion">
+      <summary class="accordion-trigger"><span class="glossary-term">EML</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="accordion-body"><p>An email file. Download EML gives you the email as a file you can open and send from your own mail program.</p></div>
+    </details>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════ NEXT STEPS ════════════════════════════ -->
+<div class="section" id="nextsteps" style="margin-bottom:24px;">
+  <div class="card" style="background:var(--accent-soft);border-color:var(--accent);">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;">What to do next</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:12px;">
+      <div><p style="font-size:14px;font-weight:600;margin:0;">Do the missions</p><p style="font-size:13px;margin:4px 0 0;">Work through the guided missions. Start with the first three.</p></div>
+      <div><p style="font-size:14px;font-weight:600;margin:0;">Break things on purpose</p><p style="font-size:13px;margin:4px 0 0;">Use the controls to fail a send, remove a phone number, or change a date from outside.</p></div>
+      <div><p style="font-size:14px;font-weight:600;margin:0;">Tell us what you found</p><p style="font-size:13px;margin:4px 0 0;">Note anything confusing, missing or wrong, with the ticket number and the stage, and send it to the Asset Team.</p></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ───── Sidebar toggle ─────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+// ───── Theme toggle ─────
+function toggleTheme() {
+  var root = document.documentElement;
+  var current = root.getAttribute('data-theme');
+  if (current === 'dark') {
+    root.removeAttribute('data-theme');
+  } else {
+    root.setAttribute('data-theme', 'dark');
+  }
+  try { localStorage.setItem('ams-guide-theme', root.getAttribute('data-theme') || ''); } catch(e) {}
+}
+(function() {
+  try {
+    var saved = localStorage.getItem('ams-guide-theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  } catch(e) {}
+})();
+
+// ───── Section visit tracking ─────
+var visitedSections = {};
+(function() {
+  try {
+    var saved = localStorage.getItem('ams-guide-visited');
+    if (saved) visitedSections = JSON.parse(saved);
+  } catch(e) {}
+  Object.keys(visitedSections).forEach(function(id) {
+    var link = document.querySelector('.toc-link[data-section="' + id + '"]');
+    if (link) link.classList.add('visited');
+  });
+})();
+
+function markVisited(id) {
+  visitedSections[id] = true;
+  try { localStorage.setItem('ams-guide-visited', JSON.stringify(visitedSections)); } catch(e) {}
+  var link = document.querySelector('.toc-link[data-section="' + id + '"]');
+  if (link) link.classList.add('visited');
+  updateProgress();
+}
+
+// ───── Progress bar ─────
+function updateProgress() {
+  var total = document.querySelectorAll('.toc-link[data-section]').length;
+  var visited = Object.keys(visitedSections).length;
+  var pct = total > 0 ? (visited / total) * 100 : 0;
+  var fill = document.getElementById('progressFill');
+  if (fill) fill.style.width = pct + '%';
+}
+updateProgress();
+
+// ───── Intersection observer for visited + active TOC ─────
+(function() {
+  var sections = document.querySelectorAll('.section[id]');
+  var tocLinks = document.querySelectorAll('.toc-link[data-section]');
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        markVisited(entry.target.id);
+        // Update active TOC link
+        tocLinks.forEach(function(link) { link.classList.remove('active'); });
+        var activeLink = document.querySelector('.toc-link[data-section="' + entry.target.id + '"]');
+        if (activeLink) activeLink.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+
+  sections.forEach(function(section) { observer.observe(section); });
+})();
+
+// Close sidebar on nav click (mobile)
+document.querySelectorAll('.toc-link').forEach(function(link) {
+  link.addEventListener('click', function() {
+    if (window.innerWidth < 900) {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('open');
+    }
+  });
+});
+
+// ───── Checklist persistence ─────
+var checkedItems = {};
+(function() {
+  try {
+    var saved = localStorage.getItem('ams-guide-checks');
+    if (saved) checkedItems = JSON.parse(saved);
+  } catch(e) {}
+  Object.keys(checkedItems).forEach(function(key) {
+    var item = document.querySelector('[data-check="' + key + '"]');
+    if (item) item.classList.add('checked');
+  });
+})();
+
+function toggleCheck(el) {
+  var key = el.getAttribute('data-check');
+  if (!key) return;
+  el.classList.toggle('checked');
+  if (el.classList.contains('checked')) {
+    checkedItems[key] = true;
+  } else {
+    delete checkedItems[key];
+  }
+  try { localStorage.setItem('ams-guide-checks', JSON.stringify(checkedItems)); } catch(e) {}
+}
+
+// ───── Role switching ─────
+function switchRole(role) {
+  // Update tabs
+  document.querySelectorAll('.role-tab').forEach(function(tab) {
+    tab.classList.toggle('active', tab.getAttribute('data-role') === role);
+  });
+  // Update role content
+  document.querySelectorAll('.role-content').forEach(function(el) {
+    var elRole = el.getAttribute('data-role');
+    if (role === 'all') {
+      el.classList.toggle('active', el.classList.contains('role-all'));
+    } else {
+      el.classList.toggle('active', elRole === role);
+    }
+  });
+}
+</script>
+
+</body>
+</html>

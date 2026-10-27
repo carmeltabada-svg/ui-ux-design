@@ -1,21 +1,23 @@
-# [AMS Templates] – Integrate email/forms builder prototype into production AMS
+# [AMS Retrieval Module] – Production Integration
 
-*(No live Jira instance is connected to this project — paste this into a real
-ticket as-is.)*
+*(The Atlassian connector is not authorized in this session, so nothing was filed.
+Paste this into the real ticket as-is. It is one Epic covering the whole module, as decided;
+the phases below map to Stories if the team wants to split it.)*
 
 ## Summary
-Integrate the standalone Nuxt 4 prototype (email-template builder +
-retrieval-forms/document builder with Outlook export and print/PDF pipeline)
-into the real GoTeam AMS application, replacing its mock data layer with real
-persistence.
+Deliver a production-ready Retrieval Module for the GoTeam AMS — covering
+email templates, retrieval forms/documents, retrieval ticket tracking,
+offboarding checklists, and master data configuration — so the Asset Team
+can digitally manage the full employee retrieval lifecycle.
 
 ## Rationale
-The prototype was built to validate the editing UX, Outlook-export fidelity,
-and document pagination approach before committing engineering time to a
-production build. All core interaction patterns (image/button alignment,
-form-field validation, version history, Outlook export, print pagination)
-are implemented and verified in-browser; what remains is production
-plumbing — backend, auth, and real send/submit integrations.
+The Asset Team currently has no unified system for managing employee
+retrievals. Officers coordinate through spreadsheets, ad-hoc emails, and
+manual tracking — leading to missed retrievals, inconsistent communications,
+no audit trail, and no measurable process for charging unreturned assets.
+A front-end prototype has validated the core interaction patterns; what
+remains is production delivery with a real backend, database, and
+authentication layer.
 
 ## Scope
 **In:**
@@ -26,13 +28,20 @@ plumbing — backend, auth, and real send/submit integrations.
 - Replace `app/data/*.ts` reactive/localStorage stores with real API-backed
   persistence
 - Add real authentication and a real recipient/team-member directory
+- Deliver the ticket tracker (list, create, workspace with its 52 actions) and the offboarding
+  checklists on the real backend, replacing `app/api/mock.ts` and `app/api/ticketActions.ts`
+  with the server and running `app/api/http.ts` against it (see
+  [BACKEND_SWAP.md](./BACKEND_SWAP.md) and [DATA_CONTRACT.md](./DATA_CONTRACT.md))
+- Keep the text and spacing standard in the ported screens (Dev Doc §6.6)
 
 **Out** (see Dev Doc §4 for full detail):
-- **Real email/notification sending is not part of this ticket at all** —
-  it's a separate feature that will live on its own tab in the real app.
-  This ticket only needs to expose the finished content (exported Outlook
-  HTML, submitted form data) for that other feature to consume later.
-- E-signature legal certification, dark mode, mobile layout, and any
+- **Real SMS sending, and delivery from the Templates builders, are not part of
+  this ticket.** Sending the Ticket Tracker's stage emails is in scope for the
+  developer: the front end and mock are built behind one send operation,
+  `api().emails.send` (INTEGRATIONS.md section 1). SMS stays copy and confirm.
+- A live employee-record (HRIS) connection, and real email, SMS or digest delivery,
+  are separate work.
+- E-signature legal certification, a phone-ready editor layout, and any
   FormKit Pro input are also explicitly not part of this port — scope
   separately if needed.
 
@@ -64,8 +73,9 @@ item below is real, from-scratch full-stack work, not a config change)*
 - [ ] Design/implement roles/permissions and ownership checks on every
       endpoint
 
-**Email sending — OUT OF SCOPE for this ticket** (separate feature, separate
-tab in the real app; do not build an SMTP/API integration here)
+**Email sending: in scope for the Ticket Tracker, out of scope for the Templates builders**
+(build the server side of `emails.send`, see INTEGRATIONS.md section 1; the builders only
+hand over finished content)
 - [ ] Define the data hand-off contract only: exported Outlook-safe HTML for
       email templates, submitted form values for retrieval forms
 - [ ] Leave `RecipientsSection.vue` / the forms "emailed copy" notice as
@@ -91,41 +101,75 @@ tab in the real app; do not build an SMTP/API integration here)
 - [ ] Reconcile this prototype's theming with the real app's design system,
       if one already exists
 - [ ] Scope `@formkit/pro` + license cost if any Pro input is requested
-- [ ] Scope dark mode / mobile support as separate design work if required
+- [ ] Dark mode is built; scope mobile support as separate design work if required
 
 **Testing & rollout**
-- [ ] Run `tests/e2e/` (Playwright) and `npx vue-tsc --noEmit -p .` clean
+- [ ] Run `tests/e2e/` (Playwright) and `npx vue-tsc --noEmit -p .nuxt/tsconfig.app.json` clean
 - [ ] Add real backend/API tests (none exist today)
 - [ ] Load-test and security-review before production rollout
+
+**Ticket tracker, master data and data layer**
+- [ ] Replace `api/mock.ts` and `api/ticketActions.ts` with the real backend; keep `api/types.ts`, `keys.ts` and `mappers.ts`
+- [ ] Run `app/api/http.ts` against the real server and correct its paths and envelopes
+- [ ] Serialize ticket actions per ticket, or add a version check
+- [ ] Confirm the ten default assumptions in DATA_CONTRACT section 10
+- [ ] Move the alert scan and the digest to the server
+- [ ] Replace browser object-URL files with multipart upload
+- [ ] Delete the demo-only code (Dev Doc §12)
+- [ ] Keep the text and spacing standard when porting
+- [ ] Run `npx vue-tsc --noEmit -p .nuxt/tsconfig.app.json`, `npx nuxt build` and `tests/e2e/ticket-smoke.spec.ts` clean
 
 Full detail and rationale for each item: [Dev Doc §10](./DEV_HANDOFF.md#10-implementation-checklist).
 
 ## Known Traps (top 3)
-1. `ButtonLink`'s editor-DOM anchor intentionally has no live `href` (only
-   `data-href`) to prevent in-editor navigation — the exported HTML re-adds
-   a real `href`. Don't "fix" this without re-solving the navigation issue.
-2. Image/button auto-move-to-edge logic must insert before stripping empty
-   paragraphs, or it reintroduces a real infinite-loop tab hang.
-3. Image sizing must use the real canvas pixel crop (`cropImageToAspect()`)
-   — CSS `object-fit` visibly distorts images in real Outlook.
+1. **[Data layer]** The stage rules for the 52 ticket actions live in
+   `api/ticketActions.ts`, which is mock-server code. The server must own them;
+   do not re-add page-side writes of ticket fields, history or notifications.
+2. **[Data layer]** Ticket actions are not serialized per ticket. In http mode two
+   quick actions can overwrite each other; serialize or send a version (ETag).
+3. **[All]** `npx vue-tsc --noEmit -p .` checks nothing. Use
+   `npx vue-tsc --noEmit -p .nuxt/tsconfig.app.json`.
 
 Full list: [Dev Doc §3](./DEV_HANDOFF.md#3-known-traps).
 
 ## Out of Scope (top 3)
-1. No real backend/persistence exists yet — everything is `localStorage` +
-   in-memory state today.
-2. No auth, roles, or real recipient directory exists yet.
-3. No FormKit Pro inputs/license — only free/core FormKit inputs are used.
+1. **[All]** Real SMS and notification delivery are not built here. Real email sending
+   from the Ticket Tracker is the developer's work behind the existing send operation
+   (INTEGRATIONS.md section 1).
+2. **[Ticket Tracker, Data layer]** No live employee-record (HRIS) connection;
+   the directory is a fixture and the timed jobs run in the browser today.
+3. **[All]** No auth, roles or real recipient directory, and no FormKit Pro inputs.
 
 Full list: [Dev Doc §4](./DEV_HANDOFF.md#4-out-of-scope).
 
+## Implementation Phases
+
+This work is phased to manage dependencies and allow parallel streams.
+Full breakdown: [Implementation Phases](./IMPLEMENTATION_PHASES.md).
+
+| Phase | Focus | Depends on |
+|---|---|---|
+| **0 — Foundation** | Backend API, database schema, auth | Nothing |
+| **1 — Templates Builder** | Email editor + Outlook export, forms editor + FormKit fields, version history, print/PDF | Phase 0 |
+| **2 — Master Data** | Retrieval paths, offboarding checklists, config screens | Phase 0 |
+| **3 — Ticket Tracker** | List/create/detail, communications/send, logistics, closure | Phases 1 + 2 |
+| **4 — Integration** | Theming, data contracts, testing, security, rollout | Phase 3 |
+
+Phases 1 and 2 can run in parallel with different developers.
+
 ## References
+- [Product Requirements Document (PRD)](./PRD.md)
+- [Implementation Phases](./IMPLEMENTATION_PHASES.md)
 - [Dev Documentation](./DEV_HANDOFF.md)
 - [QA Documentation](./QA_HANDOFF.md)
+- [Data Contract](./DATA_CONTRACT.md) and [Backend Swap](./BACKEND_SWAP.md)
+- [Token Data Mapping](./TOKEN_DATA_MAPPING.html): the 66 placeholders, which come from production (14), which this module creates (37) and which are still open (15)
+- [User Guide](./USER_GUIDE.html) (interactive, one page per role) and [Handoff walkthrough](./HANDOFF_WALKTHROUGH.md)
+- PRD requirements fulfilled: the Must-Have list in the PRD (backend, database, auth, front end porting, testing); the prototype fulfils the front end behavior only
+- Live prototype: https://ams-retrieval-demo.netlify.app (a static build of `main`)
+- Source code: https://github.com/carmeltabada-svg/ui-ux-design (`main` is the source of truth; `retrieval` and `templates` are kept as backups)
 - Prior session notes (background only, not required reading):
   [archive/HANDOFF.md](./archive/HANDOFF.md),
   [archive/HANDOFF_SUMMARY.md](./archive/HANDOFF_SUMMARY.md),
   [archive/PAGINATION_TOOLKIT_STUDY.md](./archive/PAGINATION_TOOLKIT_STUDY.md),
   [archive/SESSION_SUMMARY.md](./archive/SESSION_SUMMARY.md)
-- No Figma file or live prototype URL is connected to this project — the
-  running prototype itself (`pnpm dev`) is the reference.

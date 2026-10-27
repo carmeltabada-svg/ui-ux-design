@@ -26,6 +26,12 @@ Sends in the retrieval flow (each one is a button in the workspace):
 
 ### 1.2 What is built now, and what is not
 
+**Request extras.** The request also carries `outcome` (charging only) and an optional `manual` flag. `manual: true` means the operator sent the email from their own client and is confirming it: the stage advances and the send is recorded with `sentExternally: true`, but the server must skip the placeholder check and must not send. Branch requests have no manual option. The placeholder guard is also skipped while the demo switch `allowUnresolvedSends` is on.
+
+**Download EML.** A built in fallback on the email preview and the closure modal: it builds an inline styled `.eml` in the browser for the operator to send from their own client. The closure PDF record is downloaded separately.
+
+**IT notice.** A4 "Notify IT" is recorded on the ticket only (`notifyItLock`, `skipItNotice`). No message is sent to IT. If IT is to be emailed, that send is new work and is not covered by `emails.send`.
+
 **Built (front end and mock):** one send operation, `api().emails.send` (`POST /tickets/{n}/emails`), used by every stage send (notice, courier endorsement, branch request, reminders, overdue, charging notice). The request carries the stage, kind, template key, form id, recipients and an idempotency key. The mock server (`api/mock.ts`) renders the message from the ticket with `utils/ticketMessage.ts`, refuses it with a message when a placeholder cannot be filled, simulates a mail server (a 0.7 second delay, and a "Fail the next email send" switch in the Simulation Control popover), stores a snapshot on the ticket (`emails[]`), and applies the stage's own history entry through the existing recorder action. The page shows a Sending state on the button, an "Email not sent" banner and toast on a refusal (nothing is recorded, the same button retries with the same idempotency key), and the sent banner on success. The Templates builders stay free of sending. SMS is unchanged (copy and confirm). **The closure copy is still only recorded** (`closeTicket` with the documented flag); sending it uses the same operation in production but is not wired in the prototype.
 
 **What the developer still builds:** the real server behind that operation (render in PHP against the same rules, send, store, status), the mail provider and sender mailbox, failed-attempt storage, reply detection, and the recipient form link. The list below was the gap analysis before this was built; items marked **built** are done in the front end and mock.
@@ -47,13 +53,13 @@ Sends in the retrieval flow (each one is a button in the workspace):
 | **Built.** The send actions are recorders | `recordNoticeSent` and `recordReminderSent` take no arguments and only write a history line (for example "Retrieval notice sent (email + SMS)") | The request must say what to send: template key, form id, recipients |
 | **Built.** Recipient override is lost | The "Use personal email" toggle and the typed address are page state and never reach the server | `to`, `cc`, `bcc` in the request |
 | **Built.** Template and form overrides are lost | Replace and Remove in the pickers are page state (`overrideTemplateKey`, `overrideFormId`) | The chosen `templateKey` and `formId` (or none) in the request |
-| **Built (rules extracted).** Token values are resolved in the page | `ticketRealValues` in `ticket-tracker/[id].vue` maps ticket fields to the 66 placeholders, and expands asset tables with regex over HTML | The server must render the message. Otherwise the front end would post finished HTML and the server could not validate it |
+| **Built (rules extracted).** Token values are resolved in the page | `ticketTokenValues` (`utils/ticketMessage.ts`; the page's `ticketRealValues` only wraps it) maps ticket fields to the 66 placeholders, and expands asset tables with regex over HTML | The server must render the message. Otherwise the front end would post finished HTML and the server could not validate it |
 | **Built in the mock.** The placeholder check is client-only | The guard in the page blocks the send; the server does not check | A server-side check that refuses with the list of missing tokens |
 | **Built in the mock.** Nothing is stored about what was sent | Only a history line; no subject, body, recipients, form version | A snapshot of the rendered message and attachments, recipients, sender, time, provider id |
 | **Built in the UI.** No send status | The UI assumes the send succeeded the instant the button is pressed and shows "sent" | Pending, sent and failed states, with a retry; a failed send must not show as sent |
 | **Built.** No idempotency | Pressing twice records twice (the UI hides the button after the first, but the server does not guard) | An idempotency key per send |
 | Reply detection is simulated | `simulateBranchReply` fakes "a reply has arrived in Outlook" | Inbound mail integration (see 1.4), or drop the feature and keep "Mark Reply as Received" manual |
-| The recipient form link is undefined | `ACKNOWLEDGMENT_LINK` is `https://forms.go.team/acknowledgment/{token}`, a placeholder host that is not a route in this app; `/form-preview` is an internal preview (TEMPLATES_SPEC section 5) | A real recipient page and token scheme (see section 5) |
+| The recipient form link is undefined | the `{{ACKNOWLEDGMENT_LINK}}` token resolves to `ACKNOWLEDGMENT_HOST` (`ticketTrackers.ts`, `https://forms.go.team/acknowledgment`) plus the ticket's `acknowledgmentToken`; the host is a placeholder that is not a route in this app; `/form-preview` is an internal preview (TEMPLATES_SPEC section 5) | A real recipient page and token scheme (see section 5) |
 | Forms attach by ticket mode | The attached form comes from the ticket mode and the charging outcome map, not from the template's own attachment (TEMPLATES_SPEC section 7) | One source of truth for which form a send attaches |
 
 ### 1.3 Recommended contract
@@ -94,7 +100,7 @@ The B8 reply banner ("A reply has arrived") is simulated. Real detection needs a
 
 ### 2.1 Where it is today
 
-The SMS texts (11 templates, `data/smsTemplates.ts`) are **copy and paste**. The operator copies the text, sends it from Google Messages for web on their own phone, and taps "Mark SMS sent", which records that it was sent (`confirmSmsSentFor`). There is no gateway. The Asset Team asked for exactly this and it is built.
+The SMS texts (12 templates, codes SMS-1A to SMS-11, `data/smsTemplates.ts`) are **copy and paste**. The operator copies the text, sends it from Google Messages for web on their own phone, and taps "Mark SMS sent", which records that it was sent (`confirmSmsSentFor`). There is no gateway. The Asset Team asked for exactly this and it is built.
 
 ### 2.2 Can it be sent from inside AMS through Google Messages?
 
@@ -121,7 +127,7 @@ Capture the two open facts in the next discussion: who must be able to read repl
 
 **Principle (decided with the Asset Team):** the AMS already holds the team member records and their assets. Do **not** bridge to R24 for anything the AMS already has. Fetch from R24 **only what the AMS does not have**, on a case by case basis when a ticket is created or opened, show it in the ticket, and **do not keep a copy of it in AMS tables** (servicing R24 data inside the AMS is not recommended).
 
-The prototype fakes both sources with one mock, `app/mocks/hris_directory.json` (five employees, type `HrisRecord` in `app/data/ticketTrackers.ts`), loaded through `GET /hris/team-members` in `app/api/http.ts`. That single list has to be split into the two sources below.
+The prototype fakes both sources with one mock, `app/mocks/hris_directory.json` (30 employees, type `HrisRecord` in `app/data/ticketTrackers.ts`), loaded through `GET /hris/team-members` in `app/api/http.ts`. That single list has to be split into the two sources below.
 
 ### 3.1 Already in the AMS: read from the AMS, do not fetch from R24
 
@@ -149,7 +155,7 @@ The prototype fakes both sources with one mock, `app/mocks/hris_directory.json` 
 
 Employee id, name and work email are already in the AMS (confirmed), so they are read from the AMS.
 
-`caseType` (for example "Voluntary Resignation") is in the mock record but **no screen reads it**. Do not fetch it.
+`caseType` (for example "Voluntary Resignation") is in the mock record and is shown only as a display line on the create view (`create.vue`). It drives nothing. Do not fetch it unless that display is kept.
 
 ### 3.3 Assets: serials and tags
 
@@ -204,7 +210,7 @@ The Asset Team members, couriers, courier branches and the Asset Team contact de
 | Where | Problem |
 |---|---|
 | `createdAt` | Still a calendar date string. It is also the "notice date" anchor for immediate resignation. The server should set it (in the company's business date) |
-| Morning digest and `scanTicketAlerts` | The 08:00 digest uses the browser's local clock; there is no stored time zone per Asset Team member. A server job needs one |
+| Morning digest and `scanTicketAlerts` | `scanTicketAlerts` and `sendDueDigests` (`app/data/ticketTrackers.ts`) run in the browser, started from `TopNavbar.vue` 2.5 s after mount and then every 60 s. The 08:00 cut uses the browser's clock; there is no stored time zone per Asset Team member. A server job needs one |
 | Number formats | Every date uses the `en-US` locale. If users should see their own locale format, pass the user's locale |
 | Time of "today" on the server | Overdue and due soon use the viewer's calendar date in the browser. A server that computes alerts needs the recipient's zone |
 | Automated test | The check was run once by script (`tz-check`, not kept in the repo). Node on Windows ignores the `TZ` variable, so an automated multi-zone test needs a browser context with a time zone (Playwright `timezoneId`) |
@@ -274,6 +280,6 @@ What the dev needs to know when porting:
 - **Tokens, not colors.** `bg-white` is now `bg-card`. The pinned `rgb(0,127,69)` and `#894b00` text are `text-ams-success` and `text-ams-warning`. Tailwind gray, slate and the 50 to 300 tints of the status hues are redefined under `.dark`, and the 600 to 800 text shades are mapped to light tints in `@layer utilities`. Any new color class written for a light surface needs a dark value there.
 - **One primary token feeds text and fill** in Nuxt UI, so dark primary is `#7da2ff` and a solid primary button is that blue with dark text. Status pills keep their solid fills with white text.
 - **Placeholder passes AA in dark** (5.9:1). The light placeholder exception (3.5:1) is unchanged.
-- **Focus ring.** Dark uses a full strength primary outline. Nuxt UI's default (primary at 25% opacity) is about 1.6:1 in dark and 1.4:1 in light, and light is left as it was.
+- **Focus ring.** Both themes draw a 2px full strength primary outline with a 2px offset on links, buttons, tabs, menu items, switches and summaries (`main.css`, "Keyboard focus ring"). Nuxt UI's default ring (primary at 25% opacity) measured about 1.1:1 on dark and 1.8:1 on light. The outline measures about 5.9:1 on dark and 4.6:1 on light.
 - **Logo.** `public/img/logofull-white.svg` shows in dark, `logofull-default.svg` in light.
 - **What was and was not checked** is in `DEV_HANDOFF.md` section 13, and the open items are in section 15.

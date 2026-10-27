@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMS Token Data Mapping</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root { --bg:#FAFBFC; --fg:#1a1d23; --muted:#6b7280; --accent:#386BE6; --surface:#fff; --border:#E5E7EB;
+    --green:#059669; --green-soft:#ECFDF5; --blue:#386BE6; --blue-soft:#EBF0FD; --orange:#B45309; --orange-soft:#FFFBEB; --grey:#4b5563; --grey-soft:#F3F4F6;
+    --font:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0f1117; --fg:#e5e7eb; --muted:#9ca3af; --accent:#6B8EF0; --surface:#1a1d27; --border:#2d3140;
+    --green:#34d399; --green-soft:#0a2e1f; --blue:#6B8EF0; --blue-soft:#1e2a4a; --orange:#fbbf24; --orange-soft:#2a1f0a; --grey:#d1d5db; --grey-soft:#22262f; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:var(--font); line-height:1.5; max-width:1180px; margin:0 auto; padding:24px 20px 80px; }
+  h1 { font-size:1.5rem; font-weight:700; margin:0 0 4px; letter-spacing:-0.02em; }
+  .subtitle { color:var(--muted); font-size:.85rem; margin-bottom:20px; }
+  h2 { font-size:1rem; font-weight:700; margin:32px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--border); }
+  h2 .n { font-weight:500; color:var(--muted); font-size:.8rem; margin-left:6px; }
+  p { font-size:.88rem; }
+  code { font-family:var(--mono); font-size:.75rem; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 18px; margin:12px 0; font-size:.86rem; }
+  .card p { margin:6px 0; }
+  .legend { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin:12px 0; }
+  .legend .card { margin:0; }
+  .filters { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 4px; }
+  .filters button { font:inherit; font-size:.8rem; font-weight:600; padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--fg); cursor:pointer; }
+  .filters button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .filters button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .tbl-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
+  table { width:100%; border-collapse:collapse; font-size:.8rem; min-width:980px; }
+  th { text-align:left; padding:8px 10px; background:var(--surface); border-bottom:1px solid var(--border); font-weight:600; font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); position:sticky; top:0; }
+  td { padding:7px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:last-child td { border-bottom:0; }
+  .token { font-family:var(--mono); font-size:.76rem; color:var(--accent); white-space:nowrap; }
+  .source { font-size:.76rem; color:var(--muted); }
+  .source code { background:var(--grey-soft); padding:1px 4px; border-radius:3px; }
+  .prod { display:inline-block; font-size:.72rem; font-weight:700; padding:2px 10px; border-radius:20px; }
+  .prod-yes { background:var(--green-soft); color:var(--green); }
+  .prod-no { background:var(--grey-soft); color:var(--grey); }
+  .prod-open { background:var(--orange-soft); color:var(--orange); }
+  .fill { font-size:.74rem; color:var(--muted); font-style:italic; background:repeating-linear-gradient(135deg,transparent 0 6px,var(--grey-soft) 6px 7px); }
+  .note { font-size:.8rem; color:var(--muted); padding:10px 14px; background:var(--surface); border-radius:8px; border:1px solid var(--border); margin:8px 0 16px; }
+  tr[hidden] { display:none; }
+  @media print { .filters { display:none; } .tbl-wrap { overflow:visible; } table { min-width:0; } }
+</style></head>
+<body>
+<h1>Token Data Mapping</h1>
+<p class="subtitle">Developer reference. For every <code>{{TOKEN}}</code> in the emails and forms: where the prototype gets the value, and whether production supplies it.</p>
+
+<p>Every email template and form uses <code>{{TOKEN}}</code> placeholders. In the prototype they are filled from the ticket (function <code>ticketTokenValues</code>) or, for a preview with no ticket, from <code>SAMPLE_VALUES</code>. This file does <strong>not</strong> claim the production field names or types. We do not know them. It says instead whether the value is something production already holds, so the developer knows which tokens need a lookup and which the new module stores itself.</p>
+
+<div class="legend">
+  <div class="card"><span class="prod prod-yes">Yes</span><p><strong>Comes from a production system.</strong> The value already exists in the AMS team member or asset records, or in R24 (HRIS). The developer maps it and fills in the real field and type in the last column.</p></div>
+  <div class="card"><span class="prod prod-no">No</span><p><strong>Created by this module.</strong> The officer types it into the ticket, or the module works it out (a date rule, a count, a generated number). The new retrieval tables store it. Nothing to look up.</p></div>
+  <div class="card"><span class="prod prod-open">Open</span><p><strong>No decision yet.</strong> The value is fixed text or a fixture in the prototype (couriers, company details, Asset Team members) and has no source system. The team decides where it lives: a settings table, master data or another system.</p></div>
+</div>
+
+<p><strong>66 tokens:</strong> 14 from production, 37 created by this module, 15 still open.</p>
+
+<div class="filters" role="group" aria-label="Filter by source">
+  <button type="button" data-filter="all" aria-pressed="true">All 66</button>
+  <button type="button" data-filter="Yes" aria-pressed="false">From production: Yes 14</button>
+  <button type="button" data-filter="No" aria-pressed="false">Created by this module: No 37</button>
+  <button type="button" data-filter="Open" aria-pressed="false">Open 15</button>
+</div>
+
+<h2>Custodian (team member) <span class="n">10</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="Yes"><td class="token">TM_FULL_NAME</td><td>Team member full name</td><td class="source"><code>ticket.employee.name</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">Text. Name, employee id and work email are already in the AMS.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="No"><td class="token">TM_FIRST_NAME</td><td>Team member first name</td><td class="source"><code>First word of the full name, or the case's own first name override</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Worked out from TM_FULL_NAME. The officer can override it for one charging case.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="Yes"><td class="token">EMPLOYEE_ID</td><td>Employee ID</td><td class="source"><code>ticket.employee.id with the "EMP-" prefix removed</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">The prototype's ids are seed data. Confirm the real format and whether it has a prefix.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">TM_EMAIL</td><td>GoTeam email</td><td class="source"><code>ticket.employee.email</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">Text. Work email.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">TM_CONTACT_NUMBER</td><td>Contact number</td><td class="source"><code>ticket.contact.number</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">Text. May be empty. The officer can correct it for one ticket, which does not change the master record.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">TM_PRESENT_ADDRESS</td><td>Present address</td><td class="source"><code>The officer's correction for this ticket, else ticket.employee.address</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">Text. A correction is stored on the ticket only. Used to suggest the nearest courier branch.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">CLIENT_NAME</td><td>Client name</td><td class="source"><code>ticket.employee.client</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">Text. "Internal" means a GoTeam owned asset, any other value means a client owned asset.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">LEADERSHIP_COACH</td><td>Leadership Coach</td><td class="source"><code>ticket.employee.leadershipCoach</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">R24 (HRIS)</td><td class="source">Text, shaped like "Name, Role". Confirmed as an R24 field. Fetch when needed, do not store.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">ALTERNATE_CONTACT_NAME</td><td>Alternate contact name</td><td class="source"><code>ticket.contact.altName</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">Text. May be empty. Assumed to live with the alternate number. Confirm.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">ALTERNATE_CONTACT_NUMBER</td><td>Alternate contact number</td><td class="source"><code>ticket.contact.altNumber</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS team member record</td><td class="source">Text. May be empty.</td><td class="fill">To confirm</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Ticket <span class="n">4</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="No"><td class="token">APR_REF</td><td>Ticket reference number</td><td class="source"><code>ticket.reference</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text like APR-26-00422. The server assigns it and resets the sequence each year.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">TICKET_CREATED_DATE</td><td>Ticket created date</td><td class="source"><code>ticket.createdAt</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Set when the ticket is created.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">RETRIEVAL_REASON</td><td>Retrieval reason</td><td class="source"><code>REASON_LABELS[ticket.reason]</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">One of five: Resignation, Immediate Resignation, End of Contract, Recalled, Unexplained Absence. Pre-filled from R24's suggested reason, but the ticket stores the final value.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">RETURN_MODE</td><td>Return mode</td><td class="source"><code>ticket.mode</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Onsite or Remote. Pre-filled from R24, but the ticket stores the final value.</td><td class="fill">Stored by this module</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Dates <span class="n">13</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="No"><td class="token">TARGET_RETURN_DATE</td><td>Target return date</td><td class="source"><code>ticket.targetDateISO</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Calendar date. Worked out from the Last Working Day and the reason rules, then stored. The officer can change it with a reason.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">TARGET_DISPATCH_DATE</td><td>Target dispatch date</td><td class="source"><code>ticket.targetDateISO</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Same field as the return date. Used by remote emails.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="Yes"><td class="token">LAST_WORKING_DAY</td><td>Last working day</td><td class="source"><code>ticket.lwd</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">R24 (HRIS)</td><td class="source">Calendar date, YYYY-MM-DD. Can change later. The backend should keep the value the Target Date was computed from (proposed column lwd_seen in DATA_CONTRACT) to notice a change.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">SEPARATION_DATE</td><td>Separation date</td><td class="source"><code>ticket.sep</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">R24 (HRIS)</td><td class="source">Calendar date. May be blank for an ongoing absence case.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="No"><td class="token">NOTICE_DATE</td><td>Notice date</td><td class="source"><code>ticket.createdAt</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. In the prototype this is the ticket creation date, not an actual notice date.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">DATE_OF_THIS_NOTICE</td><td>Date this notice was sent</td><td class="source"><code>Today, when the message is rendered</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Worked out at send time.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="Open"><td class="token">LEAVE_START_DATE</td><td>Leave start date</td><td class="source"><code>No value is produced in the prototype</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Belongs to the Sabbatical path, which has no flow yet. Decide the source when that path is defined.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="No"><td class="token">RECALL_EFFECTIVE_DATE</td><td>Recall effective date</td><td class="source"><code>ticket.recallEffectiveDate</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Entered on the create form. Required for Recalled.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">DATE_OF_ORIGINAL_NOTICE</td><td>Date the original notice was sent</td><td class="source"><code>The earliest send in the Activity Log</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Worked out from the ticket history.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">DAYS_OVERDUE</td><td>Days overdue</td><td class="source"><code>Days between the Target Date and today, only while overdue</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Whole number printed as text. Empty when the ticket is not overdue.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">ORIGINAL_TARGET_DATE</td><td>Original return or dispatch deadline</td><td class="source"><code>The first date in the Target Date history</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. The deadline as it stood before any change.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">ACKNOWLEDGMENT_DUE_DATE</td><td>Acknowledgment form due date</td><td class="source"><code>acknowledgmentDueISO(ticket)</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. A rule per reason: recall date, next working day, creation plus 3 days, Target Date or Last Working Day.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">ESCALATION_DEADLINE</td><td>Escalation deadline</td><td class="source"><code>Creation plus 3 days for Immediate Resignation, else the Target Date</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Worked out by the module.</td><td class="fill">Stored by this module</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Assets <span class="n">6</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="Yes"><td class="token">ASSET_NAME</td><td>Asset name</td><td class="source"><code>ticket.assets[].model</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS asset record</td><td class="source">Text. Category and model per unit. With several assets the email prints one row each.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">ASSET_TAG</td><td>Asset tag</td><td class="source"><code>ticket.assets[].assetTag</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS asset record</td><td class="source">Text. The prototype invents these (GT-AST-NNNN). The AMS holds the real tag per unit.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Yes"><td class="token">SERIAL_NUMBER</td><td>Serial number</td><td class="source"><code>ticket.assets[].serial</code></td><td><span class="prod prod-yes">Yes</span></td><td class="source">AMS asset record</td><td class="source">Text. The prototype invents these (SN-NNNNN). The AMS holds the real serial per unit.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="No"><td class="token">ASSET_QTY</td><td>Quantity</td><td class="source"><code>Count of the ticket's assets</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Number printed as text.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">ASSET_TABLE</td><td>Asset table (name, tag, serial)</td><td class="source"><code>expandTicketAssets(), one row per confirmed asset</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">HTML table built from the confirmed assets, which come from the AMS.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">ASSET_TABLE_QTY</td><td>Asset table (name and quantity)</td><td class="source"><code>expandTicketAssets(), courier version</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">HTML table with no serial numbers, for the courier endorsement.</td><td class="fill">Stored by this module</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Courier <span class="n">9</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="Open"><td class="token">COURIER_NAME</td><td>Courier name</td><td class="source"><code>courierProviderById(ticket.courierProviderId).name</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Text. JRS Express and LBC are fixtures today. Decide where couriers are owned.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">COURIER_ACCOUNT_NAME</td><td>Corporate account name</td><td class="source"><code>Fixed text, Go Virtual Assistants Inc.</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Text. Company constant. Decide whether it lives in settings or master data.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">COURIER_ACCOUNT_NUMBER</td><td>Corporate account number</td><td class="source"><code>courier provider accountNumber</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Text. The numbers in the prototype are demo values. The real ones are needed.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ACCOUNT_MANAGER_NAME</td><td>Account manager name</td><td class="source"><code>courier provider accountManager</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Text. Fixture today.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ACCOUNT_MANAGER_EMAIL</td><td>Account manager email</td><td class="source"><code>courier provider accountManagerEmail</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Text. Where the courier endorsement email is sent. Fixture today.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="No"><td class="token">BRANCH_NAME</td><td>Confirmed branch name</td><td class="source"><code>ticket.courierBranchName</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. Captured on the ticket when the officer confirms a branch. The branch list itself has no source system yet (JRS 391 and LBC 1,399 branches are a one time snapshot).</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">BRANCH_ADDRESS</td><td>Confirmed branch address</td><td class="source"><code>ticket.courierBranchAddress</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. Captured with the branch.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="Open"><td class="token">DECLARED_VALUE</td><td>Declared value</td><td class="source"><code>Fixed text, PHP 5,000.00</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Text. Company constant for every shipment. Decide where it lives.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="No"><td class="token">TRACKING_NUMBER</td><td>Tracking or reference number</td><td class="source"><code>ticket.trackingNumber</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. Typed by the officer when the shipment is confirmed.</td><td class="fill">Stored by this module</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Asset Team <span class="n">7</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="Open"><td class="token">ASSET_TEAM_NAME</td><td>Asset Team name</td><td class="source"><code>Fixed text</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Company constant. Decide whether it lives in settings or master data.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ASSET_TEAM_ADDRESS</td><td>Asset Team address</td><td class="source"><code>Fixed text</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Company constant. The office address printed in emails.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ASSET_TEAM_MOBILE</td><td>Asset Team mobile</td><td class="source"><code>Fixed text</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Company constant. The prototype's number is a demo value.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ASSET_TEAM_LANDLINE</td><td>Asset Team landline</td><td class="source"><code>Fixed text</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Company constant. The prototype's number is a demo value.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ASSET_TEAM_EMAIL</td><td>Asset Team email</td><td class="source"><code>Fixed text</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Company constant. Printed as the reply address.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ASSET_TEAM_SCHEDULE</td><td>Asset Team schedule</td><td class="source"><code>Fixed text</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Company constant. Office days and hours.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="Open"><td class="token">ASSET_TEAM_OFFICER</td><td>Signing officer name and title</td><td class="source"><code>Fixed text</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Company constant. Who signs the notices.</td><td class="fill">To confirm</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Links <span class="n">2</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="No"><td class="token">ACKNOWLEDGMENT_LINK</td><td>Acknowledgment form link</td><td class="source"><code>Acknowledgment host plus a random per ticket token</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">URL. The host in the prototype (forms.go.team) is a placeholder and no public page serves it. The token must be random, never the internal id.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">TRACKING_LINK</td><td>Shipment tracking link</td><td class="source"><code>ticket.trackingLink</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">URL. Typed by the officer. It must be on the courier's own website, http or https. No courier API is used.</td><td class="fill">Stored by this module</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Post-Retrieval Charging (A11) <span class="n">15</span></h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Token</th><th>What it is</th><th>In the prototype</th><th>From production?</th><th>Which system</th><th>Notes and type</th><th>Production field and type (dev fills in)</th></tr></thead>
+  <tbody>
+    <tr data-from="Open"><td class="token">CASE_OFFICER</td><td>Asset Team officer for the case</td><td class="source"><code>The case override, else the ticket assignee</code></td><td><span class="prod prod-open">Open</span></td><td class="source">No source system yet</td><td class="source">Text. Asset Team members have no source system yet. Decide the user directory.</td><td class="fill">To confirm</td></tr>
+    <tr data-from="No"><td class="token">ATD_REFERENCE</td><td>ATD reference number</td><td class="source"><code>ticket.atdReference, else ATD-&lt;year&gt;-&lt;ticket number&gt;</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. The prototype makes one up. Confirm the real numbering rule.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">ASSET_OWNER</td><td>Asset owner</td><td class="source"><code>GoTeam when the client is Internal, else the client name</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. Worked out from CLIENT_NAME.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">DATE_RETURN_REQUESTED</td><td>Date the return was requested</td><td class="source"><code>The case override, else the earliest send in the Activity Log</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Worked out unless the officer sets it.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">DATE_RECEIVED</td><td>Date the equipment was received</td><td class="source"><code>The case override, else the receipt evidence record</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Worked out unless the officer sets it. Hidden when the equipment was not returned.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">DATE_ASSESSED</td><td>Date the equipment was assessed</td><td class="source"><code>ticket.deductionCaseAssessedDate</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Entered in Case Details.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">DATE_BUYOUT_ELECTION</td><td>Date of buy-out election</td><td class="source"><code>ticket.deductionCaseBuyoutElectionDate</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Settlement outcome only.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">QUOTATION_EXPECTED_BY</td><td>Date the repair quotation is expected</td><td class="source"><code>ticket.deductionCaseQuotationExpectedDate</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Quotation Pending only.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">HEAR_BACK_BY</td><td>Date the team member will hear back by</td><td class="source"><code>ticket.deductionCaseHearBackByDate</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Quotation Pending only.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">RESPONSE_DUE_TM</td><td>Date a response is due from the team member</td><td class="source"><code>ticket.deductionCaseResponseDueDate</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Date. Entered in Case Details.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">AMOUNT_BASIS</td><td>Basis of the amount</td><td class="source"><code>DEDUCTION_AMOUNT_BASIS_LABELS[ticket.deductionCaseAmountBasis]</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">One of a short list that depends on the outcome (for example quotation, replacement cost, net book value).</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">SUPPORTING_DOC_REF</td><td>Supporting document reference</td><td class="source"><code>The quotation reference, else the typed reference</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. Entered by the officer.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">AMOUNT_FIGURES</td><td>Amount in figures</td><td class="source"><code>ticket.deductionCaseAmountFigures</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. Entered by the officer. The system does not post deductions.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">AMOUNT_WORDS</td><td>Amount in words</td><td class="source"><code>ticket.deductionCaseAmountWords</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. Entered by the officer.</td><td class="fill">Stored by this module</td></tr>
+    <tr data-from="No"><td class="token">ASSET_CONDITION</td><td>Condition, finding or settlement amount per item</td><td class="source"><code>ticket.deductionCaseAssetNotes[serial]</code></td><td><span class="prod prod-no">No</span></td><td class="source">This module</td><td class="source">Text. One note per selected item. Prints in the equipment table.</td><td class="fill">Stored by this module</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Source systems named above</h2>
+<div class="tbl-wrap"><table style="min-width:0">
+  <thead><tr><th>System</th><th>What it holds</th><th>Rule decided with the Asset Team</th></tr></thead>
+  <tbody>
+    <tr><td>AMS team member record</td><td>Name, employee id, work email, contact number, alternate contact, address, client</td><td>Read from the AMS. Do not bridge to R24 for anything the AMS already has.</td></tr>
+    <tr><td>AMS asset record</td><td>The assets a team member holds, with real serial numbers and asset tags</td><td>Read from the AMS. The prototype invents serials and tags.</td></tr>
+    <tr><td>R24 (HRIS)</td><td>Last Working Day, Separation Date, shift, suggested reason, department, leadership coach, deployment type</td><td>Fetch only what the AMS lacks, when the ticket is created or opened. Do not keep a copy, except the one value the ticket needs to notice a change (a proposed column, <code>lwd_seen</code>).</td></tr>
+    <tr><td>This module</td><td>The ticket itself, its history, case details, branch choice, tracking, generated references and links</td><td>New retrieval tables built by the developer. See DATA_CONTRACT.</td></tr>
+    <tr><td>No source system yet</td><td>Couriers and their account details, courier branches, Asset Team members, company details</td><td>Decide where each is owned. See INTEGRATIONS section 3.7.</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Resolution pipeline (prototype)</h2>
+<div class="note">
+  <strong>How tokens get resolved in the ticket workspace:</strong><br>
+  1. <code>ticketTokenValues(ticket)</code> maps the ticket to real values, one entry per token. An empty value stays undefined.<br>
+  2. <code>ticketResolvedCodeSet(ticket)</code> keeps the tokens that have a real, non empty value.<br>
+  3. <code>placeholderStatusFor(code, resolved)</code> returns <code>resolved</code>, <code>org-constant</code>, <code>missing</code> or <code>unrecognized</code>. Fixed company text is an org constant, so it is never flagged as missing.<br>
+  4. <code>wrapTokens(html, samples, statusFor)</code> renders the colored preview.<br>
+  5. <code>expandTicketAssets(html, assets)</code> repeats the asset table rows, one per confirmed asset.<br>
+  6. <code>expandCaseAssetRows(html, rows)</code> repeats the charging table rows, one per case item.<br>
+  7. <code>resolveTokensForPrint(html, samples)</code> produces the final email or form with every token filled.<br>
+  Production should do the same on the server: resolve every token from the ticket, refuse to send while any is missing (the "Resolve placeholders before sending" rule), and print an unrecognized token as nothing.
+</div>
+
+<script>
+(function () {
+  var buttons = document.querySelectorAll('.filters button');
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var f = b.getAttribute('data-filter');
+      buttons.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      document.querySelectorAll('tbody tr[data-from]').forEach(function (r) {
+        r.hidden = !(f === 'all' || r.getAttribute('data-from') === f);
+      });
+      document.querySelectorAll('h2').forEach(function (h) {
+        var w = h.nextElementSibling; if (!w || !w.classList.contains('tbl-wrap')) return;
+        var any = w.querySelectorAll('tbody tr:not([hidden])').length > 0;
+        h.hidden = w.hidden = !any;
+      });
+    });
+  });
+})();
+</script>
+</body></html>
