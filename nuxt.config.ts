@@ -93,7 +93,13 @@ export default defineNuxtConfig({
     // Same reasoning as /form-preview above - reads a ticket's gate pass
     // straight from the TICKETS store, which only really exists in
     // localStorage.
-    '/gate-pass-preview': { ssr: false }
+    '/gate-pass-preview': { ssr: false },
+    // The Assets screens keep their data in localStorage only, so a server render would
+    // flash seed data before the client swaps it in. Disabling SSR avoids that.
+    '/assets': { ssr: false },
+    '/assets/**': { ssr: false },
+    '/move-asset': { ssr: false },
+    '/move-asset/**': { ssr: false }
   },
 
   compatibilityDate: '2026-06-30',
