@@ -11,6 +11,7 @@ const sidebarOpen = ref(true)
   <div class="assets-shell antialiased flex flex-col h-dvh overflow-hidden bg-default">
     <SharedSkipLink />
     <AssetsSimulatorBar />
+    <AssetsDemoSidebarLock />
     <div class="flex flex-1 min-h-0">
       <EmailAmsSidebar
         v-if="sidebarOpen"

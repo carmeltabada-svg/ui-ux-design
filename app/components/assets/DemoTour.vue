@@ -1,117 +1,213 @@
 <script setup lang="ts">
 // Guided tour of the Assets prototype, for demos and user testing. Prototype scaffolding in the same way as the simulator
-// bar, and it lives only on the demo-guide branch: it walks the visitor through the real screens with a spotlight and a
-// card, and it touches no product page. It finds its targets by selector and text, so nothing in the pages carries a
-// tour attribute. Delete this file and its two tags (layouts/assets.vue, SimulatorBar.vue) and the tour is gone.
+// bar, and it lives only on the demo-guide branch. It never moves the visitor to another screen on its own: where the
+// next view comes from a click (a menu option, a tag, a tab), the tour points at that control and waits for the click,
+// so the visitor learns the way there. It finds its targets by selector and text, so no product page carries a tour
+// attribute. Delete this file and its tag in SimulatorBar.vue and the tour is gone.
 const route = useRoute()
 const router = useRouter()
 
-const SEEN = 'ams:assets:tour:seen:v1'
-const PROGRESS = 'ams:assets:tour:progress:v1'
+const SEEN = 'ams:assets:tour:seen:v2'
+const PROGRESS = 'ams:assets:tour:progress:v2'
 
 interface Step {
-  path?: string
   title: string
   body: string
+  /** Where this step is shown. On any other screen the card offers to take the visitor there. */
+  at?: () => boolean
+  /** Where "Take me there" goes, when the visitor is on the wrong screen. */
+  to?: string
   /** Finds the element to spotlight. No finder, or none found, shows the card in the middle. */
   find?: () => Element | null
   pad?: number
+  /** A step the visitor performs: the tour waits until this is true, then moves on by itself. */
+  until?: () => boolean
+  /** Short instruction shown above the buttons on an action step. */
+  doThis?: string
 }
 
-const UNIT = 'GT-CE-LTP-1233-0926-0013'
-const byText = (sel: string, text: string) => () => [...document.querySelectorAll(sel)].find(e => (e.textContent ?? '').trim().startsWith(text)) ?? null
+const byText = (sel: string, text: string, exact = false) => () =>
+  [...document.querySelectorAll(sel)].find((e) => { const t = (e.textContent ?? '').trim(); return exact ? t === text : t.startsWith(text) }) ?? null
+const menuOrButton = (button: () => Element | null) => () => document.querySelector('[role=menu]') ?? button()
+const rowMenuButton = () => document.querySelector('tbody tr:first-child button[aria-label^="Move "]')
+const sidebarAssets = () => [...document.querySelectorAll('a')].find(a => (a.textContent ?? '').trim() === 'Assets' && a.closest('aside, nav, [role=navigation]') && !a.closest('main')) ?? null
+
+const onList = () => route.path === '/assets'
+const onDetail = () => /^\/assets\/[^/]+/.test(route.path)
+const onForm = () => /^\/move-asset\/[^/]+\/move$/.test(route.path) && !route.query.kind
+const onSupplierForm = () => /^\/move-asset\/[^/]+\/move$/.test(route.path) && route.query.kind === 'supplier'
+const anyMove = () => /^\/move-asset\/[^/]+\/move$/.test(route.path)
+const firstRowExited = () => /Supplier Return|Client Pull-Out/.test(document.querySelector('tbody tr:first-child')?.textContent ?? '')
 
 const steps: Step[] = [
   {
-    path: '/assets',
+    at: onList,
+    to: '/assets',
     title: 'Welcome to the new Assets screens',
-    body: 'This short tour shows how to find a unit, read its history and move it. Everything here is sample data, so go ahead and click around. You can leave at any time with Skip.'
+    body: 'This tour shows how to find a unit, read its history and move it. You do the clicking, so you will see how to reach every screen yourself. Everything here is sample data, and you can leave at any time with Skip tour.'
   },
   {
-    path: '/assets',
+    at: onList,
+    to: '/assets',
     title: 'Every unit, in one list',
     body: 'The heading counts the units, and the line under it says how many are with team members, at our locations, and at a supplier or client.',
     find: () => document.querySelector('main h1')
   },
   {
-    path: '/assets',
+    at: onList,
+    to: '/assets',
     title: 'Narrow it down',
     body: 'Filter by status, type and more. The older statuses, such as Under Repair and In Transit, are in a Legacy group at the bottom of the status list.',
     find: () => document.querySelector('[aria-label="Filter by Status"]'),
     pad: 6
   },
   {
-    path: '/assets',
+    at: onList,
+    to: '/assets',
     title: 'Move a unit from its row',
-    body: 'Open this menu to check a unit in or out, return it to its supplier, or record a client pull-out. If an option is greyed out, hover it to see why.',
-    find: () => document.querySelector('tbody tr:first-child button[aria-label^="Move "]'),
-    pad: 6
+    body: 'The last column has a Move menu for every unit. It offers Check In or Check Out, Return to supplier and Client pull-out. A greyed-out option tells you why when you hover it.',
+    doThis: 'Open the menu on the first row, then choose Check In or Check Out.',
+    find: menuOrButton(rowMenuButton),
+    pad: 6,
+    until: anyMove
   },
   {
-    path: '/assets',
-    title: 'Open a unit',
-    body: 'Click a tag to open the unit. We will open one for you next.',
-    find: () => document.querySelector('tbody tr:first-child td:nth-child(2) a, tbody tr:first-child td:nth-child(2) button'),
-    pad: 6
-  },
-  {
-    path: `/assets/${UNIT}`,
-    title: 'Start a move from here too',
-    body: 'The same menu is at the top of every unit, next to Edit details.',
-    find: byText('button', 'Move asset'),
-    pad: 6
-  },
-  {
-    path: `/assets/${UNIT}`,
-    title: 'Everything that happened to it',
-    body: 'Custody history, Movements and the Activity feed keep a record of every status change and move, so you can always see who had a unit and when.',
-    find: byText('a, button', 'Custody history'),
-    pad: 6
-  },
-  {
-    path: `/move-asset/${UNIT}/move`,
+    at: onForm,
+    to: '/assets',
     title: 'Check In or Check Out',
-    body: 'Choose the movement first. A Check In always goes to one of our locations. A Check Out goes to a team member or a supplier.',
+    body: 'You are on the move form. Choose the movement first. A Check In always goes to one of our locations. A Check Out goes to a team member or a supplier.',
     find: () => document.querySelectorAll('[role=radiogroup]')[0] ?? null,
     pad: 6
   },
   {
-    path: `/move-asset/${UNIT}/move`,
+    at: onForm,
+    to: '/assets',
     title: 'Where it is going',
     body: 'Pick the kind of place, then the place itself. Team members can be found by name, employee number or email.',
     find: () => document.querySelectorAll('[role=radiogroup]')[1] ?? null,
     pad: 6
   },
   {
-    path: `/move-asset/${UNIT}/move`,
+    at: onForm,
+    to: '/assets',
     title: 'The new status comes last',
-    body: 'Choose the status once you know where the unit is going. Legacy statuses are at the bottom of the list.',
+    body: 'Choose the status once you know where the unit is going. Legacy statuses are at the bottom of the list. Nothing is saved until you press Move Asset, so you can leave this form safely.',
     find: () => document.querySelector('label[for=new-status]')?.parentElement ?? null,
     pad: 8
   },
   {
-    path: '/move-asset/GT-CE-LTP-1180-0326-0042/move?kind=supplier',
+    at: onForm,
+    to: '/assets',
+    title: 'Back to the list',
+    body: 'The sidebar takes you back to the list at any time.',
+    doThis: 'Click Assets in the sidebar.',
+    find: sidebarAssets,
+    pad: 6,
+    until: onList
+  },
+  {
+    at: onList,
+    to: '/assets',
+    title: 'Open a unit',
+    body: 'Every tag in the list is a link to that unit.',
+    doThis: 'Click a tag in the first column.',
+    find: () => document.querySelector('tbody tr:first-child td:nth-child(2) a, tbody tr:first-child td:nth-child(2) button'),
+    pad: 6,
+    until: onDetail
+  },
+  {
+    at: onDetail,
+    to: '/assets',
+    title: 'The same Move menu is here too',
+    body: 'Every unit has the Move menu at the top, next to Edit details, so you do not have to go back to the list to move it.',
+    find: byText('button', 'Move asset'),
+    pad: 6
+  },
+  {
+    at: onDetail,
+    to: '/assets',
+    title: 'Everything that happened to it',
+    body: 'The tabs keep a record of every status change and move. Custody history shows who had the unit and for how long.',
+    doThis: 'Click the Custody history tab.',
+    find: byText('a, button', 'Custody history'),
+    pad: 6,
+    until: () => route.path.endsWith('/custody-history')
+  },
+  {
+    at: onDetail,
+    to: '/assets',
     title: 'Returning a unit to its supplier',
-    body: 'The status and the supplier address are filled in for you. Attach the signed agreement and say why the unit is going back.',
+    body: 'This is the same Move menu. Returning a unit to its supplier is its own choice, so the form can fill in the details for you. You will only look at the form, nothing is saved until you press Move Asset.',
+    doThis: 'Open the Move asset menu, then choose Return to supplier.',
+    find: menuOrButton(byText('button', 'Move asset')),
+    pad: 6,
+    until: onSupplierForm
+  },
+  {
+    at: onSupplierForm,
+    to: '/assets',
+    title: 'What a supplier return records',
+    body: 'The status and the supplier address are filled in for you. You attach the signed agreement and say why the unit is going back.',
     find: byText('p', 'Supplier Return details'),
     pad: 10
   },
   {
-    path: '/move-asset/GT-CE-LTP-1180-0326-0042/move?kind=supplier',
+    at: onSupplierForm,
+    to: '/assets',
     title: 'A replacement is optional',
     body: 'Pick one now, or add it later from the unit. The question marks inside the list explain how the units are grouped.',
     find: () => document.querySelector('#rep'),
     pad: 8
   },
   {
-    path: '/assets/GT-CE-LTP-0826-0005?moveDetails=1',
+    at: onSupplierForm,
+    to: '/assets',
+    title: 'Leave without saving',
+    body: 'You do not have to finish the form. The sidebar takes you back.',
+    doThis: 'Click Assets in the sidebar.',
+    find: sidebarAssets,
+    pad: 6,
+    until: onList
+  },
+  {
+    at: onList,
+    to: '/assets',
+    title: 'Find units that have already left',
+    body: 'The tiles above the list are shortcuts. This one shows the units that were returned to a supplier or pulled out by a client.',
+    doThis: 'Click Returned or pulled out.',
+    find: byText('button', 'Returned or pulled out'),
+    pad: 6,
+    until: firstRowExited
+  },
+  {
+    at: onList,
+    to: '/assets',
+    title: 'Open one of them',
+    body: 'These units are final. Their details are kept in a panel on the unit.',
+    doThis: 'Click a tag in the first column.',
+    find: () => document.querySelector('tbody tr:first-child td:nth-child(2) a, tbody tr:first-child td:nth-child(2) button'),
+    pad: 6,
+    until: onDetail
+  },
+  {
+    at: onDetail,
+    to: '/assets',
     title: 'Move details',
-    body: 'Once a unit has been returned, this panel shows what was recorded. The replacement can still be added or changed here. Use the arrow keys to move through the tour while this panel is open.',
+    body: 'A unit that has left has a Move details button instead of a Move menu.',
+    doThis: 'Click Move details.',
+    find: byText('button', 'Move details'),
+    pad: 6,
+    until: () => !!document.querySelector('[role=dialog]:not(#demo-tour-card)')
+  },
+  {
+    at: onDetail,
+    to: '/assets',
+    title: 'What was recorded',
+    body: 'The panel shows what was recorded when the unit left. A replacement can still be added or changed here. Use the arrow keys to move through the tour while the panel is open.',
     find: () => document.querySelector('[role=dialog]:not(#demo-tour-card)'),
     pad: 0
   },
   {
-    path: '/assets',
     title: 'That is the tour',
     body: 'Press Reset sample data in the dark bar to start again with fresh units. Choose Guide any time to see the tour again.'
   }
@@ -121,14 +217,15 @@ const active = ref(false)
 const idx = ref(0)
 const rect = ref<DOMRect | null>(null)
 const missing = ref(false)
+const wrongScreen = ref(false)
 const card = ref<HTMLElement>()
+const root = ref<HTMLElement>()
 const cardPos = ref({ left: 12, top: 12 })
 const nextBtn = ref<{ $el?: HTMLElement } | null>(null)
-const root = ref<HTMLElement>()
 
 const step = computed(() => steps[idx.value]!)
+const isAction = computed(() => !!step.value.until && !wrongScreen.value)
 const last = computed(() => idx.value === steps.length - 1)
-const cardId = 'demo-tour-card'
 
 function remember(seen: boolean) {
   try {
@@ -138,22 +235,20 @@ function remember(seen: boolean) {
   } catch { /* storage can be unavailable; the tour still works */ }
 }
 
-function matchesRoute(p?: string) {
-  if (!p) return true
-  const [path, query] = p.split('?')
-  if (route.path !== path) return false
-  if (query) return route.fullPath.endsWith(query) || Object.keys(route.query).length > 0
-  return true
-}
-
 let token = 0
+let poll: ReturnType<typeof setInterval> | undefined
+function stopPoll() { if (poll) { clearInterval(poll); poll = undefined } }
+
 async function show() {
   const my = ++token
+  stopPoll()
   rect.value = null
   missing.value = false
   const s = step.value
-  if (s.path && !matchesRoute(s.path)) await router.push(s.path)
-  if (my !== token) return
+  // The visitor already did what this step asks (the click took them to the next screen): move on.
+  if (s.until?.() && idx.value > 0) { setTimeout(() => { if (my === token) go(1) }, 300); return }
+  wrongScreen.value = !!s.at && !s.at()
+  if (wrongScreen.value) { await nextTick(); place(); focusCard(); return }
   if (s.find) {
     const found = await waitFor(s.find, 4000)
     if (my !== token) return
@@ -165,9 +260,14 @@ async function show() {
   await nextTick()
   place()
   focusCard()
-  // Panels and menus slide in; measure again once they have settled.
   setTimeout(() => { if (my === token) refresh() }, 350)
   setTimeout(() => { if (my === token) refresh() }, 800)
+  if (s.until) {
+    poll = setInterval(() => {
+      if (my !== token) return stopPoll()
+      if (s.until!()) { stopPoll(); setTimeout(() => { if (my === token) go(1) }, 500) } else refresh()
+    }, 200)
+  }
 }
 
 function waitFor(find: () => Element | null, ms: number): Promise<Element | null> {
@@ -219,6 +319,7 @@ function start(at = 0) {
 function end() {
   active.value = false
   token++
+  stopPoll()
   remember(true)
 }
 function go(delta: number) {
@@ -227,12 +328,18 @@ function go(delta: number) {
   if (n >= steps.length) { end(); return }
   idx.value = n
 }
+function takeMeThere() {
+  const to = step.value.to
+  if (to) router.push(to)
+}
 
 watch([active, idx], () => {
   if (!active.value) return
   remember(false)
   show()
 })
+// Where the visitor is changes what a step can show: on the right screen the step finds its target by itself.
+watch(() => route.fullPath, () => { if (active.value) setTimeout(show, 250) })
 
 // A modal panel (the Move details drawer) hides everything outside it from assistive tech and from the pointer.
 // The tour card is part of the tour, not of the page, so it clears that mark whenever it is added.
@@ -254,23 +361,23 @@ watch(active, async (on) => {
   guard.observe(root.value, { attributes: true, attributeFilter: ['aria-hidden', 'data-aria-hidden', 'inert'] })
 })
 
-// Keep the spotlight on its target while the page scrolls or resizes.
+// Keep the spotlight on its target while the page scrolls, resizes or a menu opens.
 let raf = 0
 function refresh() {
-  if (!active.value || !step.value.find) return
+  if (!active.value || wrongScreen.value || !step.value.find) return
   cancelAnimationFrame(raf)
   raf = requestAnimationFrame(() => {
     const el = step.value.find?.()
-    if (el) { measure(el); place() }
+    if (el && el.getBoundingClientRect().width > 0) { measure(el); place() }
   })
 }
 function onKey(e: KeyboardEvent) {
   if (!active.value) return
   const t = e.target as HTMLElement | null
   if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return
-  if (e.key === 'ArrowRight') { e.preventDefault(); go(1) }
+  if (e.key === 'Escape' && !document.querySelector('[role=menu], [role=dialog]:not(#demo-tour-card), [role=listbox]')) end()
+  else if (e.key === 'ArrowRight' && !isAction.value) { e.preventDefault(); go(1) }
   else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1) }
-  else if (e.key === 'Escape') end()
 }
 
 onMounted(() => {
@@ -293,11 +400,12 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
   cancelAnimationFrame(raf)
   guard?.disconnect()
+  stopPoll()
 })
 
 const spot = computed(() => {
   const r = rect.value
-  if (!r) return null
+  if (!r || wrongScreen.value) return null
   const pad = step.value.pad ?? 6
   return { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` }
 })
@@ -338,7 +446,7 @@ const spot = computed(() => {
       />
 
       <section
-        :id="cardId"
+        id="demo-tour-card"
         ref="card"
         role="dialog"
         aria-modal="false"
@@ -363,16 +471,22 @@ const spot = computed(() => {
           id="demo-tour-title"
           class="text-base font-semibold text-slate-900 dark:text-white text-balance"
         >
-          {{ step.title }}
+          {{ wrongScreen ? 'This step is on another screen' : step.title }}
         </h2>
         <p
           id="demo-tour-body"
           class="mt-1.5 text-sm text-slate-700 dark:text-[#e2e8f0] text-pretty"
         >
-          {{ step.body }}
+          {{ wrongScreen ? `You have moved away from where this step happens: ${step.title}.` : step.body }}
         </p>
         <p
-          v-if="missing"
+          v-if="isAction && step.doThis"
+          class="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-900 dark:bg-blue-950 dark:text-white"
+        >
+          Your turn: {{ step.doThis }}
+        </p>
+        <p
+          v-if="missing && !wrongScreen"
           class="mt-2 text-xs text-slate-600 dark:text-slate-400"
         >
           This part of the screen is not showing right now, so there is nothing to point at.
@@ -387,6 +501,25 @@ const spot = computed(() => {
             @click="go(-1)"
           />
           <UButton
+            v-if="wrongScreen"
+            ref="nextBtn"
+            color="primary"
+            size="sm"
+            label="Take me there"
+            @click="takeMeThere"
+          />
+          <template v-else-if="isAction">
+            <UButton
+              ref="nextBtn"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              label="Skip this step"
+              @click="go(1)"
+            />
+          </template>
+          <UButton
+            v-else
             ref="nextBtn"
             color="primary"
             size="sm"
