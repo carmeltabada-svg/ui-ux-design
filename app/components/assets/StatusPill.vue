@@ -20,8 +20,15 @@ const light = computed(() => STATUS_LIGHT[color.value])
 <template>
   <div class="inline-flex items-center gap-2">
     <span class="inline-flex items-center text-xs font-medium text-white whitespace-nowrap">
-      <span class="px-1.5 py-0.5" :class="[bg, date ? 'rounded-l-md' : 'rounded-md']">{{ status }}</span>
-      <span v-if="date" class="px-1.5 py-0.5 rounded-r-md font-normal" :class="light">{{ badgeDate(date) }}</span>
+      <span
+        class="px-1.5 py-0.5"
+        :class="[bg, date ? 'rounded-l-md' : 'rounded-md']"
+      >{{ status }}</span>
+      <span
+        v-if="date"
+        class="px-1.5 py-0.5 rounded-r-md font-normal"
+        :class="light"
+      >{{ badgeDate(date) }}</span>
     </span>
     <span
       v-if="sub"

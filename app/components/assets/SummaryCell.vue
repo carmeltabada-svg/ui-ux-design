@@ -7,8 +7,17 @@ defineProps<{ label: string }>()
 
 <template>
   <div class="px-4 py-4 min-w-0">
-    <p class="text-xs font-semibold uppercase tracking-wide text-dimmed mb-2">{{ label }}</p>
-    <div class="text-base font-semibold text-highlighted min-w-0"><slot /></div>
-    <p v-if="$slots.sub" class="text-xs text-muted mt-1"><slot name="sub" /></p>
+    <p class="text-xs font-semibold uppercase tracking-wide text-dimmed mb-2">
+      {{ label }}
+    </p>
+    <div class="text-base font-semibold text-highlighted min-w-0">
+      <slot />
+    </div>
+    <p
+      v-if="$slots.sub"
+      class="text-xs text-muted mt-1"
+    >
+      <slot name="sub" />
+    </p>
   </div>
 </template>

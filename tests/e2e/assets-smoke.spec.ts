@@ -106,9 +106,9 @@ test.describe('Move Asset', () => {
 
   test('an exited unit cannot be moved again, and unknown tags are not found', async ({ page }) => {
     await page.goto(`/move-asset/${EXITED}/move`)
-    await expect(page.getByText("can't be moved again")).toBeVisible()
+    await expect(page.getByText('can\'t be moved again')).toBeVisible()
     await page.goto('/assets/constructor')
-    await expect(page.getByText("We couldn't find that asset")).toBeVisible()
+    await expect(page.getByText('We couldn\'t find that asset')).toBeVisible()
   })
 })
 

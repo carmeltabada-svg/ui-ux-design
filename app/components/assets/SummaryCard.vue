@@ -8,7 +8,14 @@ defineProps<{ title?: string }>()
 
 <template>
   <section class="flex flex-col rounded-lg border border-default bg-card overflow-hidden">
-    <h3 v-if="title" class="px-4 py-2.5 border-b border-default bg-slate-50 dark:bg-gray-800/60 text-xs font-semibold uppercase tracking-wide text-default">{{ title }}</h3>
-    <div class="flex-1 min-w-0"><slot /></div>
+    <h3
+      v-if="title"
+      class="px-4 py-2.5 border-b border-default bg-slate-50 dark:bg-gray-800/60 text-xs font-semibold uppercase tracking-wide text-default"
+    >
+      {{ title }}
+    </h3>
+    <div class="flex-1 min-w-0">
+      <slot />
+    </div>
   </section>
 </template>

@@ -18,7 +18,15 @@ onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <UTooltip :text="text" :disabled="!clipped" :delay-duration="150">
-    <span ref="el" v-bind="$attrs" class="block min-w-0 truncate"><slot>{{ text }}</slot></span>
+  <UTooltip
+    :text="text"
+    :disabled="!clipped"
+    :delay-duration="150"
+  >
+    <span
+      ref="el"
+      v-bind="$attrs"
+      class="block min-w-0 truncate"
+    ><slot>{{ text }}</slot></span>
   </UTooltip>
 </template>

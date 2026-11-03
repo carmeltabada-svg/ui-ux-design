@@ -35,12 +35,32 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
     <div class="mx-auto w-full max-w-2xl">
       <section class="rounded-lg border border-default bg-card">
         <div class="flex flex-col items-center text-center py-10 px-6">
-          <UIcon name="i-lucide-circle-check" class="size-12 text-green-500 mb-4" aria-hidden="true" />
-          <h1 class="text-2xl font-semibold text-highlighted mb-2">Asset Moved Successfully</h1>
-          <p class="text-sm text-muted mb-6" role="status">{{ tag }} has been moved. You will be redirected in {{ countdown }} seconds.</p>
+          <UIcon
+            name="i-lucide-circle-check"
+            class="size-12 text-green-500 mb-4"
+            aria-hidden="true"
+          />
+          <h1 class="text-2xl font-semibold text-highlighted mb-2">
+            Asset Moved Successfully
+          </h1>
+          <p
+            class="text-sm text-muted mb-6"
+            role="status"
+          >
+            {{ tag }} has been moved. You will be redirected in {{ countdown }} seconds.
+          </p>
           <div class="flex gap-2">
-            <UButton color="neutral" variant="ghost" label="Move Another Asset" @click="go('/move-asset')" />
-            <UButton color="primary" label="View Asset" @click="go(assetPath)" />
+            <UButton
+              color="neutral"
+              variant="ghost"
+              label="Move Another Asset"
+              @click="go('/move-asset')"
+            />
+            <UButton
+              color="primary"
+              label="View Asset"
+              @click="go(assetPath)"
+            />
           </div>
         </div>
       </section>

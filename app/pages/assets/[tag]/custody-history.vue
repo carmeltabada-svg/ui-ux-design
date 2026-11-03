@@ -79,106 +79,240 @@ const COLUMNS = ['Asset Tag', 'Seq', 'Emp No.', 'Custodian', 'Condition', 'Deplo
   <div class="stage-enter">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <div>
-        <h2 class="text-lg font-semibold text-highlighted text-balance">Custody History</h2>
-        <p class="text-sm text-muted mt-1 text-pretty">Every custodian this asset has had, in order.</p>
+        <h2 class="text-lg font-semibold text-highlighted text-balance">
+          Custody History
+        </h2>
+        <p class="text-sm text-muted mt-1 text-pretty">
+          Every custodian this asset has had, in order.
+        </p>
       </div>
       <UTooltip text="Copy this asset's custody history to paste into a spreadsheet">
-        <UButton color="neutral" variant="outline" icon="i-lucide-copy" :label="copyLabel" @click="copyHistory" />
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-copy"
+          :label="copyLabel"
+          @click="copyHistory"
+        />
       </UTooltip>
     </div>
 
-    <UAlert color="neutral" variant="subtle" icon="i-lucide-info" class="mb-4" :ui="{ description: 'text-xs text-default' }">
+    <UAlert
+      color="neutral"
+      variant="subtle"
+      icon="i-lucide-info"
+      class="mb-4"
+      :ui="{ description: 'text-xs text-default' }"
+    >
       <template #description>
         Rows here are generated automatically from Check-Out and Check-In movements, including historical ones added via
-        <NuxtLink :to="`/assets/${asset?.tag}/movements`" class="text-blue-700 hover:text-blue-800 dark:text-blue-400">Add Historical Movement</NuxtLink>
+        <NuxtLink
+          :to="`/assets/${asset?.tag}/movements`"
+          class="text-blue-700 hover:text-blue-800 dark:text-blue-400"
+        >Add Historical Movement</NuxtLink>
         in the Movements tab.
       </template>
     </UAlert>
 
-    <div v-if="!loading && summary" class="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4 mb-4">
+    <div
+      v-if="!loading && summary"
+      class="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4 mb-4"
+    >
       <AssetsSummaryCard title="Age summary">
         <div class="flex h-full">
-          <AssetsSummaryCell label="Actual age" class="flex-1">
+          <AssetsSummaryCell
+            label="Actual age"
+            class="flex-1"
+          >
             {{ ageLabel(summary.actualSince ? summary.actualMonths : null) }}
-            <template #sub>{{ actualSub }}</template>
+            <template #sub>
+              {{ actualSub }}
+            </template>
           </AssetsSummaryCell>
           <div class="w-px bg-default" />
-          <AssetsSummaryCell label="Total used age" class="flex-1">
+          <AssetsSummaryCell
+            label="Total used age"
+            class="flex-1"
+          >
             {{ ageLabel(summary.count ? summary.totalUsedMonths : null) }}
-            <template #sub>Across {{ summary.count }} custodian{{ summary.count === 1 ? '' : 's' }}<span class="block">{{ usedSub }}</span></template>
+            <template #sub>
+              Across {{ summary.count }} custodian{{ summary.count === 1 ? '' : 's' }}<span class="block">{{ usedSub }}</span>
+            </template>
           </AssetsSummaryCell>
         </div>
       </AssetsSummaryCard>
 
       <AssetsSummaryCard>
-        <AssetsSummaryCell label="Currently with" class="!pb-3">
-          <span v-if="summary.current" class="flex items-center gap-3 text-sm font-medium">
-            <span class="inline-flex items-center justify-center rounded-full size-6 text-xs font-normal bg-elevated text-muted" aria-hidden="true">{{ initialsOf(summary.current.name) }}</span>
+        <AssetsSummaryCell
+          label="Currently with"
+          class="!pb-3"
+        >
+          <span
+            v-if="summary.current"
+            class="flex items-center gap-3 text-sm font-medium"
+          >
+            <span
+              class="inline-flex items-center justify-center rounded-full size-6 text-xs font-normal bg-elevated text-muted"
+              aria-hidden="true"
+            >{{ initialsOf(summary.current.name) }}</span>
             {{ summary.current.name }}<span class="text-sm font-normal text-muted"># {{ summary.current.empNo }}</span>
           </span>
-          <span v-else class="text-sm font-normal text-muted">Not currently deployed</span>
+          <span
+            v-else
+            class="text-sm font-normal text-muted"
+          >Not currently deployed</span>
         </AssetsSummaryCell>
         <div class="h-px bg-default" />
-        <AssetsSummaryCell label="First deployed to" class="!pt-3">
-          <span v-if="summary.maiden" class="flex items-center gap-3 text-sm font-medium">
-            <span class="inline-flex items-center justify-center rounded-full size-6 text-xs font-normal bg-elevated text-muted" aria-hidden="true">{{ initialsOf(summary.maiden.name) }}</span>
+        <AssetsSummaryCell
+          label="First deployed to"
+          class="!pt-3"
+        >
+          <span
+            v-if="summary.maiden"
+            class="flex items-center gap-3 text-sm font-medium"
+          >
+            <span
+              class="inline-flex items-center justify-center rounded-full size-6 text-xs font-normal bg-elevated text-muted"
+              aria-hidden="true"
+            >{{ initialsOf(summary.maiden.name) }}</span>
             {{ summary.maiden.name }}<span class="text-sm font-normal text-muted"># {{ summary.maiden.empNo }}</span>
           </span>
-          <span v-else class="text-sm font-normal text-muted">No deployments yet</span>
+          <span
+            v-else
+            class="text-sm font-normal text-muted"
+          >No deployments yet</span>
         </AssetsSummaryCell>
       </AssetsSummaryCard>
     </div>
 
     <div class="rounded-lg border border-default bg-card overflow-hidden">
       <div class="px-4 py-3">
-        <UInput v-model="search" icon="i-lucide-search" aria-label="Search custodians" placeholder="Search custodian, asset tag or emp no." size="md" class="w-full sm:w-[360px]" />
+        <UInput
+          v-model="search"
+          icon="i-lucide-search"
+          aria-label="Search custodians"
+          placeholder="Search custodian, asset tag or emp no."
+          size="md"
+          class="w-full sm:w-[360px]"
+        />
       </div>
-      <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Custody history table">
+      <div
+        class="overflow-x-auto"
+        tabindex="0"
+        role="region"
+        aria-label="Custody history table"
+      >
         <table class="w-full min-w-[1100px] text-sm border-separate border-spacing-0">
           <thead>
             <tr>
               <th class="w-12 px-4 py-3 text-center border-b border-default">
-                <UCheckbox :model-value="allChecked" aria-label="Select all custody rows" @update:model-value="toggleAll" />
+                <UCheckbox
+                  :model-value="allChecked"
+                  aria-label="Select all custody rows"
+                  @update:model-value="toggleAll"
+                />
               </th>
-              <th v-for="c in COLUMNS" :key="c" class="px-4 py-3 text-left text-sm font-medium text-default whitespace-nowrap border-b border-default">{{ c }}</th>
+              <th
+                v-for="c in COLUMNS"
+                :key="c"
+                class="px-4 py-3 text-left text-sm font-medium text-default whitespace-nowrap border-b border-default"
+              >
+                {{ c }}
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="10" class="px-4 py-8 text-center text-sm text-muted" role="status">Loading custody history...</td>
+              <td
+                colspan="10"
+                class="px-4 py-8 text-center text-sm text-muted"
+                role="status"
+              >
+                Loading custody history...
+              </td>
             </tr>
             <template v-else-if="shown.length">
-              <tr v-for="l in shown" :key="l.seq" class="group">
+              <tr
+                v-for="l in shown"
+                :key="l.seq"
+                class="group"
+              >
                 <td class="px-4 py-5 text-center border-b border-default bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
-                  <UCheckbox :model-value="selected.includes(l.seq)" :aria-label="`Select ${l.member}`" @update:model-value="toggleRow(l.seq)" />
+                  <UCheckbox
+                    :model-value="selected.includes(l.seq)"
+                    :aria-label="`Select ${l.member}`"
+                    @update:model-value="toggleRow(l.seq)"
+                  />
                 </td>
-                <td class="px-4 py-5 text-sm text-blue-600 dark:text-blue-400 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">{{ asset?.tag }}</td>
+                <td class="px-4 py-5 text-sm text-blue-600 dark:text-blue-400 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                  {{ asset?.tag }}
+                </td>
                 <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
-                  <span class="inline-flex items-center justify-center size-5 rounded-full text-xs font-medium" :class="l.isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'">{{ l.seq }}</span>
+                  <span
+                    class="inline-flex items-center justify-center size-5 rounded-full text-xs font-medium"
+                    :class="l.isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                  >{{ l.seq }}</span>
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">{{ l.empNo }}</td>
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                  {{ l.empNo }}
+                </td>
                 <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
                   <span class="flex items-center gap-3">
-                    <span class="inline-flex items-center justify-center shrink-0 rounded-full size-6 text-xs font-normal bg-elevated text-muted" aria-hidden="true">{{ initialsOf(l.member) }}</span>
+                    <span
+                      class="inline-flex items-center justify-center shrink-0 rounded-full size-6 text-xs font-normal bg-elevated text-muted"
+                      aria-hidden="true"
+                    >{{ initialsOf(l.member) }}</span>
                     <span class="text-sm text-muted">{{ l.member }}</span>
-                    <UBadge v-if="l.isCurrent" label="Current" color="primary" variant="outline" size="md" />
-                    <UBadge v-else-if="l.isMaiden" label="Maiden" color="neutral" variant="outline" size="md" />
+                    <UBadge
+                      v-if="l.isCurrent"
+                      label="Current"
+                      color="primary"
+                      variant="outline"
+                      size="md"
+                    />
+                    <UBadge
+                      v-else-if="l.isMaiden"
+                      label="Maiden"
+                      color="neutral"
+                      variant="outline"
+                      size="md"
+                    />
                   </span>
                 </td>
                 <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
-                  <UBadge :label="l.condition" :color="l.condition === 'Brand New' ? 'primary' : 'neutral'" variant="subtle" size="md" />
+                  <UBadge
+                    :label="l.condition"
+                    :color="l.condition === 'Brand New' ? 'primary' : 'neutral'"
+                    variant="subtle"
+                    size="md"
+                  />
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">{{ dmy(l.deployed) }}</td>
                 <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
-                  <UBadge v-if="l.inTransit" label="Open" color="primary" variant="outline" size="md" />
+                  {{ dmy(l.deployed) }}
+                </td>
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                  <UBadge
+                    v-if="l.inTransit"
+                    label="Open"
+                    color="primary"
+                    variant="outline"
+                    size="md"
+                  />
                   <span v-else>{{ dmy(l.received) }}</span>
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[300px] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">{{ l.location }}</td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[110px] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 tabular-nums">{{ ageLabel(l.usedMonths) }}</td>
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[300px] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                  {{ l.location }}
+                </td>
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[110px] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 tabular-nums">
+                  {{ ageLabel(l.usedMonths) }}
+                </td>
               </tr>
             </template>
             <tr v-else>
-              <td colspan="10" class="px-8 py-8 text-center text-xs text-muted">
+              <td
+                colspan="10"
+                class="px-8 py-8 text-center text-xs text-muted"
+              >
                 {{ view?.lines.length ? 'No custodian matches your search.' : "No custodians recorded yet. This fills in automatically from the asset's first Check-Out movement." }}
               </td>
             </tr>
@@ -187,7 +321,14 @@ const COLUMNS = ['Asset Tag', 'Seq', 'Emp No.', 'Custodian', 'Condition', 'Deplo
       </div>
       <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-default">
         <span class="text-sm text-muted tabular-nums">{{ selected.length }} of {{ rows.length }} row(s) selected.</span>
-        <UPagination v-model:page="page" size="sm" :items-per-page="PAGE" :total="rows.length" :sibling-count="1" show-edges />
+        <UPagination
+          v-model:page="page"
+          size="sm"
+          :items-per-page="PAGE"
+          :total="rows.length"
+          :sibling-count="1"
+          show-edges
+        />
       </div>
     </div>
   </div>

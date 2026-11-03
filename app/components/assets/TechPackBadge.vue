@@ -11,10 +11,22 @@ defineProps<{ type: string, tier?: TechPackTier }>()
 
 <template>
   <span class="inline-flex items-center gap-1 whitespace-nowrap">
-    <span v-if="TECH_PACK_STYLE[type]" class="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium" :class="TECH_PACK_STYLE[type]!.cls">
-      <UIcon :name="TECH_PACK_STYLE[type]!.icon" class="size-3" aria-hidden="true" />
+    <span
+      v-if="TECH_PACK_STYLE[type]"
+      class="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium"
+      :class="TECH_PACK_STYLE[type]!.cls"
+    >
+      <UIcon
+        :name="TECH_PACK_STYLE[type]!.icon"
+        class="size-3"
+        aria-hidden="true"
+      />
       {{ TECH_PACK_STYLE[type]!.short }}
     </span>
-    <span v-if="tier" class="inline-flex items-center rounded-md border px-1.5 py-px text-xs font-medium" :class="TIER_STYLE[tier]">{{ TIER_SHORT[tier] }}</span>
+    <span
+      v-if="tier"
+      class="inline-flex items-center rounded-md border px-1.5 py-px text-xs font-medium"
+      :class="TIER_STYLE[tier]"
+    >{{ TIER_SHORT[tier] }}</span>
   </span>
 </template>

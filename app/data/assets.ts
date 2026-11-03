@@ -7,9 +7,10 @@
 // rows, both in the existing Terminal lane. Competitor and Direct Hire are the sub status
 // options of Client Pull-Out.
 
-export type TechPackType = 'Monthly Rental' | 'Outright Purchase' | 'BYOD'
 import { escapeText } from '~/utils/escapeHtml'
 import { DB_ASSETS, DB_ADDRESS, DB_COMPANY } from '~/data/assetsDbSeed'
+
+export type TechPackType = 'Monthly Rental' | 'Outright Purchase' | 'BYOD'
 
 export type StatusLane = 'intake_ready_pool' | 'active_use' | 'return_triage' | 'review_investigation' | 'decommissioning' | 'terminal'
 export type StatusColor = 'green' | 'blue' | 'orange' | 'red' | 'yellow' | 'purple' | 'gray' | 'teal' | 'pink'
@@ -243,7 +244,7 @@ export function locationView(a: { status: string, custodian: string, client: str
   if (a.status === 'Supplier Return') return { kind: 'supplier', text: a.supplier, icon: 'i-lucide-truck', tip: 'Asset is located at the supplier facility' }
   if (a.status === 'Client Pull-Out') return { kind: 'client', text: a.client, icon: 'i-lucide-building-2', tip: 'Asset was pulled out by the client' }
   if (a.status === 'In Use' && a.custodian) {
-    return { kind: 'member', text: MEMBER_ADDRESS[a.custodian] ?? a.location, icon: 'i-lucide-house', tip: "Asset is based on the team member's current address" }
+    return { kind: 'member', text: MEMBER_ADDRESS[a.custodian] ?? a.location, icon: 'i-lucide-house', tip: 'Asset is based on the team member\'s current address' }
   }
   return { kind: 'location', text: a.location, icon: 'i-lucide-building', tip: 'Asset is based on the asset location' }
 }
@@ -401,8 +402,8 @@ export function openDoc(id: string, doc: { name: string, type: string }): void {
 
 const isStr = (v: unknown): v is string => typeof v === 'string'
 function validHistory(h: unknown): h is HistoryEntry[] {
-  return Array.isArray(h) && h.every(e => e && typeof e === 'object' && isStr(e.id) && isStr(e.status) && !!statusDef(e.status) && /^[\w-]+$/.test(e.id) && e.id !== '__proto__' && isStr(e.date) && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && isStr(e.by) && isStr(e.note) &&
-    [e.reason, e.sub, e.member, e.location, e.replacement, e.replacementFor].every(v => v === undefined || isStr(v)) && (e.movement === undefined || e.movement === 'Check In' || e.movement === 'Check Out')
+  return Array.isArray(h) && h.every(e => e && typeof e === 'object' && isStr(e.id) && isStr(e.status) && !!statusDef(e.status) && /^[\w-]+$/.test(e.id) && e.id !== '__proto__' && isStr(e.date) && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && isStr(e.by) && isStr(e.note)
+    && [e.reason, e.sub, e.member, e.location, e.replacement, e.replacementFor].every(v => v === undefined || isStr(v)) && (e.movement === undefined || e.movement === 'Check In' || e.movement === 'Check Out')
     && (e.doc === undefined || (e.doc && isStr(e.doc.name) && isStr(e.doc.type) && typeof e.doc.size === 'number')))
 }
 /** Only these fields are read back from storage, and only when they have the right shape. */
@@ -458,8 +459,6 @@ export const DOC_ACCEPT = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image
 export function canPullOut(a: Pick<Asset, 'techPack'>): boolean {
   return a.techPack !== 'Monthly Rental'
 }
-
-
 
 // Why Client Pull-Out is blocked on a given unit, or '' when it is allowed.
 export function pullOutReason(a: Pick<Asset, 'techPack'>): string {
