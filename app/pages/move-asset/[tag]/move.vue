@@ -185,7 +185,7 @@ const confirmSummary = computed(() => {
                 <dt class="text-xs font-normal text-muted">Serial</dt>
                 <dd class="text-sm text-highlighted mt-1 break-words inline-flex items-start gap-2">
                   <UIcon name="i-lucide-hash" class="size-4 text-muted shrink-0 mt-0.5" aria-hidden="true" />
-                  {{ asset.serial }}
+                  <span class="min-w-0 break-all">{{ asset.serial }}</span>
                   <UTooltip :text="copyFlash.isCopied('serial') ? 'Copied' : 'Copy serial'"><UButton :class="['shrink-0', { 'copy-flash': copyFlash.isCopied('serial') }]" size="xs" :color="copyFlash.isCopied('serial') ? 'success' : 'primary'" variant="ghost" square :icon="copyFlash.icon('serial')" :aria-label="copyFlash.label('serial', 'Copy serial')" @click="copyFlash.copy('serial', asset.serial)" /></UTooltip>
                 </dd>
               </div>
