@@ -241,49 +241,143 @@ const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-dimmed'
 </script>
 
 <template>
-  <div v-if="assetsSimState === 'notfound' || !asset" class="px-6 py-16">
+  <div
+    v-if="assetsSimState === 'notfound' || !asset"
+    class="px-6 py-16"
+  >
     <div class="flex flex-col items-center text-center gap-2 text-muted">
-      <UIcon name="i-lucide-search-x" class="size-6" />
-      <p class="text-sm font-medium text-default">We couldn't find that asset</p>
-      <p class="text-xs">The tag may be wrong or the unit may have been removed.</p>
-      <UButton to="/assets" color="neutral" variant="outline" size="sm" label="Back to Assets" class="mt-1" />
+      <UIcon
+        name="i-lucide-search-x"
+        class="size-6"
+      />
+      <p class="text-sm font-medium text-default">
+        We couldn't find that asset
+      </p>
+      <p class="text-xs">
+        The tag may be wrong or the unit may have been removed.
+      </p>
+      <UButton
+        to="/assets"
+        color="neutral"
+        variant="outline"
+        size="sm"
+        label="Back to Assets"
+        class="mt-1"
+      />
     </div>
   </div>
 
-  <div v-else ref="scrollerEl" class="h-full overflow-y-auto overscroll-contain bg-gray-50 dark:bg-transparent stage-enter">
+  <div
+    v-else
+    ref="scrollerEl"
+    class="h-full overflow-y-auto overscroll-contain bg-gray-50 dark:bg-transparent stage-enter"
+  >
     <!-- Header -->
-    <div data-detail-header class="sm:sticky top-0 z-20 bg-card border-b border-default px-4 sm:px-8 pt-5 sm:pt-6 pb-5">
+    <div
+      data-detail-header
+      class="sm:sticky top-0 z-20 bg-card border-b border-default px-4 sm:px-8 pt-5 sm:pt-6 pb-5"
+    >
       <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div class="flex items-start gap-3 min-w-0 flex-1">
           <UTooltip text="Back to Assets">
-            <UButton to="/assets" color="neutral" variant="ghost" size="sm" square icon="i-lucide-arrow-left" aria-label="Back to Assets" class="text-muted shrink-0" />
+            <UButton
+              to="/assets"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              square
+              icon="i-lucide-arrow-left"
+              aria-label="Back to Assets"
+              class="text-muted shrink-0"
+            />
           </UTooltip>
           <div class="min-w-0">
             <h1 class="flex items-center gap-2.5 text-2xl font-semibold text-highlighted leading-none mb-2.5">
               <span class="break-all">{{ asset.tag }}</span>
-              <UTooltip :text="copyFlash.isCopied('tag') ? 'Copied' : 'Copy tag'"><UButton :class="['shrink-0', { 'copy-flash': copyFlash.isCopied('tag') }]" size="xs" :color="copyFlash.isCopied('tag') ? 'success' : 'primary'" variant="ghost" square :icon="copyFlash.icon('tag')" :aria-label="copyFlash.label('tag', 'Copy tag')" @click="copyFlash.copy('tag', asset.tag)" /></UTooltip>
+              <UTooltip :text="copyFlash.isCopied('tag') ? 'Copied' : 'Copy tag'">
+                <UButton
+                  :class="['shrink-0', { 'copy-flash': copyFlash.isCopied('tag') }]"
+                  size="xs"
+                  :color="copyFlash.isCopied('tag') ? 'success' : 'primary'"
+                  variant="ghost"
+                  square
+                  :icon="copyFlash.icon('tag')"
+                  :aria-label="copyFlash.label('tag', 'Copy tag')"
+                  @click="copyFlash.copy('tag', asset.tag)"
+                />
+              </UTooltip>
             </h1>
             <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
-              <AssetsStatusPill :status="asset.status" :sub="asset.sub" :date="asset.statusDate" />
+              <AssetsStatusPill
+                :status="asset.status"
+                :sub="asset.sub"
+                :date="asset.statusDate"
+              />
               <span>·</span>
-              <span v-if="movement" class="inline-flex items-center gap-1">
-                <UIcon :name="movement.type === 'check_in' ? 'i-lucide-log-in' : 'i-lucide-log-out'" class="size-3.5" :class="movement.type === 'check_in' ? 'text-blue-500' : 'text-purple-500'" aria-hidden="true" />
+              <span
+                v-if="movement"
+                class="inline-flex items-center gap-1"
+              >
+                <UIcon
+                  :name="movement.type === 'check_in' ? 'i-lucide-log-in' : 'i-lucide-log-out'"
+                  class="size-3.5"
+                  :class="movement.type === 'check_in' ? 'text-blue-500' : 'text-purple-500'"
+                  aria-hidden="true"
+                />
                 {{ movement.type === 'check_in' ? 'Checked In' : 'Checked Out' }}
               </span>
               <span>·</span>
-              <span class="inline-flex items-center gap-1"><UIcon :name="TYPE_ICON[asset.type] ?? 'i-lucide-layers'" class="size-3.5" aria-hidden="true" />{{ asset.type }}</span>
+              <span class="inline-flex items-center gap-1"><UIcon
+                :name="TYPE_ICON[asset.type] ?? 'i-lucide-layers'"
+                class="size-3.5"
+                aria-hidden="true"
+              />{{ asset.type }}</span>
               <span>·</span>
-              <span class="inline-flex items-center gap-1"><UIcon name="i-lucide-laptop" class="size-3.5" aria-hidden="true" />{{ asset.name }}</span>
+              <span class="inline-flex items-center gap-1"><UIcon
+                name="i-lucide-laptop"
+                class="size-3.5"
+                aria-hidden="true"
+              />{{ asset.name }}</span>
               <span>·</span>
-              <span class="inline-flex items-center gap-1"><UIcon name="i-lucide-users" class="size-3.5" aria-hidden="true" />{{ holder }}</span>
+              <span class="inline-flex items-center gap-1"><UIcon
+                name="i-lucide-users"
+                class="size-3.5"
+                aria-hidden="true"
+              />{{ holder }}</span>
             </div>
           </div>
         </div>
         <div class="flex flex-wrap items-center gap-1.5 sm:shrink-0">
-          <UButton v-if="!editing && canEdit" color="neutral" variant="outline" size="md" icon="i-lucide-pencil" label="Edit details" @click="startEdit()" />
-          <UButton v-if="canMove" :to="`/move-asset/${asset.tag}/move`" color="neutral" variant="outline" size="md" icon="i-lucide-truck" label="Move asset" />
-          <UDropdownMenu :items="menuItems" :content="{ align: 'end' }">
-            <UButton color="neutral" variant="ghost" size="md" square icon="i-lucide-ellipsis" aria-label="More actions" />
+          <UButton
+            v-if="!editing && canEdit"
+            color="neutral"
+            variant="outline"
+            size="md"
+            icon="i-lucide-pencil"
+            label="Edit details"
+            @click="startEdit()"
+          />
+          <UButton
+            v-if="canMove"
+            :to="`/move-asset/${asset.tag}/move`"
+            color="neutral"
+            variant="outline"
+            size="md"
+            icon="i-lucide-truck"
+            label="Move asset"
+          />
+          <UDropdownMenu
+            :items="menuItems"
+            :content="{ align: 'end' }"
+          >
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="md"
+              square
+              icon="i-lucide-ellipsis"
+              aria-label="More actions"
+            />
           </UDropdownMenu>
         </div>
       </div>
@@ -293,107 +387,381 @@ const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-dimmed'
     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_313px] items-start gap-6 px-4 sm:px-8 py-6">
       <!-- Left -->
       <div class="min-w-0 flex flex-col gap-6">
-        <section id="asset-details-panel" class="rounded-lg border bg-card overflow-hidden scroll-mt-32 transition-shadow" :class="editing ? 'border-primary ring-[3px] ring-primary/15' : 'border-default'">
-          <p v-if="editing" class="px-6 py-2.5 bg-primary/10 text-primary text-xs font-medium inline-flex items-center gap-2 w-full" role="status">
-            <UIcon name="i-lucide-pencil" class="size-3.5" aria-hidden="true" />
+        <section
+          id="asset-details-panel"
+          class="rounded-lg border bg-card overflow-hidden scroll-mt-32 transition-shadow"
+          :class="editing ? 'border-primary ring-[3px] ring-primary/15' : 'border-default'"
+        >
+          <p
+            v-if="editing"
+            class="px-6 py-2.5 bg-primary/10 text-primary text-xs font-medium inline-flex items-center gap-2 w-full"
+            role="status"
+          >
+            <UIcon
+              name="i-lucide-pencil"
+              class="size-3.5"
+              aria-hidden="true"
+            />
             Editing asset details. Press Esc to cancel, Cmd+S or Ctrl+S to save.
           </p>
           <div class="p-6 flex flex-col gap-6">
             <div class="flex flex-col gap-2.5">
-              <p :class="sectionLabel">Identity</p>
+              <p :class="sectionLabel">
+                Identity
+              </p>
               <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Tag</dt>
-                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5 break-all"><UIcon name="i-lucide-tag" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ asset.tag }}</dd>
+                  <dt class="text-xs text-muted">
+                    Tag
+                  </dt>
+                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5 break-all">
+                    <UIcon
+                      name="i-lucide-tag"
+                      class="size-4 text-dimmed shrink-0"
+                      aria-hidden="true"
+                    />{{ asset.tag }}
+                  </dd>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted"><label for="serial-field">Serial</label> <span v-if="editing" class="text-red-600">*</span></dt>
-                  <dd v-if="!editing" class="text-sm text-highlighted inline-flex items-center gap-1.5">
-                    <UIcon name="i-lucide-hash" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ asset.serial }}
-                    <UTooltip :text="copyFlash.isCopied('serial') ? 'Copied' : 'Copy serial'"><UButton :class="['shrink-0', { 'copy-flash': copyFlash.isCopied('serial') }]" size="xs" :color="copyFlash.isCopied('serial') ? 'success' : 'primary'" variant="ghost" square :icon="copyFlash.icon('serial')" :aria-label="copyFlash.label('serial', 'Copy serial')" @click="copyFlash.copy('serial', asset.serial)" /></UTooltip>
+                  <dt class="text-xs text-muted">
+                    <label for="serial-field">Serial</label> <span
+                      v-if="editing"
+                      class="text-red-600"
+                    >*</span>
+                  </dt>
+                  <dd
+                    v-if="!editing"
+                    class="text-sm text-highlighted inline-flex items-center gap-1.5"
+                  >
+                    <UIcon
+                      name="i-lucide-hash"
+                      class="size-4 text-dimmed shrink-0"
+                      aria-hidden="true"
+                    />{{ asset.serial }}
+                    <UTooltip :text="copyFlash.isCopied('serial') ? 'Copied' : 'Copy serial'">
+                      <UButton
+                        :class="['shrink-0', { 'copy-flash': copyFlash.isCopied('serial') }]"
+                        size="xs"
+                        :color="copyFlash.isCopied('serial') ? 'success' : 'primary'"
+                        variant="ghost"
+                        square
+                        :icon="copyFlash.icon('serial')"
+                        :aria-label="copyFlash.label('serial', 'Copy serial')"
+                        @click="copyFlash.copy('serial', asset.serial)"
+                      />
+                    </UTooltip>
                   </dd>
                   <dd v-else>
-                    <UInput id="serial-field" v-model="draft.serial" icon="i-lucide-hash" placeholder="e.g. 5CD5281W0J" class="w-full" :color="problems.serial ? 'error' : undefined" />
-                    <p v-if="problems.serial" data-edit-error class="text-xs text-red-600 mt-1.5">{{ problems.serial }}</p>
-                    <p v-else class="text-xs text-helper mt-1.5">Manufacturer's serial number</p>
+                    <UInput
+                      id="serial-field"
+                      v-model="draft.serial"
+                      icon="i-lucide-hash"
+                      placeholder="e.g. 5CD5281W0J"
+                      class="w-full"
+                      :color="problems.serial ? 'error' : undefined"
+                    />
+                    <p
+                      v-if="problems.serial"
+                      data-edit-error
+                      class="text-xs text-red-600 mt-1.5"
+                    >
+                      {{ problems.serial }}
+                    </p>
+                    <p
+                      v-else
+                      class="text-xs text-helper mt-1.5"
+                    >
+                      Manufacturer's serial number
+                    </p>
                   </dd>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Name</dt>
-                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5"><UIcon name="i-lucide-laptop" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ asset.name }}</dd>
+                  <dt class="text-xs text-muted">
+                    Name
+                  </dt>
+                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5">
+                    <UIcon
+                      name="i-lucide-laptop"
+                      class="size-4 text-dimmed shrink-0"
+                      aria-hidden="true"
+                    />{{ asset.name }}
+                  </dd>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Model <span v-if="editing" class="text-red-600">*</span></dt>
-                  <dd v-if="!editing" class="text-sm inline-flex items-center gap-1.5">
-                    <UIcon name="i-lucide-cpu" class="size-4 shrink-0 text-dimmed" aria-hidden="true" />
-                    <button type="button" class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left" @click="info(asset.model, 'This opens the asset model detail page. It is an existing view in the system and out of scope for this task.')">{{ asset.model }}</button>
-                    <UTooltip :text="copyFlash.isCopied('model') ? 'Copied' : 'Copy model'"><UButton :class="['shrink-0', { 'copy-flash': copyFlash.isCopied('model') }]" size="xs" :color="copyFlash.isCopied('model') ? 'success' : 'primary'" variant="ghost" square :icon="copyFlash.icon('model')" :aria-label="copyFlash.label('model', 'Copy model')" @click="copyFlash.copy('model', asset.model)" /></UTooltip>
+                  <dt class="text-xs text-muted">
+                    Model <span
+                      v-if="editing"
+                      class="text-red-600"
+                    >*</span>
+                  </dt>
+                  <dd
+                    v-if="!editing"
+                    class="text-sm inline-flex items-center gap-1.5"
+                  >
+                    <UIcon
+                      name="i-lucide-cpu"
+                      class="size-4 shrink-0 text-dimmed"
+                      aria-hidden="true"
+                    />
+                    <button
+                      type="button"
+                      class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left"
+                      @click="info(asset.model, 'This opens the asset model detail page. It is an existing view in the system and out of scope for this task.')"
+                    >
+                      {{ asset.model }}
+                    </button>
+                    <UTooltip :text="copyFlash.isCopied('model') ? 'Copied' : 'Copy model'">
+                      <UButton
+                        :class="['shrink-0', { 'copy-flash': copyFlash.isCopied('model') }]"
+                        size="xs"
+                        :color="copyFlash.isCopied('model') ? 'success' : 'primary'"
+                        variant="ghost"
+                        square
+                        :icon="copyFlash.icon('model')"
+                        :aria-label="copyFlash.label('model', 'Copy model')"
+                        @click="copyFlash.copy('model', asset.model)"
+                      />
+                    </UTooltip>
                   </dd>
                   <dd v-else>
-                    <SharedSelect v-model="draft.model" :items="asItems(MODEL_OPTIONS)" icon="i-lucide-cpu" placeholder="Select model" class="w-full" :color="problems.model ? 'error' : undefined" aria-label="Model" />
-                    <p v-if="problems.model" data-edit-error class="text-xs text-red-600 mt-1.5">{{ problems.model }}</p>
-                    <p v-else class="text-xs text-helper mt-1.5">Pick the exact model this unit is</p>
+                    <SharedSelect
+                      v-model="draft.model"
+                      :items="asItems(MODEL_OPTIONS)"
+                      icon="i-lucide-cpu"
+                      placeholder="Select model"
+                      class="w-full"
+                      :color="problems.model ? 'error' : undefined"
+                      aria-label="Model"
+                    />
+                    <p
+                      v-if="problems.model"
+                      data-edit-error
+                      class="text-xs text-red-600 mt-1.5"
+                    >
+                      {{ problems.model }}
+                    </p>
+                    <p
+                      v-else
+                      class="text-xs text-helper mt-1.5"
+                    >
+                      Pick the exact model this unit is
+                    </p>
                   </dd>
                 </div>
               </dl>
             </div>
 
             <div class="flex flex-col gap-3">
-              <p :class="sectionLabel">Location <span v-if="editing" class="text-red-600">*</span></p>
-              <p v-if="!editing" class="text-sm inline-flex items-start gap-1.5">
-                <UIcon :name="locationView(asset).icon" class="size-4 shrink-0 mt-0.5 text-dimmed" aria-hidden="true" />
+              <p :class="sectionLabel">
+                Location <span
+                  v-if="editing"
+                  class="text-red-600"
+                >*</span>
+              </p>
+              <p
+                v-if="!editing"
+                class="text-sm inline-flex items-start gap-1.5"
+              >
+                <UIcon
+                  :name="locationView(asset).icon"
+                  class="size-4 shrink-0 mt-0.5 text-dimmed"
+                  aria-hidden="true"
+                />
                 <!-- Only an office from the Locations page is a link. A team member's address, a supplier and a client are plain text. -->
                 <UTooltip :text="locationView(asset).tip">
-                  <button v-if="locationView(asset).kind === 'location'" type="button" class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left break-words" @click="info('Location', 'This opens the location page. It is an existing view in the system and out of scope for this task.')">{{ locationView(asset).text }}</button>
-                  <span v-else class="text-highlighted break-words">{{ locationView(asset).text }}</span>
+                  <button
+                    v-if="locationView(asset).kind === 'location'"
+                    type="button"
+                    class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left break-words"
+                    @click="info('Location', 'This opens the location page. It is an existing view in the system and out of scope for this task.')"
+                  >
+                    {{ locationView(asset).text }}
+                  </button>
+                  <span
+                    v-else
+                    class="text-highlighted break-words"
+                  >{{ locationView(asset).text }}</span>
                 </UTooltip>
               </p>
               <div v-else>
-                <SharedSelect v-model="draft.location" :items="asItems(LOCATION_OPTIONS)" icon="i-lucide-map-pin" placeholder="Select location" class="w-full" :color="problems.location ? 'error' : undefined" aria-label="Location" />
-                <p v-if="problems.location" data-edit-error class="text-xs text-red-600 mt-1.5">{{ problems.location }}</p>
-                <p v-else class="text-xs text-helper mt-1.5">Where this asset currently lives</p>
+                <SharedSelect
+                  v-model="draft.location"
+                  :items="asItems(LOCATION_OPTIONS)"
+                  icon="i-lucide-map-pin"
+                  placeholder="Select location"
+                  class="w-full"
+                  :color="problems.location ? 'error' : undefined"
+                  aria-label="Location"
+                />
+                <p
+                  v-if="problems.location"
+                  data-edit-error
+                  class="text-xs text-red-600 mt-1.5"
+                >
+                  {{ problems.location }}
+                </p>
+                <p
+                  v-else
+                  class="text-xs text-helper mt-1.5"
+                >
+                  Where this asset currently lives
+                </p>
               </div>
             </div>
 
             <div class="flex flex-col gap-2.5">
-              <p :class="sectionLabel">Ownership &amp; finance</p>
+              <p :class="sectionLabel">
+                Ownership &amp; finance
+              </p>
               <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Owner <span v-if="editing" class="text-red-600">*</span></dt>
-                  <dd v-if="!editing" class="text-sm inline-flex items-center gap-2">
-                    <span class="inline-flex items-center justify-center shrink-0 rounded-md bg-elevated size-6 text-xs font-medium text-slate-600 dark:text-slate-300" aria-hidden="true">{{ initials(asset.owner) }}</span>
-                    <button type="button" class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left" @click="info(asset.owner, 'This opens the client page. It is an existing view in the system and out of scope for this task.')">{{ asset.owner }}</button>
+                  <dt class="text-xs text-muted">
+                    Owner <span
+                      v-if="editing"
+                      class="text-red-600"
+                    >*</span>
+                  </dt>
+                  <dd
+                    v-if="!editing"
+                    class="text-sm inline-flex items-center gap-2"
+                  >
+                    <span
+                      class="inline-flex items-center justify-center shrink-0 rounded-md bg-elevated size-6 text-xs font-medium text-slate-600 dark:text-slate-300"
+                      aria-hidden="true"
+                    >{{ initials(asset.owner) }}</span>
+                    <button
+                      type="button"
+                      class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left"
+                      @click="info(asset.owner, 'This opens the client page. It is an existing view in the system and out of scope for this task.')"
+                    >
+                      {{ asset.owner }}
+                    </button>
                   </dd>
                   <dd v-else>
-                    <SharedSelect v-model="draft.owner" :items="asItems(OWNER_OPTIONS)" placeholder="Select owner" class="w-full" :color="problems.owner ? 'error' : undefined" aria-label="Owner" />
-                    <p v-if="problems.owner" data-edit-error class="text-xs text-red-600 mt-1.5">{{ problems.owner }}</p>
-                    <p v-else class="text-xs text-helper mt-1.5">Legal owner entity of this asset</p>
-                    <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-refresh-cw" label="Use GoTeam (default)" class="mt-1 -ml-2" @click="draft.owner = 'GoTeam'" />
+                    <SharedSelect
+                      v-model="draft.owner"
+                      :items="asItems(OWNER_OPTIONS)"
+                      placeholder="Select owner"
+                      class="w-full"
+                      :color="problems.owner ? 'error' : undefined"
+                      aria-label="Owner"
+                    />
+                    <p
+                      v-if="problems.owner"
+                      data-edit-error
+                      class="text-xs text-red-600 mt-1.5"
+                    >
+                      {{ problems.owner }}
+                    </p>
+                    <p
+                      v-else
+                      class="text-xs text-helper mt-1.5"
+                    >
+                      Legal owner entity of this asset
+                    </p>
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-lucide-refresh-cw"
+                      label="Use GoTeam (default)"
+                      class="mt-1 -ml-2"
+                      @click="draft.owner = 'GoTeam'"
+                    />
                   </dd>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Acquisition Cost ({{ editing ? draft.currency : asset.currency }}) <span v-if="editing" class="text-red-600">*</span></dt>
-                  <dd v-if="!editing" class="text-sm text-highlighted tabular-nums">
-                    <template v-if="money(asset)">{{ money(asset) }}</template>
+                  <dt class="text-xs text-muted">
+                    Acquisition Cost ({{ editing ? draft.currency : asset.currency }}) <span
+                      v-if="editing"
+                      class="text-red-600"
+                    >*</span>
+                  </dt>
+                  <dd
+                    v-if="!editing"
+                    class="text-sm text-highlighted tabular-nums"
+                  >
+                    <template v-if="money(asset)">
+                      {{ money(asset) }}
+                    </template>
                     <AssetsEmptyMark v-else />
                   </dd>
                   <dd v-else>
-                    <UInput v-model="draft.cost" type="number" step="0.01" min="0" placeholder="0.00" class="w-full" :color="problems.cost ? 'error' : undefined" aria-label="Acquisition cost" />
-                    <p v-if="problems.cost" data-edit-error class="text-xs text-red-600 mt-1.5">{{ problems.cost }}</p>
-                    <p v-else class="text-xs text-helper mt-1.5">Enter 0 if there was no cost</p>
+                    <UInput
+                      v-model="draft.cost"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      class="w-full"
+                      :color="problems.cost ? 'error' : undefined"
+                      aria-label="Acquisition cost"
+                    />
+                    <p
+                      v-if="problems.cost"
+                      data-edit-error
+                      class="text-xs text-red-600 mt-1.5"
+                    >
+                      {{ problems.cost }}
+                    </p>
+                    <p
+                      v-else
+                      class="text-xs text-helper mt-1.5"
+                    >
+                      Enter 0 if there was no cost
+                    </p>
                   </dd>
                 </div>
-                <div id="po-field" class="flex flex-col gap-1.5 scroll-mt-40">
-                  <dt class="text-xs text-muted">Purchase Order</dt>
-                  <dd v-if="!editing" class="text-sm text-highlighted inline-flex items-center gap-1.5">
-                    <UIcon name="i-lucide-file-text" class="size-4 text-dimmed shrink-0" aria-hidden="true" />
-                    <button v-if="effectivePo" type="button" class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left" @click="info(effectivePo, 'This opens the purchase order page. It is an existing view in the system and out of scope for this task.')">{{ effectivePo }}</button>
-                    <span v-else class="text-placeholder">Not linked</span>
+                <div
+                  id="po-field"
+                  class="flex flex-col gap-1.5 scroll-mt-40"
+                >
+                  <dt class="text-xs text-muted">
+                    Purchase Order
+                  </dt>
+                  <dd
+                    v-if="!editing"
+                    class="text-sm text-highlighted inline-flex items-center gap-1.5"
+                  >
+                    <UIcon
+                      name="i-lucide-file-text"
+                      class="size-4 text-dimmed shrink-0"
+                      aria-hidden="true"
+                    />
+                    <button
+                      v-if="effectivePo"
+                      type="button"
+                      class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left"
+                      @click="info(effectivePo, 'This opens the purchase order page. It is an existing view in the system and out of scope for this task.')"
+                    >
+                      {{ effectivePo }}
+                    </button>
+                    <span
+                      v-else
+                      class="text-placeholder"
+                    >Not linked</span>
                   </dd>
                   <dd v-else>
                     <div class="flex items-center gap-2">
-                      <SharedSelect v-model="poValue" :items="poItems" placeholder="Select purchase order" class="flex-1" aria-label="Purchase order" />
-                      <UTooltip text="Clear selection"><UButton color="neutral" variant="outline" size="sm" square icon="i-lucide-x" aria-label="Clear selection" :disabled="!draft.po" @click="draft.po = ''" /></UTooltip>
+                      <SharedSelect
+                        v-model="poValue"
+                        :items="poItems"
+                        placeholder="Select purchase order"
+                        class="flex-1"
+                        aria-label="Purchase order"
+                      />
+                      <UTooltip text="Clear selection">
+                        <UButton
+                          color="neutral"
+                          variant="outline"
+                          size="sm"
+                          square
+                          icon="i-lucide-x"
+                          aria-label="Clear selection"
+                          :disabled="!draft.po"
+                          @click="draft.po = ''"
+                        />
+                      </UTooltip>
                     </div>
                   </dd>
                 </div>
@@ -401,51 +769,140 @@ const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-dimmed'
             </div>
 
             <div class="flex flex-col gap-2.5">
-              <p :class="sectionLabel">Tech pack</p>
+              <p :class="sectionLabel">
+                Tech pack
+              </p>
               <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Type <span v-if="editing" class="text-red-600">*</span></dt>
-                  <dd v-if="!editing"><AssetsTechPackBadge :type="asset.techPack" :tier="asset.tier" /></dd>
-                  <dd v-else><SharedSelect v-model="draft.techPack" :items="asItems(TECH_PACK_OPTIONS)" class="w-full" aria-label="Tech pack type" /></dd>
+                  <dt class="text-xs text-muted">
+                    Type <span
+                      v-if="editing"
+                      class="text-red-600"
+                    >*</span>
+                  </dt>
+                  <dd v-if="!editing">
+                    <AssetsTechPackBadge
+                      :type="asset.techPack"
+                      :tier="asset.tier"
+                    />
+                  </dd>
+                  <dd v-else>
+                    <SharedSelect
+                      v-model="draft.techPack"
+                      :items="asItems(TECH_PACK_OPTIONS)"
+                      class="w-full"
+                      aria-label="Tech pack type"
+                    />
+                  </dd>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Currency <span v-if="editing" class="text-red-600">*</span></dt>
-                  <dd v-if="!editing" class="text-sm text-highlighted inline-flex items-center gap-1.5"><UIcon name="i-lucide-banknote" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ asset.currency }}</dd>
+                  <dt class="text-xs text-muted">
+                    Currency <span
+                      v-if="editing"
+                      class="text-red-600"
+                    >*</span>
+                  </dt>
+                  <dd
+                    v-if="!editing"
+                    class="text-sm text-highlighted inline-flex items-center gap-1.5"
+                  >
+                    <UIcon
+                      name="i-lucide-banknote"
+                      class="size-4 text-dimmed shrink-0"
+                      aria-hidden="true"
+                    />{{ asset.currency }}
+                  </dd>
                   <dd v-else>
-                    <URadioGroup v-model="draft.currency" :items="asItems(CURRENCY_OPTIONS)" orientation="horizontal" color="primary" aria-label="Currency" />
-                    <p class="text-xs text-helper mt-1.5">Currency the acquisition cost is in</p>
+                    <URadioGroup
+                      v-model="draft.currency"
+                      :items="asItems(CURRENCY_OPTIONS)"
+                      orientation="horizontal"
+                      color="primary"
+                      aria-label="Currency"
+                    />
+                    <p class="text-xs text-helper mt-1.5">
+                      Currency the acquisition cost is in
+                    </p>
                   </dd>
                 </div>
               </dl>
             </div>
 
             <div class="flex flex-col gap-2.5">
-              <button type="button" class="inline-flex items-center gap-1.5 text-left" :class="sectionLabel" :aria-expanded="timestampsOpen" @click="timestampsOpen = !timestampsOpen">
-                <UIcon :name="timestampsOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3.5" aria-hidden="true" />Timestamps
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 text-left"
+                :class="sectionLabel"
+                :aria-expanded="timestampsOpen"
+                @click="timestampsOpen = !timestampsOpen"
+              >
+                <UIcon
+                  :name="timestampsOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+                  class="size-3.5"
+                  aria-hidden="true"
+                />Timestamps
               </button>
-              <dl v-if="timestampsOpen" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+              <dl
+                v-if="timestampsOpen"
+                class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5"
+              >
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Created</dt>
-                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5"><UIcon name="i-lucide-calendar" class="size-4 text-dimmed" aria-hidden="true" />{{ created }}</dd>
+                  <dt class="text-xs text-muted">
+                    Created
+                  </dt>
+                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5">
+                    <UIcon
+                      name="i-lucide-calendar"
+                      class="size-4 text-dimmed"
+                      aria-hidden="true"
+                    />{{ created }}
+                  </dd>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <dt class="text-xs text-muted">Updated</dt>
-                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5"><UIcon name="i-lucide-calendar" class="size-4 text-dimmed" aria-hidden="true" />{{ updated }}</dd>
+                  <dt class="text-xs text-muted">
+                    Updated
+                  </dt>
+                  <dd class="text-sm text-highlighted inline-flex items-center gap-1.5">
+                    <UIcon
+                      name="i-lucide-calendar"
+                      class="size-4 text-dimmed"
+                      aria-hidden="true"
+                    />{{ updated }}
+                  </dd>
                 </div>
               </dl>
             </div>
           </div>
 
-          <div v-if="editing" class="px-6 py-3.5 bg-elevated/50 border-t border-default flex justify-end gap-2">
-            <UButton color="neutral" variant="outline" size="md" label="Cancel" @click="cancelEdit" />
-            <UButton color="primary" size="md" label="Save changes" @click="saveEdit" />
+          <div
+            v-if="editing"
+            class="px-6 py-3.5 bg-elevated/50 border-t border-default flex justify-end gap-2"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="md"
+              label="Cancel"
+              @click="cancelEdit"
+            />
+            <UButton
+              color="primary"
+              size="md"
+              label="Save changes"
+              @click="saveEdit"
+            />
           </div>
         </section>
 
         <!-- Pill tabs: each is its own route, like the live page -->
         <div>
           <div class="relative mb-5">
-            <nav ref="tabsEl" class="flex gap-1 overflow-x-auto [scrollbar-width:none]" aria-label="Asset sections" @scroll="updateFade">
+            <nav
+              ref="tabsEl"
+              class="flex gap-1 overflow-x-auto [scrollbar-width:none]"
+              aria-label="Asset sections"
+              @scroll="updateFade"
+            >
               <NuxtLink
                 v-for="t in tabs"
                 :key="t.to"
@@ -453,16 +910,44 @@ const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-dimmed'
                 class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap transition-colors"
                 :class="route.path === t.to ? 'text-blue-600 ring-1 ring-inset ring-default bg-card' : 'text-muted hover:text-default hover:bg-elevated'"
               >
-                <UIcon :name="t.icon" class="size-4" aria-hidden="true" />{{ t.label }}
+                <UIcon
+                  :name="t.icon"
+                  class="size-4"
+                  aria-hidden="true"
+                />{{ t.label }}
               </NuxtLink>
             </nav>
             <template v-if="fadeLeft">
-              <span class="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-gray-50 to-transparent" aria-hidden="true" />
-              <UButton color="neutral" variant="outline" size="xs" square icon="i-lucide-chevron-left" aria-label="Scroll tabs left" class="absolute left-0 top-1/2 -translate-y-1/2 bg-card" @click="scrollTabs(-160)" />
+              <span
+                class="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-gray-50 to-transparent"
+                aria-hidden="true"
+              />
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="xs"
+                square
+                icon="i-lucide-chevron-left"
+                aria-label="Scroll tabs left"
+                class="absolute left-0 top-1/2 -translate-y-1/2 bg-card"
+                @click="scrollTabs(-160)"
+              />
             </template>
             <template v-if="fadeRight">
-              <span class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-gray-50 to-transparent" aria-hidden="true" />
-              <UButton color="neutral" variant="outline" size="xs" square icon="i-lucide-chevron-right" aria-label="Scroll tabs right" class="absolute right-0 top-1/2 -translate-y-1/2 bg-card" @click="scrollTabs(160)" />
+              <span
+                class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-gray-50 to-transparent"
+                aria-hidden="true"
+              />
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="xs"
+                square
+                icon="i-lucide-chevron-right"
+                aria-label="Scroll tabs right"
+                class="absolute right-0 top-1/2 -translate-y-1/2 bg-card"
+                @click="scrollTabs(160)"
+              />
             </template>
           </div>
           <NuxtPage :transition="false" />
@@ -472,83 +957,240 @@ const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-dimmed'
       <!-- Right rail -->
       <aside class="flex flex-col gap-4 xl:sticky xl:top-[7.5rem]">
         <section class="rounded-lg border border-default bg-card overflow-hidden">
-          <p class="px-4 py-2.5 bg-slate-50 dark:bg-gray-800/60 border-b border-default inline-flex items-center gap-2 w-full text-xs font-semibold uppercase tracking-wide text-default">Current movement</p>
-          <div v-if="movement" class="p-4 flex flex-col gap-6">
+          <p class="px-4 py-2.5 bg-slate-50 dark:bg-gray-800/60 border-b border-default inline-flex items-center gap-2 w-full text-xs font-semibold uppercase tracking-wide text-default">
+            Current movement
+          </p>
+          <div
+            v-if="movement"
+            class="p-4 flex flex-col gap-6"
+          >
             <div class="min-w-0">
-              <div class="text-xs font-normal text-default">Status</div>
+              <div class="text-xs font-normal text-default">
+                Status
+              </div>
               <div class="text-sm text-highlighted mt-1 flex items-center gap-2">
-                <UIcon :name="movement.type === 'check_in' ? 'i-lucide-log-in' : 'i-lucide-log-out'" class="size-4" :class="movement.type === 'check_in' ? 'text-blue-500' : 'text-purple-500'" aria-hidden="true" />
+                <UIcon
+                  :name="movement.type === 'check_in' ? 'i-lucide-log-in' : 'i-lucide-log-out'"
+                  class="size-4"
+                  :class="movement.type === 'check_in' ? 'text-blue-500' : 'text-purple-500'"
+                  aria-hidden="true"
+                />
                 {{ movement.type === 'check_in' ? 'Checked In' : 'Checked Out' }}
-                <span v-if="assetsSimTransit === 'transit'" class="ml-auto inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset" :class="WARRANTY_TONE.warning">Receipt open</span>
-                <span v-else-if="assetsSimTransit === 'inuse'" class="ml-auto inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset" :class="WARRANTY_TONE.success">Receipt confirmed</span>
+                <span
+                  v-if="assetsSimTransit === 'transit'"
+                  class="ml-auto inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
+                  :class="WARRANTY_TONE.warning"
+                >Receipt open</span>
+                <span
+                  v-else-if="assetsSimTransit === 'inuse'"
+                  class="ml-auto inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
+                  :class="WARRANTY_TONE.success"
+                >Receipt confirmed</span>
               </div>
             </div>
             <div class="min-w-0">
-              <div class="text-xs font-normal text-default">Date</div>
-              <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5"><UIcon name="i-lucide-calendar" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ badgeDate(movement.date) }}</div>
+              <div class="text-xs font-normal text-default">
+                Date
+              </div>
+              <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5">
+                <UIcon
+                  name="i-lucide-calendar"
+                  class="size-4 text-dimmed shrink-0"
+                  aria-hidden="true"
+                />{{ badgeDate(movement.date) }}
+              </div>
             </div>
             <div class="min-w-0">
-              <div class="text-xs font-normal text-default">Location</div>
-              <div class="text-sm text-highlighted mt-1 flex items-start gap-1.5"><UIcon :name="movement.locationIcon" class="size-4 mt-0.5 text-dimmed shrink-0" aria-hidden="true" /><span class="break-words min-w-0">{{ movement.location }}</span></div>
+              <div class="text-xs font-normal text-default">
+                Location
+              </div>
+              <div class="text-sm text-highlighted mt-1 flex items-start gap-1.5">
+                <UIcon
+                  :name="movement.locationIcon"
+                  class="size-4 mt-0.5 text-dimmed shrink-0"
+                  aria-hidden="true"
+                /><span class="break-words min-w-0">{{ movement.location }}</span>
+              </div>
             </div>
             <div class="min-w-0">
-              <div class="text-xs font-normal text-default">{{ movement.member ? 'Checked out to' : 'Checked in by' }}</div>
+              <div class="text-xs font-normal text-default">
+                {{ movement.member ? 'Checked out to' : 'Checked in by' }}
+              </div>
               <div class="text-sm text-highlighted mt-1 flex items-center gap-2">
-                <span class="inline-flex items-center justify-center rounded-full size-6 text-xs font-semibold bg-blue-100 text-blue-700" aria-hidden="true">{{ initials(movement.member || movement.by) }}</span>{{ movement.member || movement.by }}
+                <span
+                  class="inline-flex items-center justify-center rounded-full size-6 text-xs font-semibold bg-blue-100 text-blue-700"
+                  aria-hidden="true"
+                >{{ initials(movement.member || movement.by) }}</span>{{ movement.member || movement.by }}
               </div>
             </div>
           </div>
-          <p v-else class="p-4 text-sm text-placeholder">No movement recorded yet.</p>
+          <p
+            v-else
+            class="p-4 text-sm text-placeholder"
+          >
+            No movement recorded yet.
+          </p>
         </section>
 
         <section class="rounded-lg border border-default bg-card overflow-hidden">
-          <p class="px-4 py-2.5 bg-slate-50 dark:bg-gray-800/60 border-b border-default inline-flex items-center gap-2 w-full text-xs font-semibold uppercase tracking-wide text-default">QR code</p>
+          <p class="px-4 py-2.5 bg-slate-50 dark:bg-gray-800/60 border-b border-default inline-flex items-center gap-2 w-full text-xs font-semibold uppercase tracking-wide text-default">
+            QR code
+          </p>
           <div class="p-4 flex flex-col gap-4">
             <div class="flex items-center gap-4">
-              <div class="size-[142px] shrink-0 rounded bg-white ring-1 ring-inset ring-gray-200 p-2 flex items-center justify-center" role="img" :aria-label="`QR code for ${asset.tag}`">
+              <div
+                class="size-[142px] shrink-0 rounded bg-white ring-1 ring-inset ring-gray-200 p-2 flex items-center justify-center"
+                role="img"
+                :aria-label="`QR code for ${asset.tag}`"
+              >
                 <div class="grid grid-cols-[repeat(21,1fr)] size-full">
-                  <div v-for="(on, i) in qrModules" :key="i" class="aspect-square" :class="on ? 'bg-slate-900' : 'bg-white'" />
+                  <div
+                    v-for="(on, i) in qrModules"
+                    :key="i"
+                    class="aspect-square"
+                    :class="on ? 'bg-slate-900' : 'bg-white'"
+                  />
                 </div>
               </div>
               <div class="min-w-0 flex-1 flex flex-col gap-1.5">
-                <UButton color="neutral" variant="outline" size="sm" icon="i-lucide-printer" label="Print" block @click="printQr" />
-                <UButton color="neutral" variant="outline" size="sm" icon="i-lucide-download" label="Download" block @click="downloadQr" />
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-printer"
+                  label="Print"
+                  block
+                  @click="printQr"
+                />
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-download"
+                  label="Download"
+                  block
+                  @click="downloadQr"
+                />
               </div>
             </div>
-            <p class="text-xs text-muted flex items-center gap-1.5"><UIcon name="i-lucide-scan-line" class="size-4 text-dimmed shrink-0" aria-hidden="true" />Scan this QR code to quickly access this asset.</p>
+            <p class="text-xs text-muted flex items-center gap-1.5">
+              <UIcon
+                name="i-lucide-scan-line"
+                class="size-4 text-dimmed shrink-0"
+                aria-hidden="true"
+              />Scan this QR code to quickly access this asset.
+            </p>
           </div>
         </section>
 
         <section class="rounded-lg border border-default bg-card overflow-hidden">
-          <p class="px-4 py-2.5 bg-slate-50 dark:bg-gray-800/60 border-b border-default inline-flex items-center gap-2 w-full text-xs font-semibold uppercase tracking-wide text-default">Warranty</p>
+          <p class="px-4 py-2.5 bg-slate-50 dark:bg-gray-800/60 border-b border-default inline-flex items-center gap-2 w-full text-xs font-semibold uppercase tracking-wide text-default">
+            Warranty
+          </p>
           <div class="p-4">
-            <div v-if="warranty" class="flex flex-col gap-6">
+            <div
+              v-if="warranty"
+              class="flex flex-col gap-6"
+            >
               <div class="min-w-0">
-                <div class="text-xs font-normal text-default">Asset model</div>
-                <div class="text-sm mt-1 flex items-center gap-1.5"><UIcon name="i-lucide-cpu" class="size-4 text-dimmed shrink-0" aria-hidden="true" /><button type="button" class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left" @click="info(asset.model, 'This opens the asset model detail page. It is an existing view in the system and out of scope for this task.')">{{ asset.model }}</button></div>
+                <div class="text-xs font-normal text-default">
+                  Asset model
+                </div>
+                <div class="text-sm mt-1 flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-cpu"
+                    class="size-4 text-dimmed shrink-0"
+                    aria-hidden="true"
+                  /><button
+                    type="button"
+                    class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left"
+                    @click="info(asset.model, 'This opens the asset model detail page. It is an existing view in the system and out of scope for this task.')"
+                  >
+                    {{ asset.model }}
+                  </button>
+                </div>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-normal text-default">Warranty period</div>
-                <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5"><UIcon name="i-lucide-shield-check" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ warranty.months }} months from the purchase date</div>
+                <div class="text-xs font-normal text-default">
+                  Warranty period
+                </div>
+                <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-shield-check"
+                    class="size-4 text-dimmed shrink-0"
+                    aria-hidden="true"
+                  />{{ warranty.months }} months from the purchase date
+                </div>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-normal text-default">Purchase date</div>
-                <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5"><UIcon name="i-lucide-calendar-plus" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ warranty.purchase }}</div>
+                <div class="text-xs font-normal text-default">
+                  Purchase date
+                </div>
+                <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-calendar-plus"
+                    class="size-4 text-dimmed shrink-0"
+                    aria-hidden="true"
+                  />{{ warranty.purchase }}
+                </div>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-normal text-default">Expiration date</div>
-                <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5"><UIcon name="i-lucide-calendar-x" class="size-4 text-dimmed shrink-0" aria-hidden="true" />{{ warranty.expiration }}</div>
+                <div class="text-xs font-normal text-default">
+                  Expiration date
+                </div>
+                <div class="text-sm text-highlighted mt-1 flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-calendar-x"
+                    class="size-4 text-dimmed shrink-0"
+                    aria-hidden="true"
+                  />{{ warranty.expiration }}
+                </div>
               </div>
               <div class="min-w-0">
-                <div class="text-xs font-normal text-default">Time remaining</div>
-                <div class="mt-1 flex items-center gap-1.5"><UIcon name="i-lucide-hourglass" class="size-4 text-dimmed shrink-0" aria-hidden="true" /><span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset" :class="WARRANTY_TONE[warranty.tone]">{{ warranty.remaining }}</span></div>
+                <div class="text-xs font-normal text-default">
+                  Time remaining
+                </div>
+                <div class="mt-1 flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-hourglass"
+                    class="size-4 text-dimmed shrink-0"
+                    aria-hidden="true"
+                  /><span
+                    class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset"
+                    :class="WARRANTY_TONE[warranty.tone]"
+                  >{{ warranty.remaining }}</span>
+                </div>
               </div>
-              <p class="text-xs text-helper">Calculated from the purchase order's order date and the asset model's set warranty period.</p>
+              <p class="text-xs text-helper">
+                Calculated from the purchase order's order date and the asset model's set warranty period.
+              </p>
             </div>
-            <div v-else class="flex flex-col gap-3">
-              <p v-if="noWarranty" class="text-sm text-placeholder">No manufacturer warranty. This unit is covered by its owner, not by GoTeam.</p>
-              <p v-else class="text-sm text-placeholder">Coverage can't be calculated yet. It needs a linked purchase order and the asset model's warranty period.</p>
-              <UButton v-if="canEdit && needsPo" color="primary" variant="link" size="sm" trailing-icon="i-lucide-arrow-right" label="Link PO" class="self-start -ml-2.5" @click="startEdit('po')" />
+            <div
+              v-else
+              class="flex flex-col gap-3"
+            >
+              <p
+                v-if="noWarranty"
+                class="text-sm text-placeholder"
+              >
+                No manufacturer warranty. This unit is covered by its owner, not by GoTeam.
+              </p>
+              <p
+                v-else
+                class="text-sm text-placeholder"
+              >
+                Coverage can't be calculated yet. It needs a linked purchase order and the asset model's warranty period.
+              </p>
+              <UButton
+                v-if="canEdit && needsPo"
+                color="primary"
+                variant="link"
+                size="sm"
+                trailing-icon="i-lucide-arrow-right"
+                label="Link PO"
+                class="self-start -ml-2.5"
+                @click="startEdit('po')"
+              />
             </div>
           </div>
         </section>

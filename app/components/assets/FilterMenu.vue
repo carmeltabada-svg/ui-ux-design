@@ -36,18 +36,38 @@ const ui = { content: 'min-w-64', item: 'group', itemLabel: 'group-data-[state=c
     >
       <span class="inline-flex items-center gap-2">
         {{ label }}
-        <UBadge v-if="model.length" :label="String(model.length)" color="primary" variant="solid" size="sm" class="rounded-full tabular-nums" />
+        <UBadge
+          v-if="model.length"
+          :label="String(model.length)"
+          color="primary"
+          variant="solid"
+          size="sm"
+          class="rounded-full tabular-nums"
+        />
       </span>
       <template #item-label="{ item }">
         <AssetsTruncate :text="(item as FilterOption).label" />
       </template>
       <template #item-trailing="{ item }">
-        <UBadge v-if="(item as FilterOption).count !== undefined" color="neutral" variant="subtle" size="sm" class="rounded-full tabular-nums">{{ (item as FilterOption).count }}</UBadge>
+        <UBadge
+          v-if="(item as FilterOption).count !== undefined"
+          color="neutral"
+          variant="subtle"
+          size="sm"
+          class="rounded-full tabular-nums"
+        >
+          {{ (item as FilterOption).count }}
+        </UBadge>
       </template>
     </USelectMenu>
   </div>
 
-  <UFormField v-else :label="label" :hint="disabled ? 'Pick an asset type first' : undefined" :ui="{ label: 'text-xs font-normal text-default', hint: 'text-xs text-muted' }">
+  <UFormField
+    v-else
+    :label="label"
+    :hint="disabled ? 'Pick an asset type first' : undefined"
+    :ui="{ label: 'text-xs font-normal text-default', hint: 'text-xs text-muted' }"
+  >
     <USelectMenu
       v-model="model"
       multiple
@@ -60,12 +80,23 @@ const ui = { content: 'min-w-64', item: 'group', itemLabel: 'group-data-[state=c
       class="w-full"
       :ui="ui"
     >
-      <AssetsTruncate :text="summary" :class="model.length ? 'text-highlighted' : 'text-muted'" />
+      <AssetsTruncate
+        :text="summary"
+        :class="model.length ? 'text-highlighted' : 'text-muted'"
+      />
       <template #item-label="{ item }">
         <AssetsTruncate :text="(item as FilterOption).label" />
       </template>
       <template #item-trailing="{ item }">
-        <UBadge v-if="(item as FilterOption).count !== undefined" color="neutral" variant="subtle" size="sm" class="rounded-full tabular-nums">{{ (item as FilterOption).count }}</UBadge>
+        <UBadge
+          v-if="(item as FilterOption).count !== undefined"
+          color="neutral"
+          variant="subtle"
+          size="sm"
+          class="rounded-full tabular-nums"
+        >
+          {{ (item as FilterOption).count }}
+        </UBadge>
       </template>
     </USelectMenu>
   </UFormField>

@@ -258,4 +258,3 @@ export function saveAssetDetails(tag: string, d: DetailsDraft): void {
   a.techPack = d.techPack as Asset['techPack']
   a.currency = d.currency
 }
-

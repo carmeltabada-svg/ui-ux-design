@@ -3,5 +3,13 @@
 </script>
 
 <template>
-  <span class="inline-flex" role="img" aria-label="None"><UIcon name="i-lucide-minus" class="size-4 text-dimmed" aria-hidden="true" /></span>
+  <span
+    class="inline-flex"
+    role="img"
+    aria-label="None"
+  ><UIcon
+    name="i-lucide-minus"
+    class="size-4 text-dimmed"
+    aria-hidden="true"
+  /></span>
 </template>

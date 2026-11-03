@@ -7,7 +7,11 @@ const model = defineModel<T>({ required: true })
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-2 mb-6" role="group" :aria-label="label">
+  <div
+    class="flex flex-wrap items-center gap-2 mb-6"
+    role="group"
+    :aria-label="label"
+  >
     <UButton
       v-for="f in items"
       :key="f.value"
@@ -19,7 +23,15 @@ const model = defineModel<T>({ required: true })
       @click="model = f.value"
     >
       {{ f.label }}
-      <UBadge color="neutral" :variant="model === f.value ? 'solid' : 'subtle'" size="sm" class="rounded-full tabular-nums" :class="model === f.value ? 'bg-white/20 text-white' : ''">{{ f.count }}</UBadge>
+      <UBadge
+        color="neutral"
+        :variant="model === f.value ? 'solid' : 'subtle'"
+        size="sm"
+        class="rounded-full tabular-nums"
+        :class="model === f.value ? 'bg-white/20 text-white' : ''"
+      >
+        {{ f.count }}
+      </UBadge>
     </UButton>
   </div>
 </template>

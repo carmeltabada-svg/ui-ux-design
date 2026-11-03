@@ -41,30 +41,56 @@ function choose(o: StatusOption) {
 </script>
 
 <template>
-  <UPopover v-model:open="open" :content="{ align: 'start' }" :ui="{ content: 'w-(--reka-popper-anchor-width) min-w-72' }">
+  <UPopover
+    v-model:open="open"
+    :content="{ align: 'start' }"
+    :ui="{ content: 'w-(--reka-popper-anchor-width) min-w-72' }"
+  >
     <button
       type="button"
       class="flex items-center gap-2 w-full h-9 px-2.5 text-sm text-left bg-default border border-accented rounded-md hover:bg-elevated/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       :class="selectedName ? 'text-default' : 'text-dimmed'"
     >
       <span class="flex-1 min-w-0 truncate">{{ selectedName || placeholder || 'Select status' }}</span>
-      <UIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-dimmed" />
+      <UIcon
+        name="i-lucide-chevron-down"
+        class="size-4 shrink-0 text-dimmed"
+      />
     </button>
 
     <template #content>
       <div class="flex flex-col max-h-80">
         <div class="p-2 border-b border-default shrink-0">
-          <UInput v-model="query" size="sm" icon="i-lucide-search" placeholder="Search status" autofocus class="w-full" />
+          <UInput
+            v-model="query"
+            size="sm"
+            icon="i-lucide-search"
+            placeholder="Search status"
+            autofocus
+            class="w-full"
+          />
         </div>
         <div class="min-h-0 overflow-y-auto fade-scroll-y p-1">
-          <template v-for="group in groups" :key="group.lane">
-            <p class="px-2 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-dimmed">{{ group.label }}</p>
+          <template
+            v-for="group in groups"
+            :key="group.lane"
+          >
+            <p class="px-2 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-dimmed">
+              {{ group.label }}
+            </p>
 
-            <template v-for="o in group.items" :key="o.name">
+            <template
+              v-for="o in group.items"
+              :key="o.name"
+            >
               <!-- Client Pull-Out, ineligible: hovering the row shows the reason in a tooltip above;
                    clicking the status or the info button surfaces the same reason as a toast (clicks
                    close the dropdown, so a toast is what stays visible). -->
-              <UTooltip v-if="o.disabled && o.info" :text="o.reason" :content="{ side: 'top' }">
+              <UTooltip
+                v-if="o.disabled && o.info"
+                :text="o.reason"
+                :content="{ side: 'top' }"
+              >
                 <div class="flex items-center gap-1 rounded-md">
                   <button
                     type="button"
@@ -75,7 +101,11 @@ function choose(o: StatusOption) {
                     <span class="flex-1 min-w-0 truncate">{{ o.name }}</span>
                   </button>
                   <UButton
-                    color="neutral" variant="ghost" size="xs" square icon="i-lucide-info"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    icon="i-lucide-info"
                     :aria-label="`Why is ${o.name} unavailable`"
                     class="shrink-0 text-dimmed"
                     @click="explain(o)"
@@ -87,7 +117,9 @@ function choose(o: StatusOption) {
               <div
                 v-else-if="o.disabled"
                 class="px-2 py-1.5 text-sm rounded-md text-dimmed/70 cursor-not-allowed select-none"
-              >{{ o.name }}</div>
+              >
+                {{ o.name }}
+              </div>
 
               <!-- Selectable -->
               <button
@@ -98,11 +130,20 @@ function choose(o: StatusOption) {
                 @click="choose(o)"
               >
                 <span class="flex-1 min-w-0 truncate">{{ o.name }}</span>
-                <UIcon v-if="o.name === modelValue" name="i-lucide-check" class="size-4 shrink-0 text-primary" />
+                <UIcon
+                  v-if="o.name === modelValue"
+                  name="i-lucide-check"
+                  class="size-4 shrink-0 text-primary"
+                />
               </button>
             </template>
           </template>
-          <p v-if="!groups.length" class="px-2 py-6 text-sm text-center text-muted">No status matches.</p>
+          <p
+            v-if="!groups.length"
+            class="px-2 py-6 text-sm text-center text-muted"
+          >
+            No status matches.
+          </p>
         </div>
       </div>
     </template>
