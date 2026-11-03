@@ -1,7 +1,7 @@
 # Dev Doc: Assets list and asset detail UI/UX enhancements
 
 **Audience:** developers porting the Assets list and the Asset detail view into the R24 code base (`it/app/pages/app/assets`).
-**Source:** branch `assets-handoff`. Front end only, mock data. Nuxt 4, Nuxt UI 4, Tailwind 4, Vue 3.
+**Source:** branch `wt-assets`. Front end only, mock data. Nuxt 4, Nuxt UI 4, Tailwind 4, Vue 3.
 **Scope of this doc:** the UI/UX redesign of the Assets list and detail. The Supplier Return and Client Pull-Out exit flow (Move Asset form, confirm step, exit panel, exit documents) is covered in `DEV_DOC_supplier-return-client-pull-out.md`. The two exit statuses do appear in the views below (status badge, filter list, metric card, location), and only that is covered here.
 **Round:** 1 as its own handoff (the work was built over three rounds, summarised under What changed). Design and layout are final.
 

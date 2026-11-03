@@ -1,7 +1,7 @@
 # Dev Doc: Supplier Return and Client Pull-Out
 
 **Audience:** developers porting the Supplier Return and Client Pull-Out work into the R24 code base (`it/app/pages/app/move-asset`, and the status, movement and custody code in `it/app/pages/app/assets`).
-**Source:** branch `assets-handoff`. Front end only, mock data. Nuxt 4, Nuxt UI 4, Tailwind 4, Vue 3.
+**Source:** branch `wt-assets`. Front end only, mock data. Nuxt 4, Nuxt UI 4, Tailwind 4, Vue 3.
 **Verified:** 2 Nov 2026 (see Verification status).
 **Scope:** only the two new Terminal-lane statuses and the Move Asset flow that sets them. The UI/UX work on the Assets list and the asset detail view (filters, metric cards, detail layout, right rail, tabs, custody history rebuild, database seed) is covered in `DEV_DOC_assets-ux-enhancements.md`.
 
