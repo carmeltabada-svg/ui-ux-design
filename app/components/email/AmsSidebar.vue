@@ -15,8 +15,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'i-lucide-layout-dashboard' },
-  { id: 'assets', label: 'Assets', icon: 'i-lucide-box' },
-  { id: 'move-asset', label: 'Move Asset', icon: 'i-lucide-truck' },
+  { id: 'assets', label: 'Assets', icon: 'i-lucide-box', to: '/assets' },
+  { id: 'move-asset', label: 'Move Asset', icon: 'i-lucide-truck', to: '/move-asset' },
   { id: 'asset-removal', label: 'Asset Removal', icon: 'i-lucide-trash-2' },
   { id: 'locations', label: 'Locations', icon: 'i-lucide-map-pin' },
   { id: 'suppliers', label: 'Suppliers', icon: 'i-lucide-building-2' },
@@ -62,7 +62,13 @@ const route = useRoute()
 const active = computed(() => props.active ?? (
   route.path.startsWith('/master-data')
     ? 'master-data'
-    : route.path.startsWith('/ticket-tracker') ? 'ticket-tracker' : 'templates'
+    : route.path.startsWith('/ticket-tracker')
+      ? 'ticket-tracker'
+      : route.path.startsWith('/move-asset')
+        ? 'move-asset'
+        : (route.path === '/assets' || route.path.startsWith('/assets/'))
+          ? 'assets'
+          : 'templates'
 ))
 
 const formsOpen = ref(active.value === 'forms' || active.value === 'gate-pass')

@@ -32,7 +32,19 @@ const breadcrumbItems = computed<Crumb[]>(() => {
   const home: Crumb = { label: 'Home', icon: 'i-lucide-home', to: '/' }
   const path = route.path
   const id = String(route.params.id ?? '')
+  const tag = String(route.params.tag ?? '')
 
+  if (path.startsWith('/move-asset')) {
+    const section: Crumb = { label: 'Move Asset', icon: 'i-lucide-truck', to: '/move-asset' }
+    if (!tag) return [home, { label: 'Move Asset', icon: 'i-lucide-truck' }]
+    if (path.endsWith('/done')) return [home, section, { label: tag, to: `/move-asset/${tag}/move` }, { label: 'Done' }]
+    return [home, section, { label: tag }]
+  }
+  if (path === '/assets' || path.startsWith('/assets/')) {
+    const section: Crumb = { label: 'Assets', icon: 'i-lucide-box', to: '/assets' }
+    if (tag) return [home, section, { label: tag }]
+    return [home, { label: 'Assets', icon: 'i-lucide-box' }]
+  }
   if (path.startsWith('/master-data')) {
     const section: Crumb = { label: 'Master Data', icon: 'i-lucide-database', to: '/master-data' }
     if (path.startsWith('/master-data/offboarding-checklists')) return [home, section, { label: 'Offboarding Checklists' }]
