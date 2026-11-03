@@ -1,0 +1,8 @@
+# Netlify builds the shareable static prototype: client-side only, hash style links.
+# Install runs automatically (pnpm, from the lockfile) before this command.
+[build]
+  command = "AMS_STATIC_DEMO=1 ./node_modules/.bin/nuxt generate"
+  publish = ".output/public"
+
+[build.environment]
+  NODE_VERSION = "22"
