@@ -290,7 +290,8 @@ function measure(el: Element) {
 function place() {
   const c = card.value
   const vw = window.innerWidth
-  const vh = window.innerHeight
+  // The strip along the bottom stays free: a host such as Netlify draws its own badge there, above everything else.
+  const vh = window.innerHeight - 88
   const w = c?.offsetWidth ?? 340
   const h = c?.offsetHeight ?? 200
   const r = rect.value
