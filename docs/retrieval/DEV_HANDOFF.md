@@ -360,7 +360,7 @@ don't):
 - Print/PDF output (`/form-preview.vue`) uses `pagedjs` (`Previewer`)
   independently — a separate, more print-accurate pagination engine, wired
   up specifically because `tiptap-pagination-plus` was found to have no real
-  per-page document structure (see `docs/archive/PAGINATION_TOOLKIT_STUDY.md` for
+  per-page document structure (see `docs/retrieval/archive/PAGINATION_TOOLKIT_STUDY.md` for
   the full evaluation).
 - Custom form-field nodes (`FormFieldNode`, `app/utils/formFieldNode.ts` +
   `FormFieldNodeView.vue`) render Nuxt UI inputs inline in the document
@@ -781,5 +781,5 @@ Real findings that are larger than a cleanup, with the cost of leaving them:
 | `changeReasonAndMode` leaves `gateCount`, the checklist and the stage index unchanged | A path change can land on the wrong stage or keep the wrong gate count |
 | `nearestBranchFor` ignores the team member address correction | The suggested branch can disagree with the corrected address |
 | Seed ticket ids are employee ids, created ones are UUIDs | Inconsistent identifiers in the mock |
-| Dark mode WCAG 2.2 audit findings (docs/WCAG_DARK_AUDIT.md): 2 dark-specific (form preview caption 3.69:1, weak focus ring on breadcrumb and sidebar controls), 9 present in both themes (unnamed select buttons, nested controls, popover `aria-expanded` on a span, low control borders, small targets) | Not conformant until fixed and a manual pass is done |
+| Dark mode WCAG 2.2 audit findings (docs/retrieval/WCAG_DARK_AUDIT.md): 2 dark-specific (form preview caption 3.69:1, weak focus ring on breadcrumb and sidebar controls), 9 present in both themes (unnamed select buttons, nested controls, popover `aria-expanded` on a span, low control borders, small targets) | Not conformant until fixed and a manual pass is done |
 | Screen reader testing, forced colors and a full manual WCAG 2.2 pass | Automated contrast and focus checks do not cover reading order, names, error handling or zoom |

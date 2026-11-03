@@ -7,17 +7,17 @@ that need to be integrated into the real GoTeam AMS: an **email template
 builder** and a **retrieval-forms (document) builder**.
 
 There is no backend, no database, no authentication, and no real email
-sending in this package — see [`docs/DEV_HANDOFF.md`](docs/DEV_HANDOFF.md)
+sending in this package — see [`docs/retrieval/DEV_HANDOFF.md`](docs/retrieval/DEV_HANDOFF.md)
 for exactly what that means and what needs to be built.
 
 ## Start here
 
-**→ Open [`docs/README.md`](docs/README.md) first.** It indexes the three
+**→ Open [`docs/README.md`](docs/README.md) first** (one folder per tab; the Retrieval package is [`docs/retrieval/README.md`](docs/retrieval/README.md)). It indexes the three
 handoff documents (one each for dev, QA, and PM) — read the one for your
 role before touching anything else.
 
 If you're the developer integrating this: go straight to
-[`docs/DEV_HANDOFF.md`](docs/DEV_HANDOFF.md). It covers known traps, what's
+[`docs/retrieval/DEV_HANDOFF.md`](docs/retrieval/DEV_HANDOFF.md). It covers known traps, what's
 explicitly out of scope, every third-party toolkit/package and why it's
 there, known limitations, and a full-stack implementation checklist.
 
@@ -33,7 +33,7 @@ pnpm dev
 ```
 
 Then open `http://localhost:3000`. No login is required — there's no auth
-in this prototype (see `docs/DEV_HANDOFF.md` for why).
+in this prototype (see `docs/retrieval/DEV_HANDOFF.md` for why).
 
 **If port 3000 is already in use** (e.g. the real AMS project is already
 running on your machine), run this on a different port instead of killing
@@ -53,7 +53,7 @@ one consistently while testing this prototype (see the note below on why).
 > (or the real AMS project happens to also use `localStorage` on the same
 > port), don't be surprised if previously "saved" templates/forms seem to
 > disappear — they didn't; you're just looking at a different origin's
-> storage. See `docs/DEV_HANDOFF.md` (Known Limitations) for more on this.
+> storage. See `docs/retrieval/DEV_HANDOFF.md` (Known Limitations) for more on this.
 
 Other useful commands:
 
@@ -69,7 +69,7 @@ npx playwright test # runs the existing e2e suite in tests/e2e
 ```
 app/            Vue/Nuxt source — the actual prototype code
 public/         Static assets (logos)
-docs/           Handoff documentation — start with docs/README.md
+docs/           Documentation, one folder per tab — start with docs/README.md
 tests/          Existing Playwright e2e tests
 package.json, pnpm-lock.yaml, pnpm-workspace.yaml   Exact dependency versions
 nuxt.config.ts, tsconfig.json, eslint.config.mjs, formkit.config.ts

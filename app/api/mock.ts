@@ -1,5 +1,5 @@
 // PROTOTYPE ONLY: delete this file with `app/mocks/` when the real backend is
-// connected (see docs/BACKEND_SWAP.md). It plays the server: it returns the
+// connected (see docs/retrieval/BACKEND_SWAP.md). It plays the server: it returns the
 // fixtures exactly as the real API would, applies the rules the real server will
 // own (unique names, one template per path), and keeps changes in this browser's
 // localStorage so they survive a refresh.
@@ -338,7 +338,7 @@ const tickets: ApiClient['tickets'] = {
 // A real mail server takes a moment. This keeps the "Sending" state on screen long enough to be seen.
 const SEND_DELAY_MS = 700
 
-/** The stage's own record of a send: the history entry and the flags the workspace reads (see docs/TICKET_WORKFLOW.md section 6.3). */
+/** The stage's own record of a send: the history entry and the flags the workspace reads (see docs/retrieval/TICKET_WORKFLOW.md section 6.3). */
 function recordSend(ticket: Ticket, req: SendEmailRequest, formName: string | null) {
   switch (req.kind) {
     case 'notice':

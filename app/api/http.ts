@@ -1,5 +1,5 @@
 // Starter for the real backend. Untested: it follows the paths and response
-// envelope proposed in docs/DATA_CONTRACT.md (`{ data: ... }`, snake_case,
+// envelope proposed in docs/retrieval/DATA_CONTRACT.md (`{ data: ... }`, snake_case,
 // Laravel's 422 validation shape) and is meant to be corrected by whoever owns
 // the API.
 import { camelizeKeys, snakeizeKeys } from './keys'

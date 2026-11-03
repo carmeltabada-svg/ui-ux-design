@@ -3,7 +3,7 @@
 // This is the one place that decides which ticket field fills which placeholder.
 // The ticket workspace uses it for its previews and the Placeholder Check, and the
 // mock server (api/mock.ts) uses it to render the message it "sends". A real
-// backend must reproduce these rules: they are covered by docs/TEMPLATES_SPEC.md
+// backend must reproduce these rules: they are covered by docs/retrieval/TEMPLATES_SPEC.md
 // section 6.
 //
 // Pure: it reads the ticket it is given and nothing else, so it can be ported and

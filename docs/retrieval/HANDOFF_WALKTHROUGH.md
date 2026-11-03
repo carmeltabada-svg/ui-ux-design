@@ -6,7 +6,7 @@
 
 ## 1. Flow diagram (about 3 minutes)
 
-Open the **Ticket lifecycle** diagram in Dev Doc section 2 (`docs/diagrams/ticket-lifecycle.png`, editable as `.excalidraw`). Follow the blue path left to right and top to bottom; dashed boxes are remote only and the red path is charging.
+Open the **Ticket lifecycle** diagram in Dev Doc section 2 (`docs/retrieval/diagrams/ticket-lifecycle.png`, editable as `.excalidraw`). Follow the blue path left to right and top to bottom; dashed boxes are remote only and the red path is charging.
 
 - A ticket starts in **Create**, which allows only one open ticket per team member.
 - It runs through the **checklist** (Complete checklist needs every required task), the **IT access notice** (a notice, never a gate), **asset confirmation**, then the **notice** and **call confirmation**, then **reminders**.

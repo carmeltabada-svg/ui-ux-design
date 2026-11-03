@@ -1,7 +1,7 @@
 import { watch } from 'vue'
 import { TICKETS, NOTIFICATIONS, repairRestoredTicket, type Ticket, type AppNotification } from '~/data/ticketTrackers'
 
-// PROTOTYPE ONLY (see docs/BACKEND_SWAP.md): this is the mock server's database for tickets.
+// PROTOTYPE ONLY (see docs/retrieval/BACKEND_SWAP.md): this is the mock server's database for tickets.
 // TICKETS/NOTIFICATIONS only
 // ever exist in one tab's JS memory otherwise - there's no backend. A
 // simulated HRIS update, an acknowledgment, a Target Date re-baseline, all

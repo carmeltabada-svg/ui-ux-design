@@ -158,7 +158,7 @@ Out of scope for v1, but design decisions should not make these harder later.
 
 ## Implementation Phases
 
-See `docs/IMPLEMENTATION_PHASES.md` for full phase breakdown with dependencies.
+See `docs/retrieval/IMPLEMENTATION_PHASES.md` for full phase breakdown with dependencies.
 
 | Phase | Focus | Depends on | Can run alongside |
 |---|---|---|---|

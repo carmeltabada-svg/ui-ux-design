@@ -1,5 +1,5 @@
 // PROTOTYPE ONLY: delete this file with `app/mocks/` and `api/mock.ts` when the real backend is
-// connected (see docs/BACKEND_SWAP.md). These are the rules the server owns for a ticket:
+// connected (see docs/retrieval/BACKEND_SWAP.md). These are the rules the server owns for a ticket:
 // each function takes a ticket, changes it, writes its history line, and may say no. In
 // production they are the backend's. The browser only asks for them by name, through
 // `api().tickets.act()`, and shows the answer. `ACTIONS` at the bottom is that list of

@@ -17,7 +17,7 @@ What is kept in the browser (all keys start with `ams:`):
 | `ams:formSubmissions:v1` | Test form submissions (only a signed at time today) |
 
 The shipped content itself (the 20 email templates, the 5 forms, the sample tickets and
-people) is in `app/mocks/*.json`, which **is** in the zip. See `docs/DEV_HANDOFF.md`
+people) is in `app/mocks/*.json`, which **is** in the zip. See `docs/retrieval/DEV_HANDOFF.md`
 (Known Limitations) for why the browser copy is only a stand in for a database.
 
 If you want to preserve something you built or tested, do this **before** re-zipping, in the
@@ -45,7 +45,7 @@ If `copy()` isn't available in your browser, replace the last two lines with
 
 ## 2. Save it
 
-Paste the copied JSON into a new file at `docs/local-data-snapshot.json` in this project,
+Paste the copied JSON into a new file at `docs/retrieval/local-data-snapshot.json` in this project,
 then re-create the handoff zip. This is a point in time reference for the dev, not something
 to import into a production system as is.
 
@@ -53,10 +53,10 @@ to import into a production system as is.
 
 The snapshot is **only sample or reference data** while the dev builds the real backend and
 schema. It shows real shapes of saved records. It should **not** be imported into a real
-database; the dev's schema (see `docs/DATA_CONTRACT.md` and `docs/DEV_HANDOFF.md` §10.2) is
+database; the dev's schema (see `docs/retrieval/DATA_CONTRACT.md` and `docs/retrieval/DEV_HANDOFF.md` §10.2) is
 the source of truth for the real data model.
 
-## About the snapshot already in `docs/local-data-snapshot.json`
+## About the snapshot already in `docs/retrieval/local-data-snapshot.json`
 
 It was captured earlier, in an older storage format (`{ forms, sections }`), and mentions a
 seed form called `aof-commitment` that no longer exists. The shipped forms are now
