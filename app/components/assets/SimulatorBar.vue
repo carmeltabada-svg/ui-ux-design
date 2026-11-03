@@ -159,6 +159,7 @@ const selectClass = 'rounded border border-slate-600 bg-slate-800 text-slate-100
           </select>
         </label>
       </template>
+      <AssetsDemoTour />
       <button
         type="button"
         class="shrink-0 inline-flex items-center gap-1 rounded px-2 py-1 min-h-7 text-slate-200 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-white"
