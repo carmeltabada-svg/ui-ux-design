@@ -2,10 +2,12 @@
 
 **Author:** Carmel Tabada
 **Status:** Approved on 2026-10-29.
-**Last updated:** 2026-10-29
+**Last updated:** 2026-11-03
 **Reviewer:** Karl Bustillo (prototype signed off)
-**Build target:** the Move Asset screen of the live Assets app (`/app/move-asset/[assetTag]/move`) and the places that show the two new statuses (`/app/assets`, `/app/assets/[assetId]`). The layout work on the list and detail views is covered in `DEV_DOC_assets-ux-enhancements.md`.
+**Build target:** the Move Asset screens of the live Assets app (`/app/move-asset/[assetTag]/move`), the Move details drawer on the asset page, and the places that show the new statuses (`/app/assets`, `/app/assets/[assetId]`). The layout work on the list and detail views is covered in `DEV_DOC_assets-ux-enhancements.md`.
 **Source of the live behaviour:** the R24 Assets tab code, the backend status data in `api/database/data/asset_statuses.php`, and the running app, checked 2026-10-29
+
+**Scope as of 2026-11-03:** this document started with the two exit statuses. It now covers every kind of move on the Move Asset screen: Check In or Check Out to any status, Return to supplier, and Client pull-out (R12), the Legacy statuses (R13), and the Move details drawer with the replacement picker (R14). The prototype is already signed off, and the build is one Jira Story (`JIRA_TICKET_assets.md`).
 
 ---
 
@@ -23,7 +25,8 @@ Not solving this means the inventory count is wrong, audits cannot tell a lost u
 2. **Every exit has proof.** No exit status is saved without a date, a person who did it, a reason and a supporting document (supplier return agreement or client instruction).
 3. **Right unit, right status.** Client Pull-Out cannot be applied to Monthly Rental units. Only Outright Purchase and BYOD units can be pulled out by a client.
 4. **Traceable history.** The asset history shows each exit with date, user, reason and document, and a Supplier Return can be linked to its replacement unit.
-5. **Fit the app as it is.** The feature reuses the existing Move Asset flow and status model, and adds no new screen and no ticket flow in this phase.
+5. **Fit the app as it is.** The feature reuses the existing Move Asset flow and status model, and adds no ticket flow in this phase. Its only new surface is the Move details drawer on the asset page.
+6. **One Move Asset form for every kind of move.** The kind is chosen before the form opens, so the form layout never changes while the officer fills it in.
 
 ---
 
@@ -78,13 +81,13 @@ Not solving this means the inventory count is wrong, audits cannot tell a lost u
 
 **R1. Two new statuses in the existing Terminal lane**
 Supplier Return, and Client Pull-Out with sub status Competitor or Direct Hire. Both are new: none of them exists in the backend status list today. They are added as status rows the same way Charged Deduction was (a migration row in `asset_statuses`), in the existing `terminal` lane next to Disposed, Sold, Recovery Deduction, Charged Deduction, Gifted and Missing. Competitor and Direct Hire are stored as `sub_status_options` of Client Pull-Out, the same way Sold stores Buyout, and no new lane is created. The prototype's separate "Left us" group is dropped (see Terminology).
-- [ ] Given any unit, when the officer opens New Status, then the Terminal lane lists Supplier Return and Client Pull-Out, and Client Pull-Out asks for its sub status (Competitor or Direct Hire).
-- [ ] Supplier Return is selectable from any current status.
+- [ ] The two statuses sit in the Terminal lane everywhere statuses are listed as a filter. In the Move form they are chosen from the move menu ("Return to supplier", "Client pull-out", see R12) rather than the status list, and Client pull-out asks for its sub status (Competitor or Direct Hire).
+- [ ] Supplier Return is available from any current status of a unit that has not already left.
 - [ ] Sub status is stored with the status and shown in the badge as "Client Pull-Out, Competitor" style text, matching how the live sub status badge renders.
 
 **R2. Client Pull-Out eligibility**
-- [ ] Given a Monthly Rental unit, when the officer opens New Status, then both Client Pull-Out options are disabled with the label "not for Monthly Rental".
-- [ ] Given a Monthly Rental unit, then the Move Asset page shows: "Client Pull-Out isn't available for Monthly Rental units. Only Outright Purchase and BYOD units can be pulled out by the client."
+- [ ] Given a Monthly Rental unit, when the officer opens the Move asset menu, then "Client pull-out" is disabled, shows the reason in a tooltip ("Only Outright Purchase and BYOD units can be pulled out by the client. This unit is Monthly Rental."), and clicking it raises a toast with the same reason.
+- [ ] Given a Monthly Rental unit opened with `?kind=client`, then the Move Asset page shows the same reason and the unit cannot be saved.
 - [ ] The server rejects Client Pull-Out for a Monthly Rental unit even if the client check is bypassed, with a 422 and the same message.
 
 **R3. Required exit details**
@@ -101,7 +104,7 @@ Choosing either status reveals an "Exit details, all required" block with Date, 
 - [ ] The file is stored with the movement and is openable from the asset history.
 
 **R5. Movement and location follow the status**
-- [ ] Supplier Return sets the movement to Check In and the location to the supplier.
+- [ ] Supplier Return sets the movement to Check Out and the location type to Supplier, as in R24: the unit is sent out to the supplier's address. (An earlier version of this document said Check In.)
 - [ ] Client Pull-Out sets the movement to Check Out and the location to the client the unit was checked out to.
 - [ ] The Location field shows the derived value read only, instead of "Set when you pick the status".
 
@@ -113,18 +116,48 @@ Choosing either status reveals an "Exit details, all required" block with Date, 
 **R7. What the Assets list shows for an exit**
 - [ ] The two counts from R6 ("Active assets" and "Returned or pulled out", helper text: "Supplier Return and Client Pull-Out") are visible at the top of the list. How the list header, metric cards and filters are laid out is the separate UI/UX enhancements task (``), not this one.
 - [ ] The Asset Status filter includes the two new statuses under the Terminal lane.
-- [ ] A unit in an exit status shows its status badge and an "Exited" marker in the Actions column in place of Add Movement.
+- [ ] A unit in an exit status shows its status badge, and the Actions column shows the empty mark in place of the Move action, so it is not moved again by accident.
 - [ ] Nothing else in the table is changed by this task.
 
 **R8. History**
 - [ ] The asset Activity Feed and Movements record the change with date, user, reason and document link.
 - [ ] The status history panel on Move Asset shows the same entry.
 
+**R12. Every kind of move, chosen before the form opens**
+The Move Asset form no longer assumes an exit. Three entry points each open the same menu: the row action in the Assets list, the "Move asset" button in the asset detail header, and the "Move Asset" button on the Move Asset page. The menu has three kinds: "Check In or Check Out", "Return to supplier" and "Client pull-out". The kind is in the address of the form (`?kind=supplier` or `?kind=client`; no kind means the generic move), and the form header has a "Change move type" menu.
+- [ ] Client pull-out is disabled in the menu when the unit is a Monthly Rental. The disabled item shows the reason in a tooltip, and clicking it raises a toast with the same reason.
+- [ ] Check In or Check Out follows the live R24 form order: movement type (Check In or Check Out), location type (Asset Location, Supplier or User Address, always visible), the location, supplier or team member, who did it, a note, and the new status last. No field was invented.
+- [ ] A Check In always goes to an asset location, so Supplier and User Address are disabled while Check In is chosen.
+- [ ] The team member search shows two lines like the retrieval ticket (the name, then the employee number and email) and finds a person by name, employee number or email.
+- [ ] Return to supplier and Client pull-out show the movement as fixed and ask for the exit details in R3 and R4, then the confirm step.
+- [ ] Supplier Return and Client Pull-Out are not in the new status list. They are chosen from the menu, where Client pull-out can explain why it is off.
+- [ ] A move to Charged Deduction shows two document fields, Authority to Deduct and IT Clearance, both optional as in the live app. They are in the form from the start but switched off, and switched on only for that status, so nothing on the page shifts. The IT Clearance can be opened from the Activity Feed beside the Authority to Deduct.
+- [ ] A Check In, Check Out or Charged Deduction move is recorded in Movements, Custody history and the Activity Feed like any other.
+
+**R13. Legacy statuses**
+The five retired statuses of the old model are listed in their own "Legacy" group after the lanes: Defective (red), For Inspection (yellow), In Transit (purple), Pending Disposal (orange) and Under Repair (yellow). They come from the live R24 status table (`is_legacy`).
+- [ ] The Legacy group is in the Move form status list and in the Assets list Status filter, after the Terminal lane. No status in the Move form list is disabled any more.
+- [ ] No existing badge colour changed. No sample unit is on a legacy status yet, so their filter counts are 0.
+
+**R14. Move details drawer and the replacement unit**
+Move details open in a floating right slide-over (maximum 440 px wide) on the asset detail page, for a unit that has left only. The old Move Asset details address now only forwards to the asset page with the drawer open. The done page ("View Move Details") and the asset header ("Move details") open it, and a unit that cannot be moved again offers "View move details".
+- [ ] The drawer shows the move fields, with an empty state such as "No note recorded" where a value is missing, the supporting document as a read only attachment chip, and the Replacement section.
+- [ ] The replacement is optional and can be added, changed or cleared at any time. There is no lock rule.
+- [ ] The options are units whose status is exactly Available, that are not the unit itself, and that are not already the replacement of another unit.
+- [ ] The picker has two sections: "Same supplier" (same purchase order first) and "Other suggestions" (another supplier, same model, tech pack or client). Each has a "?" help: a tooltip on hover, and a click pins it open.
+- [ ] The picker is searchable, each option has an open in new tab icon (Ctrl or Cmd click also works), both sections have empty states, and the trigger reads "Select a replacement unit".
+- [ ] Linking writes a history entry on both units, and the Activity Feed shows it as a link item with a sentence such as "linked this unit as the replacement for".
+
+**R15. Attachments are stored for real**
+- [ ] A document attached to a move is stored in the browser (IndexedDB), so it opens as the real file from Movements, the Activity Feed and the drawer, before and after a reload. Records made before this cannot be recovered and need the document attached again.
+- [ ] The sample units' paperwork opens a stand-in page that says the file itself is not stored in this browser and to attach the document again. Reset sample data clears the stored files.
+- [ ] A document opens in a new tab with no link back to the app.
+
 ### Nice-to-Have (P1)
 
-**R9. Replacement unit link for Supplier Return.** An optional field "Replacement unit from the supplier (optional, can be linked later)", default "Not linked yet", listing eligible units. Both units show the link in their history. Linking later from the asset detail page is also supported.
+**R9. Replacement unit link for Supplier Return.** An optional field "Replacement unit from the supplier", default "Not linked yet", listing eligible units. Both units show the link in their history. Linking later from the Move details drawer is also supported. The full rules are in R14.
 **R10. Export.** The CSV export includes the exit date, reason and document name for exit units.
-**R11. Document preview.** Open the PDF or image in place from the history entry.
+**R11. Document preview.** Open the PDF or image from the history entry in a new tab, and read only in the Move details drawer. Built: a real attached file opens from Movements, the Activity Feed and the drawer, before and after a reload (see R15).
 
 ### Future Considerations (P2)
 
@@ -140,7 +173,8 @@ Choosing either status reveals an "Exit details, all required" block with Date, 
 - The prototype is a mock with a light theme and an 8 column table. The live app has 16 columns and a dark mode. The feature is inserted into the live screens, so the live layout wins.
 - New items carry no "new" outline in the build. That outline is prototype chrome.
 - The prototype's purple Demo guide, circle cursor and sign off section are review tools, not product features.
-- Reuse the Charged Deduction pattern on Move Asset (a status that reveals document fields). The difference is that these fields are required, not optional.
+- Reuse the Charged Deduction pattern on Move Asset (a status that reveals document fields). The difference is that the exit fields are required, while the Charged Deduction documents are optional. In both, the fields are in the page from the start and switched off until needed, so nothing shifts.
+- The scroll fade on a scrollable region (app wide) shows only on an edge that still has content past it: none at the very top or bottom.
 - Status badge colours: the prototype uses purple for Supplier Return and grey for Client Pull-Out. Confirm both against the live status palette and the 600 shade rule in `AMS_DESIGN_SYSTEM.md` and the Dev Doc.
 - Copy uses no dashes. The status name "Client Pull-Out" is a proper noun and keeps its hyphen.
 
@@ -156,6 +190,12 @@ Choosing either status reveals an "Exit details, all required" block with Date, 
 | Alternative, not chosen (Terminal was decided) | | **Out of Custody** | Matches the lifecycle style, says the unit is no longer in GoTeam's hands, and does not repeat "Terminal". |
 | Header count card | "Left us" | **Returned or pulled out** (helper: "Supplier Return and Client Pull-Out") | Names what is counted, in plain words. |
 | Actions column marker | "Left us" | **Exited** | Short, fits the cell, and is not a lane name. |
+
+## Quality checks done on the build
+
+- Accessibility (WCAG 2.2 AA) work on the new screens: selected toggle and card text, grey address previews, the "All required" badge, the filter count badges, the opaque dark row hover, and a 1 px outline on the date half of the status badge. The status colours and fills did not change. An axe run over 26 light states leaves only library or inherited items. Lighthouse accessibility is 97 on the Move form (desktop) and 96 on the Assets list (mobile). No sideways overflow at 320, 375, 768 and 1440 px.
+- 16 automated browser tests pass (10 earlier tests and 6 for every kind of move).
+- A code review (10 findings, all fixed) and a security review (no findings) were done.
 
 ## Success Metrics
 

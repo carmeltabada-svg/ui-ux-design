@@ -70,7 +70,7 @@ export interface FeedItem {
   from?: { status: string, sub?: string }
   to?: { status: string, sub?: string }
   /** Replacement link: the unit this one replaces */
-  link?: { tag: string }
+  link?: { tag: string, verb: string }
   /** Movement: what happened and with whom or where */
   movement?: { type: 'check_in' | 'check_out', num: string, member: string, location: string }
   /** The reason or note that came with the change */
@@ -78,6 +78,8 @@ export interface FeedItem {
   doc?: string
   /** The document behind `doc`, for opening it */
   docRef?: { id: string, doc: { name: string, type: string } }
+  /** Charged Deduction: the optional IT Clearance, kept beside the Authority to Deduct (`doc`) */
+  clearanceRef?: { id: string, doc: { name: string, type: string } }
   detail: [string, string][]
 }
 
@@ -89,9 +91,24 @@ export function feedOf(a: Asset): FeedItem[] {
   a.history.forEach((h, i) => {
     const prev = a.history[i - 1]
     const label = h.sub ? `${h.status} (${h.sub})` : h.status
+    if (h.replacementEdit) {
+      // The returned unit's own record of its replacement being added, changed or cleared.
+      const from = h.replacementFrom ?? ''
+      const to = h.replacementTo ?? ''
+      const verb = !to ? 'cleared the replacement unit' : (!from ? 'set the replacement unit to' : 'changed the replacement unit to')
+      const detail: [string, string][] = [['Replacement unit', to || 'Not linked yet']]
+      if (from) detail.push(['Was', from])
+      detail.push(['Changed on', badgeDate(h.date)])
+      items.push({ ...base(h), id: `${h.id}-replacement`, kind: 'link', link: { tag: to || from, verb }, detail })
+      return
+    }
+    if (h.replacementUnlinked) {
+      items.push({ ...base(h), id: `${h.id}-unlink`, kind: 'link', link: { tag: h.replacementUnlinked, verb: 'is no longer the replacement for' }, note: h.note || undefined, detail: [['No longer replaces', h.replacementUnlinked], ['Changed on', badgeDate(h.date)]] })
+      return
+    }
     if (h.replacementFor) {
       // Linking a replacement is not a status change: it gets its own event.
-      items.push({ ...base(h), id: `${h.id}-link`, kind: 'link', link: { tag: h.replacementFor }, note: h.note || undefined, detail: [['Replaces', h.replacementFor], ['Linked on', badgeDate(h.date)]] })
+      items.push({ ...base(h), id: `${h.id}-link`, kind: 'link', link: { tag: h.replacementFor, verb: 'linked this unit as the replacement for' }, note: h.note || undefined, detail: [['Replaces', h.replacementFor], ['Linked on', badgeDate(h.date)]] })
       return
     }
     if (!prev) {
@@ -102,10 +119,12 @@ export function feedOf(a: Asset): FeedItem[] {
       if (h.reason) detail.push(['Reason', h.reason])
       else if (h.note) detail.push(['Note', h.note])
       if (h.doc) detail.push(['Document', h.doc.name])
+      if (h.clearanceDoc) detail.push(['IT Clearance', h.clearanceDoc.name])
       if (h.replacement) detail.push(['Replacement Unit', h.replacement])
       items.push({
         ...base(h), id: `${h.id}-status`, kind: 'status', from: { status: prev.status, sub: prev.sub }, to: { status: h.status, sub: h.sub },
-        note: h.reason || h.note || undefined, doc: h.doc?.name, docRef: h.doc ? { id: h.id, doc: h.doc } : undefined, detail
+        note: h.reason || h.note || undefined, doc: h.doc?.name, docRef: h.doc ? { id: h.id, doc: h.doc } : undefined,
+        clearanceRef: h.clearanceDoc ? { id: `${h.id}-clearance`, doc: h.clearanceDoc } : undefined, detail
       })
     }
     const m = movements.find(x => x.id === h.id)

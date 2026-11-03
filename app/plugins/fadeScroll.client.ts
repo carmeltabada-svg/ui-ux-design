@@ -20,13 +20,21 @@ export default defineNuxtPlugin(() => {
 
   function flush() {
     timer = undefined
-    const results: [HTMLElement, boolean][] = []
+    const results: [HTMLElement, boolean, boolean, boolean][] = []
     dirty.forEach((el) => {
       if (!el.isConnected) return
-      results.push([el, isY(el) ? el.scrollHeight > el.clientHeight + 1 : el.scrollWidth > el.clientWidth + 1])
+      const y = isY(el)
+      const size = y ? el.clientHeight : el.clientWidth
+      const total = y ? el.scrollHeight : el.scrollWidth
+      const pos = y ? el.scrollTop : el.scrollLeft
+      results.push([el, total > size + 1, pos <= 1, pos + size >= total - 1])
     })
     dirty.clear()
-    for (const [el, overflowing] of results) el.classList.toggle('is-overflowing', overflowing)
+    for (const [el, overflowing, atStart, atEnd] of results) {
+      el.classList.toggle('is-overflowing', overflowing)
+      el.classList.toggle('is-at-start', atStart)
+      el.classList.toggle('is-at-end', atEnd)
+    }
   }
 
   function schedule(el: HTMLElement) {
@@ -38,16 +46,24 @@ export default defineNuxtPlugin(() => {
     for (const entry of entries) schedule(entry.target as HTMLElement)
   })
 
+  // Scrolling to either end changes which edge may fade; scroll events do not bubble, so each managed
+  // element listens for its own.
+  function onScroll(event: Event) {
+    schedule(event.currentTarget as HTMLElement)
+  }
+
   function manage(el: HTMLElement) {
     if (observed.has(el)) return
     observed.add(el)
     resizeObserver.observe(el)
+    el.addEventListener('scroll', onScroll, { passive: true })
     schedule(el)
   }
 
   function release(el: HTMLElement) {
     if (!observed.delete(el)) return
     resizeObserver.unobserve(el)
+    el.removeEventListener('scroll', onScroll)
     dirty.delete(el)
   }
 

@@ -28,7 +28,7 @@ const model = defineModel<T>({ required: true })
         :variant="model === f.value ? 'solid' : 'subtle'"
         size="sm"
         class="rounded-full tabular-nums"
-        :class="model === f.value ? 'bg-white/20 text-white' : ''"
+        :class="model === f.value ? 'bg-black/20 text-white dark:bg-slate-900/15 dark:text-slate-900' : ''"
       >
         {{ f.count }}
       </UBadge>

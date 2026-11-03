@@ -8,13 +8,16 @@
 // options of Client Pull-Out.
 
 import { escapeText } from '~/utils/escapeHtml'
+import { saveFile, loadFile, clearFiles } from '~/data/assetFiles'
 import { DB_ASSETS, DB_ADDRESS, DB_COMPANY } from '~/data/assetsDbSeed'
 
 export type TechPackType = 'Monthly Rental' | 'Outright Purchase' | 'BYOD'
 
-export type StatusLane = 'intake_ready_pool' | 'active_use' | 'return_triage' | 'review_investigation' | 'decommissioning' | 'terminal'
+export type StatusLane = 'intake_ready_pool' | 'active_use' | 'return_triage' | 'review_investigation' | 'decommissioning' | 'terminal' | 'legacy'
 export type StatusColor = 'green' | 'blue' | 'orange' | 'red' | 'yellow' | 'purple' | 'gray' | 'teal' | 'pink'
 export type ExitKind = 'supplier' | 'client'
+export type MovementType = 'check_in' | 'check_out'
+export type LocationType = 'asset_location' | 'user_address' | 'supplier'
 
 export const LANE_ORDER: StatusLane[] = ['intake_ready_pool', 'active_use', 'return_triage', 'review_investigation', 'decommissioning', 'terminal']
 export const LANE_LABELS: Record<StatusLane, string> = {
@@ -23,7 +26,8 @@ export const LANE_LABELS: Record<StatusLane, string> = {
   return_triage: 'Return & Triage',
   review_investigation: 'Review & Investigation',
   decommissioning: 'Decommissioning',
-  terminal: 'Terminal'
+  terminal: 'Terminal',
+  legacy: 'Legacy'
 }
 
 export interface StatusDef {
@@ -34,6 +38,19 @@ export interface StatusDef {
   /** Set on the two new exit statuses. */
   exit?: ExitKind
 }
+
+/**
+ * The retired statuses of the old model. The live status table flags them `is_legacy`, and every status select lists them
+ * in their own group after the lanes, A to Z (useAssetStatusSelectItems). Read from the local R24 status table; the colours
+ * are the live ones. They stay out of STATUSES so the list's lane filters and counts are unchanged.
+ */
+export const LEGACY_STATUSES: StatusDef[] = [
+  { name: 'Defective', lane: 'legacy', color: 'red' },
+  { name: 'For Inspection', lane: 'legacy', color: 'yellow' },
+  { name: 'In Transit', lane: 'legacy', color: 'purple' },
+  { name: 'Pending Disposal', lane: 'legacy', color: 'orange' },
+  { name: 'Under Repair', lane: 'legacy', color: 'yellow' }
+]
 
 export const STATUSES: StatusDef[] = [
   { name: 'Available', lane: 'intake_ready_pool', color: 'green' },
@@ -96,19 +113,19 @@ export const STATUS_BG: Record<StatusColor, string> = {
 
 // The date half of the badge: the status colour, much lighter (the asset detail design's light fill and text).
 export const STATUS_LIGHT: Record<StatusColor, string> = {
-  red: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-  green: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
-  blue: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
-  yellow: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
-  orange: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
-  purple: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
-  gray: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  teal: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300',
-  pink: 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300'
+  red: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 ring-1 ring-inset ring-red-600 dark:ring-red-400',
+  green: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 ring-1 ring-inset ring-green-600 dark:ring-green-400',
+  blue: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 ring-1 ring-inset ring-blue-600 dark:ring-blue-400',
+  yellow: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300 ring-1 ring-inset ring-yellow-700 dark:ring-yellow-400',
+  orange: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 ring-1 ring-inset ring-orange-600 dark:ring-orange-400',
+  purple: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 ring-1 ring-inset ring-purple-600 dark:ring-purple-400',
+  gray: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 ring-1 ring-inset ring-gray-500 dark:ring-gray-400',
+  teal: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300 ring-1 ring-inset ring-teal-600 dark:ring-teal-400',
+  pink: 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300 ring-1 ring-inset ring-pink-600 dark:ring-pink-400'
 }
 
 export function statusDef(name: string): StatusDef | undefined {
-  return STATUSES.find(s => s.name === name)
+  return STATUSES.find(s => s.name === name) ?? LEGACY_STATUSES.find(s => s.name === name)
 }
 export function exitKindOf(statusName: string): ExitKind | undefined {
   return statusDef(statusName)?.exit
@@ -132,10 +149,20 @@ export interface HistoryEntry {
   /** Tag of the replacement unit (Supplier Return) or of the unit this one replaces. */
   replacement?: string
   replacementFor?: string
+  /** Tag of the unit this one stopped being the replacement for (the link was changed or removed). */
+  replacementUnlinked?: string
+  /** On the returned unit: its replacement was added, changed or cleared here (empty means none). */
+  replacementEdit?: true
+  replacementFrom?: string
+  replacementTo?: string
   /** The team member an In Use record was with, kept when the unit later leaves (the custodian field is cleared) */
   member?: string
   movement?: 'Check In' | 'Check Out'
   location?: string
+  /** What kind of place `location` is, so the list and the detail show the right icon and link. */
+  locationKind?: LocationKind
+  /** Charged Deduction only: the optional IT Clearance document (the Authority to Deduct is `doc`). */
+  clearanceDoc?: AssetDoc
 }
 
 export interface Asset {
@@ -162,13 +189,16 @@ export interface Asset {
   /** Purchase order date and the model's warranty length, when the database holds them; the warranty ends that many months after the order date */
   orderDate?: string
   warrantyMonths?: number
+  /** Set by a move: where the unit is now. Without it, the status and custodian decide (see locationView). */
+  locationKind?: LocationKind
   history: HistoryEntry[]
 }
 
 // Registered addresses the exit movement records as the new location (a real address, not a label).
 const SUPPLIER_ADDRESS: Record<string, string> = {
   'Northline IT Supply': 'Northline IT Supply, 88 Ayala Avenue, Makati City 1226',
-  'Metro Peripherals': 'Metro Peripherals, 21 Shaw Boulevard, Mandaluyong City 1552'
+  'Metro Peripherals': 'Metro Peripherals, 21 Shaw Boulevard, Mandaluyong City 1552',
+  'Orbit Supply Co': 'Orbit Supply Co, 14 Gil Puyat Avenue, Makati City 1200'
 }
 const CLIENT_ADDRESS: Record<string, string> = {
   'Fabrikam Logistics': 'Fabrikam Logistics, Unit 12, 3rd Avenue corner 30th Street, Bonifacio Global City, Taguig 1634',
@@ -240,7 +270,9 @@ export type LocationKind = 'member' | 'location' | 'supplier' | 'client'
 export interface LocationView { kind: LocationKind, text: string, icon: string, tip: string }
 
 /** The live list's location rule: with the team member (their address), at a supplier, with the client, else at a GoTeam location. */
-export function locationView(a: { status: string, custodian: string, client: string, supplier: string, location: string }): LocationView {
+export function locationView(a: { status: string, custodian: string, client: string, supplier: string, location: string, locationKind?: LocationKind }): LocationView {
+  if (a.locationKind === 'supplier' && a.status !== 'Supplier Return') return { kind: 'supplier', text: a.location, icon: 'i-lucide-truck', tip: 'Asset is located at the supplier facility' }
+  if (a.locationKind === 'member' && a.status !== 'Client Pull-Out') return { kind: 'member', text: a.location, icon: 'i-lucide-house', tip: 'Asset is based on the team member\'s current address' }
   if (a.status === 'Supplier Return') return { kind: 'supplier', text: a.supplier, icon: 'i-lucide-truck', tip: 'Asset is located at the supplier facility' }
   if (a.status === 'Client Pull-Out') return { kind: 'client', text: a.client, icon: 'i-lucide-building-2', tip: 'Asset was pulled out by the client' }
   if (a.status === 'In Use' && a.custodian) {
@@ -308,6 +340,30 @@ function seed(): Asset[] {
       history: [{ id: 'h-1240d-1', status: 'Available', date: '2026-10-16', by: 'Jerrell Pardo', note: 'Ready for deployment' }]
     },
     {
+      // Same purchase order and model as GT-CE-LTP-1180-0326-0042: shows under "Same purchase order".
+      tag: 'GT-CE-LTP-1180-0326-0043', serial: 'PF4SIM0R8', model: 'Lenovo ThinkPad E14', name: 'Laptop', type: 'Computer Equipment',
+      status: 'Available', statusDate: '2026-10-20', techPack: 'Outright Purchase', currency: 'PHP', movementStatus: 'Checked In',
+      custodian: '', client: '', owner: OWNER, location: 'i1 Building 9th Floor · Asset Room', po: 'PO-6895557',
+      supplier: 'Northline IT Supply', cost: 6696.11, warranty: 'Active Warranty',
+      history: [{ id: 'h-1180-43', status: 'Available', date: '2026-10-20', by: 'Jerrell Pardo', note: 'Received on PO-6895557' }]
+    },
+    {
+      // A different supplier, same model and tech pack as GT-CE-LTP-1180-0326-0042: shows under "Other suggestions".
+      tag: 'GT-CE-LTP-1180-0526-0017', serial: 'ORB5SIM017', model: 'Lenovo ThinkPad E14', name: 'Laptop', type: 'Computer Equipment',
+      status: 'Available', statusDate: '2026-10-21', techPack: 'Outright Purchase', currency: 'PHP', movementStatus: 'Checked In',
+      custodian: '', client: '', owner: OWNER, location: 'i1 Building 9th Floor · Asset Room', po: 'PO-5500123',
+      supplier: 'Orbit Supply Co', cost: 6410.25, warranty: 'Active Warranty',
+      history: [{ id: 'h-1180-17', status: 'Available', date: '2026-10-21', by: 'Jerrell Pardo', note: 'Received on PO-5500123' }]
+    },
+    {
+      // A different supplier, same client and tech pack as GT-CE-LTP-1233-0926-0013: shows under "Other suggestions".
+      tag: 'GT-CE-LTP-1233-0526-0018', serial: 'ORB5SIM018', model: 'Dell Latitude 5440', name: 'Laptop', type: 'Computer Equipment',
+      status: 'Available', statusDate: '2026-10-21', techPack: 'Monthly Rental', currency: 'PHP', movementStatus: 'Checked In',
+      custodian: '', client: 'Northwind Health', owner: OWNER, location: 'i1 Building 9th Floor · Asset Room', po: 'PO-5500124',
+      supplier: 'Orbit Supply Co', cost: 8221.63, warranty: 'Active Warranty',
+      history: [{ id: 'h-1233-18', status: 'Available', date: '2026-10-21', by: 'Jerrell Pardo', note: 'Received on PO-5500124' }]
+    },
+    {
       tag: 'GT-CE-LTP-1126-0008', serial: 'VGYNFI3Z26', model: 'Asus Vivobook 14', name: 'Laptop', type: 'Computer Equipment',
       status: 'Decommission Checking', statusDate: '2026-10-23', techPack: 'Monthly Rental', currency: 'PHP', movementStatus: 'Checked In',
       custodian: '', client: '', owner: OWNER, location: 'i1 Building 9th Floor · Asset Room', po: 'PO-2235188',
@@ -330,7 +386,7 @@ function seed(): Asset[] {
     },
     {
       tag: 'GT-CE-LTP-0826-0005', serial: 'HPZ8SIM555', model: 'HP EliteBook 840 G9', name: 'Laptop', type: 'Computer Equipment',
-      status: 'Supplier Return', statusDate: '2026-10-09', techPack: 'Outright Purchase', currency: 'PHP', movementStatus: 'Checked In',
+      status: 'Supplier Return', statusDate: '2026-10-09', techPack: 'Outright Purchase', currency: 'PHP', movementStatus: 'Checked Out',
       custodian: '', client: '', owner: OWNER, location: SUPPLIER_ADDRESS['Northline IT Supply']!, po: 'PO-3380127',
       supplier: 'Northline IT Supply', cost: 9120.4, warranty: 'Active Warranty',
       history: [
@@ -338,7 +394,7 @@ function seed(): Asset[] {
         {
           id: 'h-0826-5b', status: 'Supplier Return', date: '2026-10-09', by: 'Karl Bustillo', note: 'Battery swelling on arrival',
           reason: 'Battery swelling on arrival. The supplier agreed to take the unit back and send a replacement.',
-          doc: { name: 'northline-return-agreement.pdf', type: 'application/pdf', size: 184320 }, movement: 'Check In', location: SUPPLIER_ADDRESS['Northline IT Supply']!
+          doc: { name: 'northline-return-agreement.pdf', type: 'application/pdf', size: 184320 }, movement: 'Check Out', location: SUPPLIER_ADDRESS['Northline IT Supply']!
         }
       ]
     },
@@ -375,7 +431,7 @@ function withWarrantyDemo(a: Asset): Asset {
 // prototype controls clears it. Attached files are never stored, only their name, type and
 // size, so a document opens only in the session that attached it.
 // ---------------------------------------------------------------------------
-const STORAGE_KEY = 'ams:assets:v4'
+const STORAGE_KEY = 'ams:assets:v5'
 
 export const ASSETS = reactive<Record<string, Asset>>(Object.fromEntries(seed().map(a => [a.tag, a])))
 /** Object URLs for files attached in this session, by history entry id. Not persisted. */
@@ -387,23 +443,37 @@ function sampleDocBlob(doc: { name: string, type: string }): Blob {
   const label = escapeText(doc.name)
   const pdfLabel = doc.name.replace(/[^\x20-\x7E]/g, '?').replace(/([\\()])/g, '\\$1')
   if (doc.type.startsWith('image/')) {
-    return new Blob([`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420"><rect width="640" height="420" fill="#f8fafc"/><text x="320" y="200" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" fill="#0f172a">${label}</text><text x="320" y="236" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" fill="#64748b">Sample image for the prototype</text></svg>`], { type: 'image/svg+xml' })
+    return new Blob([`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420"><rect width="640" height="420" fill="#f8fafc"/><text x="320" y="200" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" fill="#0f172a">${label}</text><text x="320" y="236" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" fill="#64748b">The file itself is not stored in this browser</text><text x="320" y="262" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" fill="#64748b">Attach the document again to see it here</text></svg>`], { type: 'image/svg+xml' })
   }
-  const body = `BT /F1 20 Tf 72 700 Td (${pdfLabel}) Tj 0 -30 Td /F1 12 Tf (Sample document for the prototype. The real file opens here in the full system.) Tj ET`
+  const body = `BT /F1 20 Tf 72 700 Td (${pdfLabel}) Tj 0 -30 Td /F1 12 Tf (The file itself is not stored in this browser.) Tj 0 -18 Td (Attach the document again to see it here.) Tj ET`
   const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${body.length}>>stream\n${body}\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF`
   return new Blob([pdf], { type: 'application/pdf' })
 }
 /** Opens an attached document in a new tab. */
 export function openDoc(id: string, doc: { name: string, type: string }): void {
-  let url = DOC_URLS[id]
-  if (!url) url = SAMPLE_URLS[id] ?? (SAMPLE_URLS[id] = URL.createObjectURL(sampleDocBlob(doc)))
-  window.open(url, '_blank', 'noopener')
+  const known = DOC_URLS[id]
+  if (known) { window.open(known, '_blank', 'noopener'); return }
+  // The file may come from an earlier visit, so it is read from the browser's file storage. The tab is opened now, in the
+  // click (a browser only allows that then), and pointed at the file once it is read. A document that was never attached
+  // here, such as the sample units' paperwork, has no file, so it gets a one page stand-in.
+  const win = window.open('', '_blank')
+  // No link back to this app from the new tab (window.open with 'noopener' would not give us the window to fill in).
+  if (win) win.opener = null
+  void loadFile(id).then((blob) => {
+    let url: string
+    if (blob) { url = URL.createObjectURL(blob); DOC_URLS[id] = url } else url = SAMPLE_URLS[id] ?? (SAMPLE_URLS[id] = URL.createObjectURL(sampleDocBlob(doc)))
+    // A blocked popup (win is null) is the browser's call to report; opening again later would be blocked as well.
+    if (win && !win.closed) win.location.href = url
+  })
 }
 
 const isStr = (v: unknown): v is string => typeof v === 'string'
 function validHistory(h: unknown): h is HistoryEntry[] {
   return Array.isArray(h) && h.every(e => e && typeof e === 'object' && isStr(e.id) && isStr(e.status) && !!statusDef(e.status) && /^[\w-]+$/.test(e.id) && e.id !== '__proto__' && isStr(e.date) && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && isStr(e.by) && isStr(e.note)
-    && [e.reason, e.sub, e.member, e.location, e.replacement, e.replacementFor].every(v => v === undefined || isStr(v)) && (e.movement === undefined || e.movement === 'Check In' || e.movement === 'Check Out')
+    && [e.reason, e.sub, e.member, e.location, e.replacement, e.replacementFor, e.replacementUnlinked, e.replacementFrom, e.replacementTo].every(v => v === undefined || isStr(v)) && (e.movement === undefined || e.movement === 'Check In' || e.movement === 'Check Out')
+    && (e.replacementEdit === undefined || e.replacementEdit === true)
+    && (e.locationKind === undefined || ['member', 'location', 'supplier', 'client'].includes(e.locationKind))
+    && (e.clearanceDoc === undefined || (e.clearanceDoc && isStr(e.clearanceDoc.name) && isStr(e.clearanceDoc.type) && typeof e.clearanceDoc.size === 'number'))
     && (e.doc === undefined || (e.doc && isStr(e.doc.name) && isStr(e.doc.type) && typeof e.doc.size === 'number')))
 }
 /** Only these fields are read back from storage, and only when they have the right shape. */
@@ -426,6 +496,7 @@ export function hydrateAssetsFromStorage() {
       if (isStr(a.techPack) && Object.hasOwn(TECH_PACK_STYLE, a.techPack)) target.techPack = a.techPack as Asset['techPack']
       if (a.movementStatus === 'Checked In' || a.movementStatus === 'Checked Out') target.movementStatus = a.movementStatus
       target.history = a.history
+      target.locationKind = a.locationKind && ['member', 'location', 'supplier', 'client'].includes(a.locationKind) ? a.locationKind : undefined
     }
   } catch { /* unreadable snapshot: keep the sample data */ }
 }
@@ -437,6 +508,7 @@ export function watchAssetsToStorage() {
 export function resetAssets() {
   try { localStorage.removeItem(STORAGE_KEY) } catch { /* nothing to clear */ }
   for (const a of seed()) ASSETS[a.tag] = a
+  void clearFiles()
   for (const k of Object.keys(DOC_URLS)) { URL.revokeObjectURL(DOC_URLS[k]!); delete DOC_URLS[k] }
   for (const k of Object.keys(SAMPLE_URLS)) { URL.revokeObjectURL(SAMPLE_URLS[k]!); delete SAMPLE_URLS[k] }
 }
@@ -468,16 +540,33 @@ export function pullOutReason(a: Pick<Asset, 'techPack'>): string {
 // Options for the New Status picker. This prototype implements the two new exit statuses, so the
 // other lifecycle statuses are shown disabled (plainly, no info affordance). Only Client Pull-Out
 // carries the info button and the eligibility explanation, and only when the unit isn't eligible.
-export interface StatusOption { name: string, lane: StatusLane, disabled: boolean, info?: boolean, reason?: string }
-export function statusPickerOptions(a: Pick<Asset, 'techPack'>): StatusOption[] {
-  return STATUSES.map((s): StatusOption => {
-    if (s.exit === 'supplier') return { name: s.name, lane: s.lane, disabled: false }
-    if (s.exit === 'client') {
-      const reason = pullOutReason(a)
-      return { name: s.name, lane: s.lane, disabled: !!reason, info: !!reason, reason: reason || undefined }
-    }
-    return { name: s.name, lane: s.lane, disabled: true }
-  })
+/**
+ * The three kinds of move, chosen before the Move Asset form opens (the same way Create Ticket asks for the ticket type
+ * first), so a form never rearranges itself after the officer has started: a Check In or Check Out to any status, a
+ * return to the supplier, or a client pull-out.
+ */
+export type MoveKind = 'move' | 'supplier' | 'client'
+export interface MoveKindOption { kind: MoveKind, label: string, icon: string, description: string, disabled: boolean, reason?: string }
+export function moveKindOptions(a?: Pick<Asset, 'techPack'>): MoveKindOption[] {
+  const reason = a ? pullOutReason(a) : ''
+  return [
+    { kind: 'move', label: 'Check In or Check Out', icon: 'i-lucide-arrow-left-right', description: 'Move the unit to any other status', disabled: false },
+    { kind: 'supplier', label: 'Return to supplier', icon: 'i-lucide-truck', description: 'Send the unit back to its supplier', disabled: false },
+    { kind: 'client', label: 'Client pull-out', icon: 'i-lucide-building-2', description: reason ? 'Not available for this unit' : 'The client takes the unit back', disabled: !!reason, reason: reason || undefined }
+  ]
+}
+export function moveKindOf(v: unknown): MoveKind { return v === 'supplier' || v === 'client' ? v : 'move' }
+export function moveHref(tag: string, kind: MoveKind): string {
+  return `/move-asset/${encodeURIComponent(tag)}/move${kind === 'move' ? '' : `?kind=${kind}`}`
+}
+
+export interface StatusOption { name: string, lane: StatusLane }
+/**
+ * Every status a Check In or Check Out can set, the legacy ones last. Supplier Return and Client Pull-Out are not here: they
+ * are chosen before the form opens (moveKindOptions), where a Client Pull-Out that doesn't apply is explained.
+ */
+export function statusPickerOptions(): StatusOption[] {
+  return [...STATUSES.filter(s => !s.exit), ...LEGACY_STATUSES].map((s): StatusOption => ({ name: s.name, lane: s.lane }))
 }
 
 /** The refusal message for a file that can't be attached, or '' when it is fine. */
@@ -525,13 +614,109 @@ export function missingForExit(kind: ExitKind, f: ExitForm): string[] {
 /** Movement and location follow the status: back to the supplier, or out to the client. */
 export function exitMovement(kind: ExitKind, a: Asset): { movement: 'Check In' | 'Check Out', location: string } {
   return kind === 'supplier'
-    ? { movement: 'Check In', location: SUPPLIER_ADDRESS[a.supplier] ?? a.supplier }
+    ? { movement: 'Check Out', location: SUPPLIER_ADDRESS[a.supplier] ?? a.supplier }
     : { movement: 'Check Out', location: CLIENT_ADDRESS[a.client] ?? a.client }
 }
 
-/** Units a Supplier Return can be linked to: in stock, not already a replacement. */
-export function replacementCandidates(forTag: string): Asset[] {
-  return allAssets().filter(a => a.tag !== forTag && a.status === 'Available' && !a.history.some(h => h.replacementFor))
+/** The client a unit is, or was, with: its own client, or the company of the last team member it was with. */
+export function unitClient(a: Asset): string {
+  if (a.client) return a.client
+  for (let i = a.history.length - 1; i >= 0; i--) {
+    const m = a.history[i]!.member
+    if (m) return memberCompany(m)
+  }
+  return ''
+}
+
+/** The latest Supplier Return record of a unit: where its replacement is kept. */
+export function supplierExitEntry(a: Asset): HistoryEntry | undefined {
+  // The exit record carries the movement; a later "replacement changed" entry has the same status but none.
+  for (let i = a.history.length - 1; i >= 0; i--) if (exitKindOf(a.history[i]!.status) === 'supplier' && a.history[i]!.movement) return a.history[i]
+  return undefined
+}
+
+/** The tag of the replacement unit linked to a returned unit, or '' when there is none. */
+export function replacementOf(a: Asset): string {
+  return exitKindOf(a.status) === 'supplier' ? (supplierExitEntry(a)?.replacement ?? '') : ''
+}
+
+export interface ReplacementOption {
+  tag: string
+  model: string
+  serial: string
+  supplier: string
+  po: string
+  client: string
+}
+export interface ReplacementGroups {
+  /** Same supplier, or the same purchase order (that is the same supplier too). Same purchase order first. */
+  supplier: ReplacementOption[]
+  /** Another supplier, but the same model, tech pack or client. The more of them a unit shares, the higher it sits. */
+  similar: ReplacementOption[]
+}
+
+/**
+ * The units a Supplier Return can name as its replacement: Available, not the unit itself, and not already the
+ * replacement of another unit. Two sections: the same supplier or purchase order, then the rest that share a model, a
+ * tech pack or a client with the returned unit. Either section can be empty, and both can be.
+ */
+export function replacementGroups(forTag: string): ReplacementGroups {
+  const out: ReplacementGroups = { supplier: [], similar: [] }
+  const r = findAsset(forTag)
+  if (!r) return out
+  const taken = new Set<string>()
+  for (const a of allAssets()) {
+    const rep = a.tag === forTag ? '' : replacementOf(a)
+    if (rep) taken.add(rep)
+  }
+  const client = unitClient(r)
+  const score = new Map<string, number>()
+  for (const c of allAssets()) {
+    if (c.tag === forTag || c.status !== 'Available' || taken.has(c.tag)) continue
+    const opt: ReplacementOption = { tag: c.tag, model: c.model, serial: c.serial, supplier: c.supplier, po: c.po, client: unitClient(c) }
+    const samePo = !!r.po && c.po === r.po
+    const sameSupplier = !!r.supplier && c.supplier === r.supplier
+    if (samePo || sameSupplier) {
+      out.supplier.push(opt)
+      score.set(c.tag, samePo ? 1 : 0)
+      continue
+    }
+    const shared = (c.model === r.model ? 1 : 0) + (c.techPack === r.techPack ? 1 : 0) + (client && opt.client === client ? 1 : 0)
+    if (shared) {
+      out.similar.push(opt)
+      score.set(c.tag, shared)
+    }
+  }
+  const order = (a: ReplacementOption, b: ReplacementOption) => (score.get(b.tag) ?? 0) - (score.get(a.tag) ?? 0) || a.tag.localeCompare(b.tag)
+  out.supplier.sort(order)
+  out.similar.sort(order)
+  return out
+}
+
+/** Every option of the groups in one list. */
+export function replacementCandidates(forTag: string): ReplacementOption[] {
+  const g = replacementGroups(forTag)
+  return [...g.supplier, ...g.similar]
+}
+
+/** Add, change or clear the replacement of a unit that was returned to its supplier. */
+export function setReplacement(tag: string, next: string, by: string): { ok: true } | { ok: false, reason: string } {
+  const a = findAsset(tag)
+  const entry = a ? supplierExitEntry(a) : undefined
+  if (!a || !entry || exitKindOf(a.status) !== 'supplier') return { ok: false, reason: 'Only a unit returned to its supplier has a replacement.' }
+  const current = entry.replacement ?? ''
+  if (next === current) return { ok: true }
+  if (next && !replacementCandidates(tag).some(o => o.tag === next)) {
+    return { ok: false, reason: `${next} can't be the replacement. It has to be Available and not already the replacement of another unit.` }
+  }
+  const today = localToday()
+  const old = current ? findAsset(current) : undefined
+  if (old) old.history.push({ id: newId(), status: old.status, date: today, by, note: `No longer the replacement for ${tag}`, replacementUnlinked: tag })
+  entry.replacement = next || undefined
+  a.history.push({ id: newId(), status: a.status, date: today, by, note: '', replacementEdit: true, replacementFrom: current, replacementTo: next })
+  const rep = next ? findAsset(next) : undefined
+  if (rep) rep.history.push({ id: newId(), status: rep.status, date: today, by, note: `Linked as the replacement for ${tag}`, replacementFor: tag })
+  return { ok: true }
 }
 
 let seq = 0
@@ -579,11 +764,12 @@ export function exitAsset(tag: string, p: ExitPayload): Asset | undefined {
   const id = newId()
   const doc: AssetDoc = { name: p.form.file.name, type: p.form.file.type, size: p.form.file.size }
   DOC_URLS[id] = URL.createObjectURL(p.form.file)
+  void saveFile(id, p.form.file)
   const sub = p.kind === 'client' ? p.form.sub : undefined
-  const replacement = p.kind === 'supplier' && p.form.replacement ? p.form.replacement : undefined
+  const replacement = p.kind === 'supplier' && p.form.replacement && replacementCandidates(tag).some(o => o.tag === p.form.replacement) ? p.form.replacement : undefined
   a.history.push({
     id, status: def.name, sub, date: p.form.date, by: p.by, note: p.form.note.trim(), reason: p.form.reason.trim(),
-    doc, replacement, movement, location
+    doc, replacement, movement, location, locationKind: p.kind === 'supplier' ? 'supplier' : 'client'
   })
   // Keep who held the unit before it left, so Movements and Custody History still know.
   for (const h of a.history) if (h.status === 'In Use' && !h.member) h.member = a.custodian
@@ -591,12 +777,100 @@ export function exitAsset(tag: string, p: ExitPayload): Asset | undefined {
   a.sub = sub
   a.statusDate = p.form.date
   a.location = location
+  a.locationKind = p.kind === 'supplier' ? 'supplier' : 'client'
   a.movementStatus = movement === 'Check In' ? 'Checked In' : 'Checked Out'
   if (p.kind === 'supplier') { a.custodian = ''; a.client = '' }
   const rep = replacement ? ASSETS[replacement] : undefined
   if (rep) {
     rep.history.push({ id: newId(), status: rep.status, date: p.form.date, by: p.by, note: `Linked as the replacement for ${a.tag}`, replacementFor: a.tag })
   }
+  return a
+}
+
+export interface MovePayload {
+  movement: MovementType
+  locationType: LocationType
+  assetLocation: string
+  supplier: string
+  member: string
+  note: string
+  status: string
+  by: string
+  authorityFile: File | null
+  clearanceFile: File | null
+}
+
+/** Where a move puts the unit. A Check In always goes to an asset location; a Check Out goes to one of the three. */
+export function moveTarget(p: Pick<MovePayload, 'movement' | 'locationType' | 'assetLocation' | 'supplier' | 'member'>): { kind: LocationKind, location: string } {
+  if (p.movement === 'check_in' || p.locationType === 'asset_location') return { kind: 'location', location: p.assetLocation }
+  if (p.locationType === 'supplier') return { kind: 'supplier', location: SUPPLIER_ADDRESS[p.supplier] ?? p.supplier }
+  return { kind: 'member', location: memberAddress(p.member) }
+}
+
+/** The supplier's registered address, or its name when none is on file. */
+export function supplierAddress(name: string): string {
+  return SUPPLIER_ADDRESS[name] ?? name
+}
+
+/** Asset locations to move a unit to: the places the units sit at when they are not with a team member. */
+export function assetLocationOptions(): string[] {
+  const out = new Set<string>()
+  for (const a of allAssets()) {
+    if (a.status !== 'In Use' && !isExited(a) && a.location && locationView(a).kind === 'location') out.add(a.location)
+  }
+  return [...out].sort()
+}
+
+export function supplierOptions(): string[] {
+  const out = new Set<string>(Object.keys(SUPPLIER_ADDRESS))
+  for (const a of allAssets()) if (a.supplier) out.add(a.supplier)
+  return [...out].sort()
+}
+
+/**
+ * Any move to a status other than the two exits: a check in or check out with its location, the status it sets, and
+ * for Charged Deduction the two optional documents. The history entry carries the movement, so Movements, Custody
+ * History and the Activity Feed pick it up like any other.
+ */
+export function moveAsset(tag: string, p: MovePayload): Asset | undefined {
+  const a = ASSETS[tag]
+  const def = statusDef(p.status)
+  if (!a || !def || def.exit || isExited(a)) return undefined
+  // The form checks these too; the function does not rely on it.
+  const where = p.movement === 'check_in' ? 'asset_location' : p.locationType
+  if (where === 'asset_location' && !p.assetLocation) return undefined
+  if (where === 'supplier' && !p.supplier) return undefined
+  if (where === 'user_address' && !p.member) return undefined
+  const today = localToday()
+  const id = newId()
+  const { kind, location } = moveTarget(p)
+  const toMember = p.movement === 'check_out' && p.locationType === 'user_address'
+  const entry: HistoryEntry = {
+    id, status: def.name, date: today, by: p.by, note: p.note.trim(),
+    movement: p.movement === 'check_in' ? 'Check In' : 'Check Out', location, locationKind: kind
+  }
+  if (toMember) entry.member = p.member
+  if (def.name === 'Charged Deduction') {
+    if (p.authorityFile) {
+      entry.doc = { name: p.authorityFile.name, type: p.authorityFile.type, size: p.authorityFile.size }
+      DOC_URLS[id] = URL.createObjectURL(p.authorityFile)
+      void saveFile(id, p.authorityFile)
+    }
+    if (p.clearanceFile) {
+      entry.clearanceDoc = { name: p.clearanceFile.name, type: p.clearanceFile.type, size: p.clearanceFile.size }
+      DOC_URLS[`${id}-clearance`] = URL.createObjectURL(p.clearanceFile)
+      void saveFile(`${id}-clearance`, p.clearanceFile)
+    }
+  }
+  a.history.push(entry)
+  a.status = def.name
+  a.sub = undefined
+  a.statusDate = today
+  a.location = location
+  a.locationKind = kind
+  a.movementStatus = p.movement === 'check_in' ? 'Checked In' : 'Checked Out'
+  a.custodian = toMember ? p.member : ''
+  if (toMember) a.client = memberCompany(p.member)
   return a
 }
 

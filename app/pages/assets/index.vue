@@ -6,7 +6,7 @@
 // summary. Clicking a tag opens the asset detail page, where the Activity Feed and Movements tabs show every move.
 import { initialsOf as initials, avatarTint } from '~/data/assetsDetail'
 import {
-  allAssets, isExited, STATUSES, ASSET_TYPES, ASSET_NAMES, memberCompany, LANE_ORDER, LANE_LABELS, TYPE_ICON, locationView, warrantyDaysLeft, localToday,
+  allAssets, isExited, moveHref, STATUSES, LEGACY_STATUSES, statusDef, ASSET_TYPES, ASSET_NAMES, memberCompany, LANE_ORDER, LANE_LABELS, TYPE_ICON, locationView, warrantyDaysLeft, localToday,
   assetsSimState, assetsSimScenario, assetsSimRole, type Asset
 } from '~/data/assets'
 
@@ -67,7 +67,7 @@ function locationTypeOf(a: Asset) {
   return a.custodian ? 'User Address' : 'Office Location'
 }
 const FILTERS: FilterDef[] = [
-  { key: 'status', noun: 'statuses', label: 'Status', group: 'Promoted', quick: true, searchable: true, read: a => a.status, all: () => STATUSES.map(x => x.name) },
+  { key: 'status', noun: 'statuses', label: 'Status', group: 'Promoted', quick: true, searchable: true, read: a => a.status, all: () => [...STATUSES, ...LEGACY_STATUSES].map(x => x.name) },
   { key: 'type', noun: 'types', label: 'Asset Type', group: 'Promoted', quick: true, read: typeCodeOf, all: () => ASSET_TYPES.map(t => t.code), text: v => `${v} - ${ASSET_TYPES.find(t => t.code === v)?.label ?? v}` },
   { key: 'name', noun: 'names', label: 'Asset Name', group: 'Promoted', quick: true, read: a => a.name, all: () => filters.type.flatMap(c => ASSET_NAMES[c] ?? []) },
   { key: 'ownership', noun: 'ownerships', label: 'Ownership', group: 'Promoted', quick: true, read: a => ownershipLabel(a), all: () => ['GoTeam-Owned', 'Client-Owned'], keepOrder: true },
@@ -111,10 +111,11 @@ const facets = computed(() => {
     if (!d.keepOrder && d.key !== 'status') values.sort((x, y) => textOf(d, x).localeCompare(textOf(d, y)))
     const opt = (v: string): FilterOption => ({ label: textOf(d, v), value: v, count: counts.get(v) ?? 0 })
     if (d.key === 'status') {
-      // Grouped by lifecycle lane, each lane headed, statuses A to Z inside it, every status listed.
+      // Grouped by lifecycle lane, each lane headed, statuses A to Z inside it, every status listed. The retired
+      // statuses follow in their own Legacy group, as in the live status filter.
       const list: FilterOption[] = []
-      for (const lane of LANE_ORDER) {
-        const names = values.filter(v => STATUSES.find(x => x.name === v)?.lane === lane).sort((x, y) => x.localeCompare(y))
+      for (const lane of [...LANE_ORDER, 'legacy' as const]) {
+        const names = values.filter(v => statusDef(v)?.lane === lane).sort((x, y) => x.localeCompare(y))
         if (names.length) list.push({ type: 'label', label: LANE_LABELS[lane] }, ...names.map(opt))
       }
       out[d.key] = list
@@ -556,25 +557,25 @@ function money(a: Asset) {
                           rounded="rounded-sm"
                         />
                       </td>
-                      <td class="sticky left-12 z-[10] w-[250px] min-w-[250px] max-w-[250px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 px-4 py-3.5 whitespace-nowrap border-b border-default">
+                      <td class="sticky left-12 z-[10] w-[250px] min-w-[250px] max-w-[250px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] px-4 py-3.5 whitespace-nowrap border-b border-default">
                         <SharedSkeleton
                           width="w-52"
                           height="h-4"
                         />
                       </td>
-                      <td class="sticky left-[298px] z-[10] w-[260px] min-w-[260px] max-w-[260px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 px-4 py-3.5 whitespace-nowrap border-b border-default border-r">
+                      <td class="sticky left-[298px] z-[10] w-[260px] min-w-[260px] max-w-[260px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] px-4 py-3.5 whitespace-nowrap border-b border-default border-r">
                         <SharedSkeleton
                           width="w-24"
                           height="h-4"
                         />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <SharedSkeleton
                           width="w-36"
                           height="h-4"
                         />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-4"
@@ -586,7 +587,7 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-4"
@@ -598,14 +599,14 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <SharedSkeleton
                           width="w-52"
                           height="h-5"
                           rounded="rounded-md"
                         />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-16"
@@ -618,13 +619,13 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <SharedSkeleton
                           width="w-24"
                           height="h-4"
                         />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-4"
@@ -636,7 +637,7 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-6"
@@ -648,7 +649,7 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-6"
@@ -660,7 +661,7 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-6"
@@ -672,7 +673,7 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-4"
@@ -684,13 +685,13 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <SharedSkeleton
                           width="w-20"
                           height="h-4"
                         />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <div class="flex items-center gap-2">
                           <SharedSkeleton
                             width="w-6"
@@ -702,7 +703,7 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 text-right">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] text-right">
                         <div class="flex justify-end">
                           <SharedSkeleton
                             width="w-24"
@@ -710,7 +711,7 @@ function money(a: Asset) {
                           />
                         </div>
                       </td>
-                      <td class="sticky right-0 z-[10] w-[88px] min-w-[88px] max-w-[88px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 px-4 py-3.5 whitespace-nowrap border-b border-default border-l">
+                      <td class="sticky right-0 z-[10] w-[88px] min-w-[88px] max-w-[88px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] px-4 py-3.5 whitespace-nowrap border-b border-default border-l">
                         <div class="flex justify-center">
                           <SharedSkeleton
                             width="w-6"
@@ -727,23 +728,23 @@ function money(a: Asset) {
                       :key="a.tag"
                       class="group relative transition-colors"
                     >
-                      <td class="sticky left-0 z-[10] w-12 min-w-12 max-w-12 bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 pl-4 pr-2 py-3.5 border-b border-default">
+                      <td class="sticky left-0 z-[10] w-12 min-w-12 max-w-12 bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] pl-4 pr-2 py-3.5 border-b border-default">
                         <UCheckbox
                           :model-value="selectedTags.has(a.tag)"
                           aria-label="Select asset"
                           @update:model-value="(v) => toggleRow(a.tag, !!v)"
                         />
                       </td>
-                      <td class="sticky left-12 z-[10] w-[250px] min-w-[250px] max-w-[250px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 px-4 py-3.5 whitespace-nowrap border-b border-default">
+                      <td class="sticky left-12 z-[10] w-[250px] min-w-[250px] max-w-[250px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] px-4 py-3.5 whitespace-nowrap border-b border-default">
                         <NuxtLink
                           :to="`/assets/${a.tag}`"
                           class="text-sm font-medium text-blue-700 hover:text-blue-800 dark:text-blue-400"
                         >{{ a.tag }}</NuxtLink>
                       </td>
-                      <td class="sticky left-[298px] z-[10] w-[260px] min-w-[260px] max-w-[260px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 px-4 py-3.5 whitespace-nowrap border-b border-default border-r text-muted">
+                      <td class="sticky left-[298px] z-[10] w-[260px] min-w-[260px] max-w-[260px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] px-4 py-3.5 whitespace-nowrap border-b border-default border-r text-muted">
                         {{ a.serial }}
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <button
                           type="button"
                           class="text-sm text-blue-700 hover:text-blue-800 dark:text-blue-400 text-left"
@@ -752,7 +753,7 @@ function money(a: Asset) {
                           {{ a.model }}
                         </button>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <span class="inline-flex items-center gap-2 text-default">
                           <UIcon
                             :name="NAME_ICON[a.name] ?? 'i-lucide-tag'"
@@ -761,7 +762,7 @@ function money(a: Asset) {
                           />{{ a.name }}
                         </span>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <span class="inline-flex items-center gap-2 text-default">
                           <UIcon
                             v-if="TYPE_ICON[a.type]"
@@ -772,22 +773,22 @@ function money(a: Asset) {
                           {{ a.type }}
                         </span>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <AssetsStatusPill
                           :status="a.status"
                           :date="a.statusDate"
                         />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <AssetsTechPackBadge
                           :type="a.techPack"
                           :tier="a.tier"
                         />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 text-default">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] text-default">
                         {{ ownershipLabel(a) }}
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <span class="inline-flex items-center gap-1.5 text-default">
                           <UIcon
                             :name="a.movementStatus === 'Checked In' ? 'i-lucide-log-in' : 'i-lucide-log-out'"
@@ -797,7 +798,7 @@ function money(a: Asset) {
                           />{{ a.movementStatus }}
                         </span>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <span
                           v-if="a.custodian"
                           class="inline-flex items-center gap-2"
@@ -811,7 +812,7 @@ function money(a: Asset) {
                         </span>
                         <AssetsEmptyMark v-else />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <span
                           v-if="a.movementStatus === 'Checked Out' && a.client"
                           class="inline-flex items-center gap-2"
@@ -824,7 +825,7 @@ function money(a: Asset) {
                         </span>
                         <AssetsEmptyMark v-else />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <span class="inline-flex items-center gap-2">
                           <span
                             class="inline-flex items-center justify-center shrink-0 rounded-md bg-elevated size-6 text-xs font-medium text-slate-600 dark:text-slate-300"
@@ -833,7 +834,7 @@ function money(a: Asset) {
                           <span class="text-default">{{ a.owner }}</span>
                         </span>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <UTooltip :text="locationView(a).tip">
                           <span class="inline-flex items-center gap-2 text-default">
                             <UIcon
@@ -851,7 +852,7 @@ function money(a: Asset) {
                           </span>
                         </UTooltip>
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <button
                           v-if="a.po"
                           type="button"
@@ -862,7 +863,7 @@ function money(a: Asset) {
                         </button>
                         <AssetsEmptyMark v-else />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                         <span
                           v-if="a.supplier"
                           class="inline-flex items-center gap-2"
@@ -875,26 +876,30 @@ function money(a: Asset) {
                         </span>
                         <AssetsEmptyMark v-else />
                       </td>
-                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 text-right tabular-nums">
+                      <td class="px-4 py-3.5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] text-right tabular-nums">
                         <template v-if="money(a)">
                           {{ money(a) }}
                         </template>
                         <AssetsEmptyMark v-else />
                       </td>
-                      <td class="sticky right-0 z-[10] w-[88px] min-w-[88px] max-w-[88px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 px-4 py-3.5 whitespace-nowrap border-b border-default border-l text-center">
+                      <td class="sticky right-0 z-[10] w-[88px] min-w-[88px] max-w-[88px] bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] px-4 py-3.5 whitespace-nowrap border-b border-default border-l text-center">
                         <UTooltip
                           v-if="canMove && !isExited(a)"
                           text="Move asset"
                         >
-                          <UButton
-                            :to="`/move-asset/${a.tag}/move`"
-                            color="neutral"
-                            variant="ghost"
-                            size="xs"
-                            square
-                            icon="i-lucide-truck"
-                            :aria-label="`Move ${a.tag}`"
-                          />
+                          <AssetsMoveMenu
+                            :asset="a"
+                            @select="(kind) => navigateTo(moveHref(a.tag, kind))"
+                          >
+                            <UButton
+                              color="neutral"
+                              variant="ghost"
+                              size="xs"
+                              square
+                              icon="i-lucide-truck"
+                              :aria-label="`Move ${a.tag}`"
+                            />
+                          </AssetsMoveMenu>
                         </UTooltip>
                         <AssetsEmptyMark v-else />
                       </td>

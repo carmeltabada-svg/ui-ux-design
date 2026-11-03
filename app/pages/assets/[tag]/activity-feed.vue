@@ -213,7 +213,7 @@ const KIND: Record<FeedItem['kind'], { icon: string, label: string }> = {
                     />
                   </template>
                   <template v-else-if="e.kind === 'link'">
-                    <span>linked this unit as the replacement for</span><span class="font-medium text-highlighted">{{ e.link!.tag }}</span>
+                    <span>{{ e.link!.verb }}</span><span class="font-medium text-highlighted">{{ e.link!.tag }}</span>
                   </template>
                   <template v-else>
                     <span v-if="e.movement!.type === 'check_out'">checked this asset out to <span class="font-medium text-highlighted">{{ e.movement!.member || e.movement!.location }}</span></span>
@@ -281,6 +281,22 @@ const KIND: Record<FeedItem['kind'], { icon: string, label: string }> = {
                     class="size-3.5"
                     aria-hidden="true"
                   />{{ e.doc }}<UIcon
+                    name="i-lucide-arrow-up-right"
+                    class="size-3 opacity-70"
+                    aria-hidden="true"
+                  />
+                </button>
+                <button
+                  v-if="e.clearanceRef"
+                  type="button"
+                  class="mt-1.5 inline-flex w-fit items-center gap-1.5 rounded-md border border-default bg-card px-2 py-1 text-xs text-blue-700 hover:text-blue-800 hover:bg-elevated"
+                  @click="openDoc(e.clearanceRef!.id, e.clearanceRef!.doc)"
+                >
+                  <UIcon
+                    name="i-lucide-paperclip"
+                    class="size-3.5"
+                    aria-hidden="true"
+                  />IT Clearance: {{ e.clearanceRef.doc.name }}<UIcon
                     name="i-lucide-arrow-up-right"
                     class="size-3 opacity-70"
                     aria-hidden="true"

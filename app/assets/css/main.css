@@ -48,13 +48,22 @@ body {
    that's the actual mask trigger below. A short list that fits with room to
    spare gets no fade at all, since there's nothing to scroll to. */
 :root { --fade-scroll-size: 20px; }
+/* An edge fades only while there is more content past it: the plugin also adds `.is-at-start` when the
+   element is scrolled all the way to its top (left) and `.is-at-end` when it is all the way to its
+   bottom (right), and that edge's fade drops to nothing so the first and last rows are never dimmed. */
+.fade-scroll-y.is-overflowing, .fade-scroll-x.is-overflowing {
+  --fade-start: var(--fade-scroll-size);
+  --fade-end: var(--fade-scroll-size);
+}
+.fade-scroll-y.is-overflowing.is-at-start, .fade-scroll-x.is-overflowing.is-at-start { --fade-start: 0px; }
+.fade-scroll-y.is-overflowing.is-at-end, .fade-scroll-x.is-overflowing.is-at-end { --fade-end: 0px; }
 .fade-scroll-y.is-overflowing {
-  mask-image: linear-gradient(to bottom, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, black var(--fade-start), black calc(100% - var(--fade-end)), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--fade-start), black calc(100% - var(--fade-end)), transparent);
 }
 .fade-scroll-x.is-overflowing {
-  mask-image: linear-gradient(to right, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black var(--fade-scroll-size), black calc(100% - var(--fade-scroll-size)), transparent);
+  mask-image: linear-gradient(to right, transparent, black var(--fade-start), black calc(100% - var(--fade-end)), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black var(--fade-start), black calc(100% - var(--fade-end)), transparent);
 }
 
 @theme static {
