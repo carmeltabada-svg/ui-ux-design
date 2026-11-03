@@ -87,7 +87,7 @@
       <div data-role="viewer"><div class="note">Your role is read only. You can look at everything, filter, copy tags and serials, and open documents. The Move and Edit buttons do not appear for you.</div></div>
       <p>First run, about two minutes:</p>
       <ol class="steps">
-        <li>Click <strong>Status</strong> above the list. <span class="see">A menu opens with every status under its group, each with a count.</span></li>
+        <li>Click <strong>Status</strong> above the list. <span class="see">A menu opens with every status under its group, each with a count. The retired statuses sit in their own Legacy group at the end.</span></li>
         <li>Type a few letters to search, tick one or two statuses, then press Esc. <span class="see">The list narrows and a chip appears under the toolbar, such as "Status: In Use".</span></li>
         <li>Click <strong>All filters</strong>. <span class="see">A panel slides in with every filter and the number of assets that match. The button at the bottom reads "Show N assets".</span></li>
         <li>Remove the chip with its x, or press <strong>Clear all</strong>. <span class="see">The full list is back.</span></li>
@@ -119,9 +119,9 @@
         <div>
           <p>The cards count every asset, whatever filters are on.</p>
           <div class="demo" aria-hidden="true">
-            <span class="metric"><span class="dot" style="background:#4A5565"></span>Total assets <b>40</b></span>
+            <span class="metric"><span class="dot" style="background:#4A5565"></span>Total assets <b>43</b></span>
             <span class="metric"><span class="dot" style="background:#155DFC"></span>In use <b>8</b></span>
-            <span class="metric"><span class="dot" style="background:#008236"></span>Ready to deploy <b>4</b></span>
+            <span class="metric"><span class="dot" style="background:#008236"></span>Ready to deploy <b>7</b></span>
             <span class="metric"><span class="dot" style="background:#E7000B"></span>Overdue returns <b>1</b></span>
             <span class="metric"><span class="dot" style="background:#F54900"></span>Warranty ending in 90 days <b>3</b></span>
             <span class="metric"><span class="dot" style="background:#4A5565"></span>Returned or pulled out <b>2</b></span>
@@ -140,6 +140,20 @@
         </div>
       </details>
 
+      <details data-role="officer">
+        <summary>Move an asset</summary>
+        <div>
+          <p>Press the truck icon at the end of a row, or <strong>Move asset</strong> in the header of an asset page. A menu asks which kind of move you want:</p>
+          <table>
+            <tr><th>Kind</th><th>Use it to</th></tr>
+            <tr><td>Check In or Check Out</td><td>Move the unit to any other status.</td></tr>
+            <tr><td>Return to supplier</td><td>Send the unit back to its supplier.</td></tr>
+            <tr><td>Client pull-out</td><td>Record the client taking the unit back. It is greyed out for Monthly Rental units: hover it to read why.</td></tr>
+          </table>
+          <p>The full steps are in the Move Asset guide.</p>
+        </div>
+      </details>
+
       <details>
         <summary>Export a few assets</summary>
         <div>
@@ -154,7 +168,7 @@
       <details>
         <summary>Read an asset page</summary>
         <div>
-          <p>Click a tag. The top shows the tag (with a copy button), the status, who has it and where. The left card has the details; the right side has three cards.</p>
+          <p>Click a tag. The top shows the tag (with a copy button), the status, who has it and where, and the buttons for what you can do. The left card has the details; the right side has three cards. On a unit that was returned or pulled out, <strong>Move details</strong> opens a panel from the right with what was recorded, and any document attached to the move opens as the real file in a new tab.</p>
           <table>
             <tr><th>Card</th><th>What it shows</th></tr>
             <tr><td>Current movement</td><td>The last check in or check out: date, place and person.</td></tr>
@@ -196,7 +210,7 @@
       <h2>The filters and what they list</h2>
       <table>
         <tr><th>Filter</th><th>Values</th></tr>
-        <tr><td>Status</td><td>Every status, grouped by lifecycle stage, A to Z inside a group. Has a search box.</td></tr>
+        <tr><td>Status</td><td>Every status, grouped by lifecycle stage, A to Z inside a group, then a Legacy group (Defective, For Inspection, In Transit, Pending Disposal, Under Repair). Has a search box.</td></tr>
         <tr><td>Asset Type</td><td>CE Computer Equipment, FF Furniture and Fixtures, OE Office Equipment.</td></tr>
         <tr><td>Asset Name</td><td>The names of the types you picked.</td></tr>
         <tr><td>Ownership</td><td>GoTeam-Owned, Client-Owned.</td></tr>
@@ -216,6 +230,7 @@
       <h2>Why it works this way</h2>
       <details><summary>Why are the filters in one row?</summary><div><p>There are eleven filters. Showing them all at once took more than half the screen before the list began. The five you use most stay on the row, and the rest are one click away.</p></div></details>
       <details><summary>Why do the cards not group by stage?</summary><div><p>The Status filter already groups by stage. The cards show numbers it cannot, such as what is overdue or about to lose its warranty.</p></div></details>
+      <details><summary>Why do some parts of a list or menu fade at the edge?</summary><div><p>The fade is a hint that there is more to scroll to. It shows only on an edge that still has content past it, so there is none at the very top, none at the very bottom, and none on a list that fits.</p></div></details>
       <details><summary>Why can I only click offices?</summary><div><p>Only offices have a page in the Locations menu. A home address, a supplier or a client do not, so they stay plain text.</p></div></details>
       <details><summary>Why does Total used age look a month higher than I expect?</summary><div><p>Each person's time is counted in whole 30 day months, then added up. This is how the live system counts it.</p></div></details>
     </section>
@@ -235,9 +250,9 @@
       <span class="mode">What is not here</span>
       <h2>Not part of this release</h2>
       <ul>
-        <li>Returning an asset to a supplier or a client pulling it out. See the Supplier Return and Client Pull-Out guide.</li>
+        <li>The steps of a move: check in, check out, return to supplier and client pull-out. See the Move Asset guide.</li>
         <li>Adding past movements, deleting an asset, and uploading photos.</li>
-        <li>Filtering by currency, and the group of retired statuses.</li>
+        <li>Filtering by currency.</li>
         <li>Saving a set of filters as a view.</li>
         <li>Per person permissions beyond officer and read only.</li>
       </ul>

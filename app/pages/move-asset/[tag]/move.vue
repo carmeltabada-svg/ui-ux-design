@@ -1,16 +1,22 @@
 <script setup lang="ts">
-// Move Asset. Changing the status to a Terminal-lane exit status (Supplier Return or
-// Client Pull-Out) reveals the required exit details inline, the same way Charged Deduction
-// reveals its document fields in the live app. Because an exit is terminal and hard to undo, a
-// confirm step with named buttons sits before the save. Movement type and location are derived
-// from the status and shown read only. The New Status field is a searchable, grouped picker.
+// Move Asset. The kind of move is chosen before this page opens (see MoveMenu), the way the ticket tracker asks for
+// the ticket type before Create Ticket, so the form never rearranges itself after the officer has started:
+//  - a Check In or Check Out to any status: the fields and their order follow the live Move Asset page (movement type,
+//    location type, the asset location, supplier or team member, who did it, the note, and the new status last), and
+//    Charged Deduction adds its two optional documents, as in the live app;
+//  - a return to the supplier, or a client pull-out: the movement is fixed (a Check Out to the supplier or the client),
+//    so it is shown, not asked, and the required exit details follow. Because an exit is final, a confirm step with named
+//    buttons sits before the save.
 import {
   findAsset, statusPickerOptions, STATUSES, docProblem, missingForExit, exitMovement,
-  replacementCandidates, exitAsset, emptyExitForm, DOC_ACCEPT, fileSize, CURRENT_OFFICER,
-  badgeDate, assetsSimState, isExited, missingKeys, locationView, openDoc, TYPE_ICON, TECH_PACK_STYLE, type Asset, type ExitKind, type MissingKey
+  replacementGroups, exitAsset, emptyExitForm, DOC_ACCEPT, fileSize, CURRENT_OFFICER,
+  badgeDate, assetsSimState, isExited, missingKeys, locationView, openDoc, TYPE_ICON, TECH_PACK_STYLE,
+  moveAsset, supplierAddress, assetLocationOptions, supplierOptions, memberAddress, moveHref, moveKindOf, pullOutReason,
+  type MoveKind, type Asset, type ExitKind, type MissingKey, type MovementType, type LocationType
 } from '~/data/assets'
+import { teamMemberOptions } from '~/data/assetsActivity'
 
-definePageMeta({ layout: 'assets', key: route => String(route.params.tag) })
+definePageMeta({ layout: 'assets', key: route => `${route.params.tag}:${route.query.kind ?? 'move'}` })
 
 const route = useRoute()
 const router = useRouter()
@@ -27,9 +33,15 @@ const tag = computed(() => String(route.params.tag ?? ''))
 const asset = computed<Asset | undefined>(() => findAsset(tag.value))
 useSeoMeta({ title: () => `Move ${tag.value} - GoTeam Assets` })
 
-const pickerOptions = computed(() => asset.value ? statusPickerOptions(asset.value) : [])
+// The kind of move, from the menu that opened this page. It fixes the layout for the whole visit.
+const kind = computed<MoveKind>(() => moveKindOf(route.query.kind))
+const pickerOptions = statusPickerOptions()
+const pullOutBlockedReason = computed(() => kind.value === 'client' && asset.value ? pullOutReason(asset.value) : '')
+const subtitle = computed(() => kind.value === 'supplier'
+  ? 'Return this unit to its supplier.'
+  : (kind.value === 'client' ? 'Record the client pulling this unit out.' : 'Check this unit in or out and set its status.'))
 
-const chosenStatus = ref('')
+const chosenStatus = ref(kind.value === 'supplier' ? 'Supplier Return' : (kind.value === 'client' ? 'Client Pull-Out' : ''))
 const chosenDef = computed(() => STATUSES.find(s => s.name === chosenStatus.value))
 const exitKind = computed<ExitKind | undefined>(() => chosenDef.value?.exit)
 const form = reactive(emptyExitForm())
@@ -40,20 +52,148 @@ const fileInput = ref<HTMLInputElement>()
 
 const derived = computed(() => (exitKind.value && asset.value) ? exitMovement(exitKind.value, asset.value) : null)
 const docLabel = computed(() => exitKind.value === 'supplier' ? 'Supplier return agreement' : 'Client instruction')
-const candidates = computed(() => asset.value ? replacementCandidates(asset.value.tag) : [])
-const replacementItems = computed(() => candidates.value.map(c => ({ label: `${c.tag} · ${c.model}`, value: c.tag })))
+const replacementOptions = computed(() => asset.value ? replacementGroups(asset.value.tag) : { supplier: [], similar: [] })
 
-const missing = computed(() => (exitKind.value ? missingForExit(exitKind.value, form) : []))
-const noStatus = computed(() => !exitKind.value)
-const errorText = computed(() => {
-  if (noStatus.value) return 'Choose the new status first. The details to fill in depend on it.'
-  return missing.value.length ? `Can't move the asset yet. Still needed: ${missing.value.join(', ')}.` : ''
+// --- The movement, in the order of the live Move Asset page ------------------------------------------------------
+const MOVEMENT_TYPES = [
+  { value: 'check_in', label: 'Check In', icon: 'i-lucide-log-in' },
+  { value: 'check_out', label: 'Check Out', icon: 'i-lucide-log-out' }
+] as const
+const LOCATION_TYPES = [
+  { value: 'asset_location', label: 'Asset Location', icon: 'i-lucide-map-pin', description: 'A physical location where the asset is stored' },
+  { value: 'user_address', label: 'User Address', icon: 'i-lucide-house', description: 'The asset goes to a team member\'s address' },
+  { value: 'supplier', label: 'Supplier', icon: 'i-lucide-truck', description: 'The asset is at a supplier\'s facility' }
+] as const
+
+const movementType = ref<'' | MovementType>('')
+const locationType = ref<'' | LocationType>('')
+const assetLocation = ref('')
+const supplier = ref('')
+const memberTo = ref('')
+// True while the form sets its own values (a default, or a status that fixes the movement), so the watchers below
+// don't treat it as the officer changing a field.
+const applying = ref(false)
+
+// The unit comes back in when it is out, and goes out when it is in (the live page's default).
+function defaultMovement(): MovementType { return asset.value?.movementStatus === 'Checked Out' ? 'check_in' : 'check_out' }
+// A return to the supplier is a Check Out to the supplier; a client pull-out is a Check Out to the client, with the team
+// member who has the unit. Anything else starts from the default.
+function applyInitial() {
+  const a = asset.value
+  if (!a) return
+  applying.value = true
+  assetLocation.value = ''
+  if (kind.value === 'supplier') {
+    movementType.value = 'check_out'
+    locationType.value = 'supplier'
+    supplier.value = a.supplier
+    memberTo.value = ''
+  } else if (kind.value === 'client') {
+    movementType.value = 'check_out'
+    locationType.value = 'user_address'
+    supplier.value = ''
+    memberTo.value = a.custodian
+  } else {
+    movementType.value = defaultMovement()
+    locationType.value = movementType.value === 'check_in' ? 'asset_location' : 'user_address'
+    supplier.value = ''
+    memberTo.value = ''
+  }
+  nextTick(() => { applying.value = false })
+}
+watch(asset, (a, old) => { if (a && a.tag !== old?.tag) applyInitial() }, { immediate: true })
+
+watch(movementType, (type) => {
+  if (applying.value) return
+  locationType.value = type === 'check_in' ? 'asset_location' : 'user_address'
+  assetLocation.value = ''
+  supplier.value = ''
+  memberTo.value = ''
 })
+watch(locationType, () => {
+  if (applying.value) return
+  assetLocation.value = ''
+  supplier.value = ''
+  memberTo.value = ''
+})
+
+// A Supplier Return or a Client Pull-Out is always a Check Out, to the supplier or to the client. Choosing one sets the
+// movement and locks it; choosing anything else gives the movement back its defaults.
+const effectiveLocationType = computed<'' | LocationType>(() => movementType.value === 'check_in' ? 'asset_location' : locationType.value)
+const locationItems = computed(() => assetLocationOptions().map(v => ({ label: v, value: v })))
+const supplierItems = computed(() => supplierOptions().map(v => ({ label: v, value: v })))
+// Two lines, as in the retrieval ticket's team member search: the name, then the employee number and the email.
+const memberItems = computed(() => teamMemberOptions().map(m => ({ label: m.name, value: m.name, empNo: m.empNo, email: m.email })))
+const locationTypeItems = computed(() => LOCATION_TYPES.map(o => ({
+  value: o.value, label: o.label, description: o.description, icon: o.icon,
+  // A Check In always goes to an asset location.
+  disabled: movementType.value === 'check_in' && o.value !== 'asset_location'
+})))
+// The icon cards of the retrieval workspace (Return Check routing, the case outcome): same classes, same selected state.
+const CARD_UI = {
+  legend: 'text-xs font-normal text-default mb-2',
+  root: 'w-full',
+  fieldset: 'w-full grid grid-cols-1 sm:grid-cols-3 gap-2',
+  item: 'group w-full items-center py-2.5 px-4 has-data-[state=checked]:bg-primary/5',
+  icon: 'transition-colors group-has-data-[state=checked]:text-primary size-4',
+  label: 'transition-colors group-has-data-[state=checked]:text-blue-700 dark:group-has-data-[state=checked]:text-primary text-sm',
+  description: 'transition-colors text-xs group-has-data-[state=checked]:text-default'
+}
+const byLabel = computed(() => movementType.value === 'check_in' ? 'Checked in by' : (movementType.value === 'check_out' ? 'Checked out by' : 'Moved by'))
+// Where the unit will be, spelled out under the field that picks it.
+const whereText = computed(() => {
+  if (exitKind.value && derived.value) return derived.value.location
+  if (effectiveLocationType.value === 'supplier') return supplier.value ? supplierAddress(supplier.value) : ''
+  if (effectiveLocationType.value === 'user_address') return memberTo.value ? memberAddress(memberTo.value) : ''
+  return ''
+})
+
+// --- Charged Deduction: two optional documents, as in the live app ----------------------------------------------
+const authorityFile = ref<File | null>(null)
+const clearanceFile = ref<File | null>(null)
+const authorityInput = ref<HTMLInputElement>()
+const clearanceInput = ref<HTMLInputElement>()
+const docError = ref('')
+const isChargedDeduction = computed(() => chosenStatus.value === 'Charged Deduction')
+function onDeductionDoc(which: 'authority' | 'clearance', e: Event) {
+  const input = e.target as HTMLInputElement
+  const f = input.files?.[0]
+  if (!f) return
+  const problem = docProblem({ name: f.name, type: f.type, size: f.size })
+  if (problem) { docError.value = problem } else {
+    docError.value = ''
+    if (which === 'authority') authorityFile.value = f
+    else clearanceFile.value = f
+  }
+  input.value = ''
+}
+function openFile(f: File | null) {
+  if (!f) return
+  const url = URL.createObjectURL(f)
+  window.open(url, '_blank', 'noopener')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+// --- What is still missing ---------------------------------------------------------------------------------------
+type FieldKey = MissingKey | 'status' | 'movement' | 'locationType' | 'assetLocation' | 'supplier' | 'member'
+const moveMissing = computed<{ key: FieldKey, label: string }[]>(() => {
+  const out: { key: FieldKey, label: string }[] = []
+  if (!movementType.value) out.push({ key: 'movement', label: 'the movement type' })
+  else if (movementType.value === 'check_out' && !locationType.value) out.push({ key: 'locationType', label: 'the location type' })
+  const where = effectiveLocationType.value
+  if (where === 'asset_location' && !assetLocation.value) out.push({ key: 'assetLocation', label: 'the asset location' })
+  if (where === 'supplier' && !supplier.value) out.push({ key: 'supplier', label: 'the supplier' })
+  if (where === 'user_address' && !memberTo.value && exitKind.value !== 'client') out.push({ key: 'member', label: 'who it is checked out to' })
+  if (!chosenStatus.value) out.push({ key: 'status', label: 'the new status' })
+  return out
+})
+const missing = computed(() => (exitKind.value ? missingForExit(exitKind.value, form) : []))
+const allMissing = computed(() => [...moveMissing.value.map(m => m.label), ...missing.value])
+const errorText = computed(() => allMissing.value.length ? `Can't move the asset yet. Still needed: ${allMissing.value.join(', ')}.` : '')
 // Once a save has been tried, each missing field is marked, the same way the retrieval forms do it.
-const invalid = computed<Set<MissingKey | 'status'>>(() => {
+const invalid = computed<Set<FieldKey>>(() => {
   if (!showErrors.value) return new Set()
-  if (noStatus.value) return new Set(['status'])
-  return new Set(missingKeys(exitKind.value!, form))
+  return new Set<FieldKey>([...moveMissing.value.map(m => m.key), ...(exitKind.value ? missingKeys(exitKind.value, form) : [])])
 })
 const bannerEl = ref<HTMLElement>()
 
@@ -70,12 +210,7 @@ function onFile(e: Event) {
 function removeFile() { form.file = null; fileError.value = '' }
 // Open the attached file in a new tab, the same way the retrieval forms do: an object URL for the
 // picked File, PDF or image alike, opened with window.open.
-function openAttached() {
-  if (!form.file) return
-  const url = URL.createObjectURL(form.file)
-  window.open(url, '_blank', 'noopener')
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
-}
+function openAttached() { openFile(form.file) }
 
 // A blocked save brings the banner into view and pulses it, so the officer sees why nothing happened.
 async function revealProblem() {
@@ -88,8 +223,24 @@ async function revealProblem() {
 
 function trySave() {
   showErrors.value = true
-  if (!exitKind.value || missing.value.length) { revealProblem(); return }
-  confirmOpen.value = true
+  if (pullOutBlockedReason.value) return
+  if (allMissing.value.length) { revealProblem(); return }
+  if (exitKind.value) { confirmOpen.value = true; return }
+  saveMove()
+}
+
+// Any status other than the two exits: save the movement and the status together.
+function saveMove() {
+  const a = asset.value
+  if (!a || !movementType.value || !effectiveLocationType.value) return
+  const result = moveAsset(a.tag, {
+    movement: movementType.value, locationType: effectiveLocationType.value, assetLocation: assetLocation.value,
+    supplier: supplier.value, member: memberTo.value, note: form.note, status: chosenStatus.value, by: CURRENT_OFFICER,
+    authorityFile: authorityFile.value, clearanceFile: clearanceFile.value
+  })
+  if (!result) return
+  toast.add({ title: `${result.tag} is now ${result.status}`, description: 'The move is in the asset\'s Movements and Activity Feed.', icon: 'i-lucide-circle-check', color: 'success' })
+  router.push(`/move-asset/${result.tag}/done`)
 }
 
 function confirmSave() {
@@ -104,10 +255,20 @@ function confirmSave() {
 
 // Reset the form each time the status changes, so a half-filled exit never carries over.
 watch(chosenStatus, () => {
+  const note = form.note
   Object.assign(form, emptyExitForm())
+  form.note = note
   fileError.value = ''
+  docError.value = ''
+  authorityFile.value = null
+  clearanceFile.value = null
   showErrors.value = false
 })
+
+function replacementLabel(tag: string) {
+  const r = findAsset(tag)
+  return r ? `${r.tag} · ${r.model}` : tag
+}
 
 const confirmSummary = computed(() => {
   const a = asset.value
@@ -118,7 +279,7 @@ const confirmSummary = computed(() => {
     ['Movement', `${derived.value?.movement} · ${derived.value?.location}`],
     ['Date', badgeDate(form.date)],
     ['Document', form.file?.name ?? ''],
-    ...(exitKind.value === 'supplier' && form.replacement ? [['Replacement unit', form.replacement]] as [string, string][] : []),
+    ...(exitKind.value === 'supplier' && form.replacement ? [['Replacement unit', replacementLabel(form.replacement)]] as [string, string][] : []),
     ['Reason', form.reason.trim()]
   ] as [string, string][]
 })
@@ -167,14 +328,22 @@ const confirmSummary = computed(() => {
       <p class="text-xs">
         It has already been returned to the supplier or pulled out by the client. Its history is on the asset page.
       </p>
-      <UButton
-        :to="`/assets/${asset.tag}`"
-        color="neutral"
-        variant="outline"
-        size="sm"
-        label="View asset"
-        class="mt-1"
-      />
+      <div class="flex gap-2 mt-1">
+        <UButton
+          :to="`/assets/${asset.tag}?moveDetails=1`"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          label="View move details"
+        />
+        <UButton
+          :to="`/assets/${asset.tag}`"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          label="View asset"
+        />
+      </div>
     </div>
   </div>
 
@@ -215,14 +384,30 @@ const confirmSummary = computed(() => {
             </UTooltip>
           </h1>
           <p class="text-sm text-muted pt-0.5">
-            Change this unit's status and record the movement.
+            {{ subtitle }}
           </p>
+        </div>
+        <div class="ml-auto shrink-0">
+          <AssetsMoveMenu
+            :asset="asset"
+            @select="(k) => navigateTo(moveHref(asset!.tag, k), { replace: true })"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              trailing-icon="i-lucide-chevron-down"
+              label="Change move type"
+            />
+          </AssetsMoveMenu>
         </div>
       </div>
     </div>
 
     <!-- Scrollable body -->
-    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain fade-scroll-y px-6 py-6">
+    <!-- relative: the hidden file input is absolutely positioned and must stay inside this scroll area, or the whole
+         window grows a second scroll bar. -->
+    <div class="relative flex-1 min-h-0 overflow-y-auto overscroll-contain fade-scroll-y px-6 py-6">
       <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6">
         <!-- Form -->
         <div class="space-y-6 min-w-0">
@@ -359,16 +544,298 @@ const confirmSummary = computed(() => {
             </dl>
           </section>
 
-          <!-- Movement details -->
+          <!-- Movement -->
           <section class="rounded-lg border border-default bg-card overflow-hidden">
             <div class="px-5 py-3 border-b border-default bg-elevated">
               <p class="text-xs font-semibold uppercase tracking-wide text-default">
                 Movement
               </p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 p-5">
-              <!-- New status: fills its column; the derived movement sits beside it -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 p-5">
+              <!-- A kind of move the unit can't have -->
+              <UAlert
+                v-if="pullOutBlockedReason"
+                class="md:col-span-2"
+                color="warning"
+                variant="subtle"
+                icon="i-lucide-triangle-alert"
+                title="This unit can't be pulled out by the client"
+                :description="pullOutBlockedReason"
+                :ui="{ description: 'text-xs' }"
+              />
+
+              <template v-if="kind === 'move'">
+                <!-- 1. Movement type: the same toggle as Mode on the retrieval ticket -->
+                <div class="md:col-span-2">
+                  <p
+                    id="movement-label"
+                    class="text-xs text-default mb-2"
+                  >
+                    Movement type <span class="text-red-600">*</span>
+                  </p>
+                  <div
+                    role="radiogroup"
+                    aria-labelledby="movement-label"
+                    class="grid grid-cols-2 gap-2 rounded-md"
+                    :class="invalid.has('movement') ? 'ring-2 ring-red-500' : ''"
+                  >
+                    <button
+                      v-for="o in MOVEMENT_TYPES"
+                      :key="o.value"
+                      type="button"
+                      role="radio"
+                      :aria-checked="movementType === o.value"
+                      class="w-full rounded-md border px-4 py-2.5 text-sm font-medium transition-colors"
+                      :class="movementType === o.value ? 'border-primary bg-primary/10 text-blue-700 dark:text-primary font-semibold' : 'border-default text-default hover:bg-elevated/50'"
+                      @click="movementType = o.value"
+                    >
+                      {{ o.label }}
+                    </button>
+                  </div>
+                  <p
+                    v-if="invalid.has('movement')"
+                    class="text-xs text-red-600 mt-1.5"
+                  >
+                    Choose Check In or Check Out.
+                  </p>
+                </div>
+
+                <!-- 2. Location type: icon cards, as in the retrieval workspace. Always shown, so the form keeps its
+                     height; a Check In always goes to an asset location, so the other two are off. -->
+                <div class="md:col-span-2">
+                  <URadioGroup
+                    :model-value="locationType || undefined"
+                    :items="locationTypeItems"
+                    legend="Location type"
+                    variant="card"
+                    orientation="horizontal"
+                    indicator="hidden"
+                    size="sm"
+                    :ui="CARD_UI"
+                    @update:model-value="(v) => (locationType = v as LocationType)"
+                    :class="invalid.has('locationType') ? 'rounded-md ring-2 ring-red-500' : ''"
+                  >
+                    <template #legend>
+                      <span class="text-xs font-normal text-default">Location type <span class="text-red-600">*</span></span>
+                    </template>
+                  </URadioGroup>
+                  <p
+                    class="text-xs mt-1.5"
+                    :class="invalid.has('locationType') ? 'text-red-600' : 'text-muted'"
+                  >
+                    {{ invalid.has('locationType') ? 'Choose where the unit goes.' : (movementType === 'check_in' ? 'A Check In always goes to an asset location.' : 'Where the unit goes when it leaves.') }}
+                  </p>
+                </div>
+
+                <!-- 3. Where it goes -->
+                <template v-if="effectiveLocationType === 'asset_location'">
+                  <div>
+                    <label
+                      for="asset-location"
+                      class="text-xs font-normal text-muted block mb-1.5"
+                    >Asset location <span class="text-red-600">*</span></label>
+                    <SharedSelect
+                      id="asset-location"
+                      v-model="assetLocation"
+                      class="w-full"
+                      placeholder="Search asset location"
+                      :color="invalid.has('assetLocation') ? 'error' : undefined"
+                      :items="locationItems"
+                    />
+                    <p
+                      v-if="invalid.has('assetLocation')"
+                      class="text-xs text-red-600 mt-1.5"
+                    >
+                      Choose the asset location.
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-normal text-muted mb-1.5">
+                      Location
+                    </p>
+                    <p
+                      class="text-sm min-h-9 flex items-center break-words"
+                      :class="assetLocation ? 'text-highlighted' : 'text-muted'"
+                    >
+                      {{ assetLocation || 'The asset location you choose' }}
+                    </p>
+                  </div>
+                </template>
+
+                <template v-else-if="effectiveLocationType === 'supplier'">
+                  <div>
+                    <label
+                      for="supplier"
+                      class="text-xs font-normal text-muted block mb-1.5"
+                    >Supplier <span class="text-red-600">*</span></label>
+                    <SharedSelect
+                      id="supplier"
+                      v-model="supplier"
+                      class="w-full"
+                      placeholder="Search supplier"
+                      :color="invalid.has('supplier') ? 'error' : undefined"
+                      :items="supplierItems"
+                    />
+                    <p
+                      v-if="invalid.has('supplier')"
+                      class="text-xs text-red-600 mt-1.5"
+                    >
+                      Choose the supplier.
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-normal text-muted mb-1.5">
+                      Location
+                    </p>
+                    <p
+                      class="text-sm min-h-9 flex items-center break-words"
+                      :class="whereText ? 'text-highlighted' : 'text-muted'"
+                    >
+                      {{ whereText || 'The supplier\'s address will be used' }}
+                    </p>
+                  </div>
+                </template>
+
+                <template v-else-if="effectiveLocationType === 'user_address'">
+                  <div>
+                    <label
+                      for="member-to"
+                      class="text-xs font-normal text-muted block mb-1.5"
+                    >Checked out to <span class="text-red-600">*</span></label>
+                    <!-- The retrieval ticket's team member search: the name, then the employee number and the email -->
+                    <UInputMenu
+                      id="member-to"
+                      v-model="memberTo"
+                      :items="memberItems"
+                      value-key="value"
+                      :filter-fields="['label', 'empNo', 'email']"
+                      placeholder="Type a name or employee ID..."
+                      aria-label="Find team member"
+                      icon="i-lucide-search"
+                      class="w-full"
+                      :color="invalid.has('member') ? 'error' : undefined"
+                    >
+                      <template #item-label="{ item }">
+                        <div class="flex flex-col">
+                          <span class="text-sm font-medium">{{ item.label }}</span>
+                          <span class="text-xs text-muted">{{ item.empNo }} &middot; {{ item.email }}</span>
+                        </div>
+                      </template>
+                    </UInputMenu>
+                    <p
+                      v-if="invalid.has('member')"
+                      class="text-xs text-red-600 mt-1.5"
+                    >
+                      Choose who the unit is checked out to.
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-normal text-muted mb-1.5">
+                      Location
+                    </p>
+                    <p
+                      class="text-sm min-h-9 flex items-center break-words"
+                      :class="whereText ? 'text-highlighted' : 'text-muted'"
+                    >
+                      {{ whereText || 'The team member\'s address will be used' }}
+                    </p>
+                  </div>
+                </template>
+              </template>
+
+              <!-- A return to the supplier or a client pull-out: the movement is fixed, so it is shown, not asked -->
+              <template v-else>
+                <div>
+                  <p class="text-xs font-normal text-muted mb-1.5">
+                    New status
+                  </p>
+                  <p class="min-h-9 flex items-center">
+                    <AssetsStatusPill :status="chosenStatus" />
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs font-normal text-muted mb-1.5">
+                    Movement type
+                  </p>
+                  <p class="text-sm text-highlighted min-h-9 flex items-center">
+                    Check Out
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs font-normal text-muted mb-1.5">
+                    Location type
+                  </p>
+                  <p class="text-sm text-highlighted min-h-9 flex items-center">
+                    {{ kind === 'supplier' ? 'Supplier' : 'User Address' }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs font-normal text-muted mb-1.5">
+                    {{ kind === 'supplier' ? 'Supplier' : 'Checked out to' }}
+                  </p>
+                  <p
+                    class="text-sm min-h-9 flex items-center"
+                    :class="(kind === 'supplier' ? asset?.supplier : asset?.custodian) ? 'text-highlighted' : 'text-muted'"
+                  >
+                    {{ (kind === 'supplier' ? asset?.supplier : asset?.custodian) || 'No team member has this unit' }}
+                  </p>
+                </div>
+                <div class="md:col-span-2">
+                  <p class="text-xs font-normal text-muted mb-1.5">
+                    Location
+                  </p>
+                  <p class="text-sm text-highlighted break-words">
+                    {{ whereText }}
+                  </p>
+                </div>
+              </template>
+
+              <!-- 4. Who did it -->
               <div>
+                <p class="text-xs font-normal text-muted mb-1.5">
+                  {{ byLabel }}
+                </p>
+                <p class="text-sm text-highlighted flex items-center gap-2 min-h-9">
+                  <span
+                    class="inline-flex items-center justify-center shrink-0 rounded-full size-6 text-xs font-semibold bg-blue-100 text-blue-700"
+                    aria-hidden="true"
+                  >KB</span>
+                  {{ CURRENT_OFFICER }}
+                  <UBadge
+                    color="neutral"
+                    variant="soft"
+                    size="xs"
+                  >
+                    You
+                  </UBadge>
+                </p>
+              </div>
+
+              <!-- 5. Note -->
+              <div class="md:col-span-2">
+                <label
+                  for="note"
+                  class="text-xs font-normal text-muted block mb-1.5"
+                >Note <UBadge
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                >Optional</UBadge></label>
+                <UTextarea
+                  id="note"
+                  v-model="form.note"
+                  :rows="2"
+                  placeholder="Add context for this move, such as a ticket number or the reason"
+                  class="w-full"
+                  :ui="{ base: 'resize-none' }"
+                />
+              </div>
+
+              <!-- 6. New status, last, as on the live page (the two exits have their status fixed above) -->
+              <div
+                v-if="kind === 'move'"
+                class="md:col-span-2"
+              >
                 <label
                   for="new-status"
                   class="text-xs font-normal text-muted block mb-1.5"
@@ -391,60 +858,106 @@ const confirmSummary = computed(() => {
                   Choose the new status.
                 </p>
               </div>
-              <div>
-                <p class="text-xs font-normal text-muted mb-1.5">
-                  Movement type
-                </p>
-                <p
-                  v-if="derived"
-                  class="text-sm text-highlighted min-h-9 flex items-center"
-                >
-                  {{ derived.movement }}
-                </p>
-                <p
-                  v-else
-                  class="text-sm text-placeholder min-h-9 flex items-center"
-                >
-                  Set when you pick the status
-                </p>
-              </div>
 
-              <div>
-                <p class="text-xs font-normal text-muted mb-1.5">
-                  {{ exitKind === 'supplier' ? 'Checked in by' : 'Checked out by' }}
-                </p>
-                <p class="text-sm text-highlighted flex items-center gap-2">
-                  <span
-                    class="inline-flex items-center justify-center shrink-0 rounded-full size-6 text-xs font-semibold bg-blue-100 text-blue-700"
-                    aria-hidden="true"
-                  >KB</span>
-                  {{ CURRENT_OFFICER }}
-                  <UBadge
+              <!-- Charged Deduction: two optional documents -->
+              <!-- Always on screen, switched on only for Charged Deduction, the way the retrieval ticket keeps its sections
+                   present and inert: choosing a status never adds or removes anything. -->
+              <fieldset
+                v-if="kind === 'move'"
+                :disabled="!isChargedDeduction"
+                class="md:col-span-2 space-y-4 min-w-0 transition-opacity"
+                :class="isChargedDeduction ? '' : 'opacity-40 select-none'"
+              >
+                <UAlert
+                  color="warning"
+                  variant="subtle"
+                  icon="i-lucide-info"
+                  title="Supporting documents"
+                  description="For Charged Deduction only, and optional: the signed Authority to Deduct and the IT Clearance. PDF, PNG or JPG, up to 10 MB each."
+                  :ui="{ description: 'text-xs' }"
+                />
+                <input
+                  ref="authorityInput"
+                  type="file"
+                  :accept="DOC_ACCEPT"
+                  aria-label="Attach the Authority to Deduct"
+                  class="sr-only"
+                  @change="onDeductionDoc('authority', $event)"
+                >
+                <input
+                  ref="clearanceInput"
+                  type="file"
+                  :accept="DOC_ACCEPT"
+                  aria-label="Attach the IT Clearance"
+                  class="sr-only"
+                  @change="onDeductionDoc('clearance', $event)"
+                >
+                <div>
+                  <p class="text-xs font-normal text-muted mb-1.5">
+                    Authority to Deduct <UBadge
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                    >Optional</UBadge>
+                  </p>
+                  <FileAttachChip
+                    v-if="authorityFile"
+                    :name="authorityFile.name"
+                    :subtitle="fileSize(authorityFile.size)"
+                    :icon="authorityFile.type === 'application/pdf' ? 'i-lucide-file-text' : 'i-lucide-image'"
+                    preview-tooltip="Open file in a new tab"
+                    @preview="openFile(authorityFile)"
+                    @replace="authorityInput?.click()"
+                    @remove="authorityFile = null"
+                  />
+                  <UButton
+                    v-else
                     color="neutral"
-                    variant="soft"
-                    size="xs"
-                  >
-                    You
-                  </UBadge>
-                </p>
-              </div>
-              <div>
-                <p class="text-xs font-normal text-muted mb-1.5">
-                  Location
-                </p>
+                    variant="outline"
+                    size="sm"
+                    icon="i-lucide-paperclip"
+                    label="Attach document"
+                    @click="authorityInput?.click()"
+                  />
+                </div>
+                <div>
+                  <p class="text-xs font-normal text-muted mb-1.5">
+                    IT Clearance <UBadge
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                    >Optional</UBadge>
+                  </p>
+                  <FileAttachChip
+                    v-if="clearanceFile"
+                    :name="clearanceFile.name"
+                    :subtitle="fileSize(clearanceFile.size)"
+                    :icon="clearanceFile.type === 'application/pdf' ? 'i-lucide-file-text' : 'i-lucide-image'"
+                    preview-tooltip="Open file in a new tab"
+                    @preview="openFile(clearanceFile)"
+                    @replace="clearanceInput?.click()"
+                    @remove="clearanceFile = null"
+                  />
+                  <UButton
+                    v-else
+                    color="neutral"
+                    variant="outline"
+                    size="sm"
+                    icon="i-lucide-paperclip"
+                    label="Attach document"
+                    @click="clearanceInput?.click()"
+                  />
+                </div>
                 <p
-                  v-if="derived"
-                  class="text-sm text-highlighted break-words"
+                  v-if="docError"
+                  class="text-xs text-red-600"
                 >
-                  {{ derived.location }}
+                  <UIcon
+                    name="i-lucide-circle-alert"
+                    class="size-3.5 align-text-bottom"
+                  /> {{ docError }}
                 </p>
-                <p
-                  v-else
-                  class="text-sm text-placeholder"
-                >
-                  Set when you pick the status
-                </p>
-              </div>
+              </fieldset>
 
               <!-- Exit details (revealed only for the two exit statuses) -->
               <div
@@ -453,7 +966,7 @@ const confirmSummary = computed(() => {
               >
                 <p class="text-sm font-semibold text-highlighted flex items-center gap-2 mb-4">
                   {{ exitKind === 'supplier' ? 'Supplier Return details' : 'Client Pull-Out details' }}
-                  <span class="inline-flex items-center rounded-md bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 px-1.5 py-0.5 text-xs font-medium dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">All required</span>
+                  <span class="inline-flex items-center rounded-md bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 px-1.5 py-0.5 text-xs font-medium dark:bg-amber-950 dark:text-amber-400 dark:ring-amber-800">All required</span>
                 </p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
@@ -481,8 +994,8 @@ const confirmSummary = computed(() => {
                   <div>
                     <label
                       for="exit-date"
-                      class="text-xs font-normal text-muted block mb-1.5"
-                    >Date <span class="text-red-600">*</span></label>
+                      class="flex items-center h-5 text-xs font-normal text-muted mb-1.5"
+                    >Date <span class="text-red-600 ml-0.5">*</span></label>
                     <div
                       class="rounded-md"
                       :class="invalid.has('date') ? 'ring-2 ring-red-500' : ''"
@@ -505,19 +1018,20 @@ const confirmSummary = computed(() => {
                   <div v-if="exitKind === 'supplier'">
                     <label
                       for="rep"
-                      class="text-xs font-normal text-muted block mb-1.5"
+                      class="flex items-center gap-1.5 h-5 text-xs font-normal text-muted mb-1.5"
                     >Replacement unit from the supplier <UBadge
                       color="neutral"
                       variant="outline"
                       size="sm"
                     >Optional</UBadge></label>
-                    <SharedSelect
+                    <AssetsReplacementPicker
                       id="rep"
                       v-model="form.replacement"
-                      class="w-full"
-                      placeholder="Not linked yet"
-                      :items="replacementItems"
+                      :groups="replacementOptions"
                     />
+                    <p class="text-xs text-muted mt-1.5">
+                      You can add it later from the move details.
+                    </p>
                   </div>
 
                   <div class="md:col-span-2">
@@ -593,26 +1107,6 @@ const confirmSummary = computed(() => {
                 </div>
               </div>
 
-              <!-- Note -->
-              <div class="md:col-span-2">
-                <label
-                  for="note"
-                  class="text-xs font-normal text-muted block mb-1.5"
-                >Note <UBadge
-                  color="neutral"
-                  variant="outline"
-                  size="sm"
-                >Optional</UBadge></label>
-                <UTextarea
-                  id="note"
-                  v-model="form.note"
-                  :rows="2"
-                  placeholder="Add context for this move, such as a ticket number or the reason"
-                  class="w-full"
-                  :ui="{ base: 'resize-none' }"
-                />
-              </div>
-
               <div
                 v-if="showErrors && errorText"
                 ref="bannerEl"
@@ -640,6 +1134,7 @@ const confirmSummary = computed(() => {
                   color="primary"
                   size="sm"
                   label="Move Asset"
+                  :disabled="!!pullOutBlockedReason"
                   @click="trySave"
                 />
               </div>
@@ -695,7 +1190,7 @@ const confirmSummary = computed(() => {
                   </p>
                   <p
                     v-else
-                    class="text-sm text-placeholder mt-0.5"
+                    class="text-sm text-muted mt-0.5"
                   >
                     No note recorded
                   </p>

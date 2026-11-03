@@ -7,7 +7,7 @@
 // shows up in the Activity Feed and Movements straight away. Delete Asset and the model, location, owner and
 // purchase order pages already exist in the system, so each one says so in a toast.
 import {
-  findAsset, isExited, locationView, TYPE_ICON, assetsSimRole, assetsSimState, assetsSimCustody, assetsSimWarranty,
+  findAsset, isExited, moveHref, locationView, TYPE_ICON, assetsSimRole, assetsSimState, assetsSimCustody, assetsSimWarranty,
   assetsSimTransit, badgeDate, localToday, addMonths, type Asset
 } from '~/data/assets'
 import { movementsOf, custodyRowsFor } from '~/data/assetsActivity'
@@ -20,6 +20,7 @@ import {
 definePageMeta({ layout: 'assets', key: route => String(route.params.tag) })
 
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const tag = computed(() => String(route.params.tag ?? ''))
 const asset = computed<Asset | undefined>(() => findAsset(tag.value))
@@ -27,6 +28,13 @@ useSeoMeta({ title: () => `${tag.value} - GoTeam Assets` })
 
 const canEdit = computed(() => assetsSimRole.value === 'officer')
 const canMove = computed(() => canEdit.value && !!asset.value && !isExited(asset.value))
+
+// Move details open in a drawer over this page: from the header button, or straight from a link with ?moveDetails.
+const moveDetailsOpen = ref(!!route.query.moveDetails)
+watch(() => route.query.moveDetails, (v) => { if (v) moveDetailsOpen.value = true })
+watch(moveDetailsOpen, (open) => {
+  if (!open && route.query.moveDetails) router.replace({ query: { ...route.query, moveDetails: undefined } })
+})
 const movement = computed(() => asset.value ? movementsOf(asset.value)[0] : undefined)
 const custody = computed(() => asset.value ? custodyRowsFor(asset.value, localToday()) : [])
 const holder = computed(() => {
@@ -357,14 +365,28 @@ const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-dimmed'
             label="Edit details"
             @click="startEdit()"
           />
-          <UButton
+          <AssetsMoveMenu
             v-if="canMove"
-            :to="`/move-asset/${asset.tag}/move`"
+            :asset="asset"
+            @select="(kind) => navigateTo(moveHref(asset!.tag, kind))"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="md"
+              icon="i-lucide-truck"
+              trailing-icon="i-lucide-chevron-down"
+              label="Move asset"
+            />
+          </AssetsMoveMenu>
+          <UButton
+            v-else-if="isExited(asset)"
             color="neutral"
             variant="outline"
             size="md"
-            icon="i-lucide-truck"
-            label="Move asset"
+            icon="i-lucide-clipboard-list"
+            label="Move details"
+            @click="moveDetailsOpen = true"
           />
           <UDropdownMenu
             :items="menuItems"
@@ -1196,5 +1218,12 @@ const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-dimmed'
         </section>
       </aside>
     </div>
+
+    <!-- Move details, in a drawer over this page -->
+    <AssetsMoveDetailsDrawer
+      v-if="asset"
+      v-model:open="moveDetailsOpen"
+      :tag="asset.tag"
+    />
   </div>
 </template>

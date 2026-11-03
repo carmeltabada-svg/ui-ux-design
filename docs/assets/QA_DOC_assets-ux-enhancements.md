@@ -1,7 +1,7 @@
 # QA Doc: Assets list and asset detail UI/UX enhancements
 
 **Audience:** QA testing the ported build. **Companion:** `DEV_DOC_assets-ux-enhancements.md` (every case names the Dev Doc section it maps to).
-**Also see:** the Supplier Return and Client Pull-Out flow (Move Asset form, confirm step, exit documents) is tested from `QA_DOC_supplier-return-client-pull-out.md`.
+**Also see:** the Move Asset flow (the Move menu with its three kinds, the form, the confirm step, the exit documents, the Move details drawer and the replacement picker) is tested from `QA_DOC_supplier-return-client-pull-out.md`. This doc covers the list and the detail page, including where they open the Move menu and the drawer.
 **Build to test:** the ported application.
 
 **How to test fast.** The dark strip at the top (State, Viewing as, Scenario, and on an asset: Custody history, Warranty, Transit, plus Reset sample data) switches every state without setup. It is **verification scaffolding, not a feature**: confirm it is **absent** from the production build.
@@ -17,7 +17,7 @@
 8. Only an office location is a link. A team member's address, a supplier and a client are plain text.
 
 ## Out of Scope (do not log as bugs)
-Backend and permissions; the Supplier Return and Client Pull-Out flow itself; the asset model, location, owner and purchase order pages (links show a note); Add Asset, Find by QR, Add historical movement, Delete asset, photo upload; a camera QR scanner and a real QR code; the Tech Pack Currency filter and the Legacy status group; server side metric counts; the simulator strip (must not ship); per category colours in the Activity feed; status group pills by lane; ellipsis in table cells.
+Backend and permissions; the Move Asset flow itself (all three kinds of move); the asset model, location, owner and purchase order pages (links show a note); Add Asset, Find by QR, Add historical movement, Delete asset, photo upload; a camera QR scanner and a real QR code; the Tech Pack Currency filter; server side metric counts; the simulator strip (must not ship); per category colours in the Activity feed; status group pills by lane; ellipsis in table cells.
 
 **Prototype only (log in the ported build, not in the prototype):** Find by QR, CSV and Add Asset do nothing; the "Historical" badge never shows; comments and legacy tags are lost on reload; comment files cannot be reopened after a reload. The Dev Doc's "Code inconsistencies to know about" lists them with the intended fix.
 
@@ -28,8 +28,8 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 ### A. List header, metric cards and table (→ Dev Doc: 2. List header and metric cards, 3. List table)
 | # | Steps | Expected | Bug if |
 |---|---|---|---|
-| A1 | Open Assets | Title "40 assets tracked", a line saying where the units are, six one line metric cards, one white card, 17 columns plus checkbox | A column from the live list is missing, or a column is clipped |
-| A2 | Read the line under the title | "8 with team members, 30 at GoTeam locations, 2 at a supplier or client." (zero parts left out) | The line repeats the status counts |
+| A1 | Open Assets | Title "43 assets tracked", a line saying where the units are, six one line metric cards, one white card, 17 columns plus checkbox | A column from the live list is missing, or a column is clipped |
+| A2 | Read the line under the title | "8 with team members, 33 at GoTeam locations, 2 at a supplier or client." (zero parts left out; the numbers follow the data, 33 is the earlier 30 plus the three new Available units) | The line repeats the status counts |
 | A3 | Hover each metric card | A tooltip says what it counts; Returned or pulled out gives the Supplier Return and Client Pull-Out split | No tooltip |
 | A4 | Click "In use", then click it again | Only In Use units show and the Status chip reads "In Use"; the card shows the primary ring; the second click clears it | Other units remain, or the ring stays |
 | A5 | Click "Warranty ending in 90 days" | The three demo units show; the chip reads "Warranty Status: Expiring in 30 Days, Expiring in 60 Days, Expiring in 90 Days" | The count is 0 |
@@ -41,7 +41,7 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | A11 | Check empty values (Checked out to on a stock unit, cost on a BYOD) | Muted minus, announced "None" to a screen reader | A typed dash, or a blank cell |
 | A12 | Click a tag; click a model; click a PO | Tag opens the detail page; model and PO show an "existing view" toast; none underline | Underline, no pointer cursor |
 | A13 | Look at Location for an In Use unit, a stock unit and a unit at a supplier | In Use: home address, plain text. Stock unit: office name, a blue link. Supplier: plain text | A team member's address or a supplier is a link |
-| A14 | State = Loading; Scenario = Empty list | Skeleton rows in the same 18 cells; then "No assets yet", title and cards read 0 | Layout jumps, or the title still says 40 |
+| A14 | State = Loading; Scenario = Empty list | Skeleton rows in the same 18 cells; then "No assets yet", title and cards read 0 | Layout jumps, or the title still says 43 |
 | A15 | Viewing as Read only | In Actions the Move icon is replaced by the muted minus on every row | Read only user can move, or the cell is blank |
 | A16 | Look at the Tag, Serial and Model cells | Tag: blue medium link to the detail page; Serial: muted plain text; Model: blue link that toasts "asset model detail page" | Serial is a link, Tag is not blue |
 | A17 | Look at the Name and Type cells on a laptop, a monitor, a desktop and another name | Laptop, monitor and desktop each have their own icon, any other name a tag icon; Type "Computer Equipment" has an icon, other types text only | Same icon for all names |
@@ -51,10 +51,10 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | A21 | Look at "Checked in by / Checked out to" and "Checked out to (Client)" | The first has a tinted round avatar and name (muted minus if none); the second shows a square avatar and the client only for a Checked Out unit with a client | Client shown for a Checked In unit |
 | A22 | Look at Owner and Supplier | Owner always has a square initials avatar and name; Supplier has the same or the muted minus | Owner blank |
 | A23 | Look at Acquisition Cost on a priced unit and a BYOD | Right aligned `PHP 1,234.00` (currency, thousands separator, two decimals); a BYOD with cost 0 shows the muted minus | A bare number, or "0.00" |
-| A24 | Click the truck icon in Actions; hover it | Opens `/move-asset/{tag}/move`; tooltip "Move asset"; screen reader label "Move {tag}" | No tooltip, wrong link |
+| A24 | Hover the truck icon in Actions, then click it | Tooltip "Move asset"; screen reader label "Move {tag}"; a menu opens with "Check In or Check Out", "Return to supplier" and "Client pull-out"; each opens `/move-asset/{tag}/move` with no kind, `?kind=supplier` or `?kind=client`. On a Monthly Rental unit "Client pull-out" is off with a reason tooltip and a toast (see N in the Move Asset QA Doc) | No menu, no tooltip, wrong link |
 | A25 | Hover a row; scroll sideways | The whole row tints, frozen cells included; the Serial column has a right border; the checkbox column stays frozen | A frozen cell does not tint |
 | A26 | Type a model name, then a serial fragment, then a custodian, in capitals | Model text finds nothing; serial and custodian find their units whatever the case; the list returns to page 1 | The search matches the model or the location |
-| A27 | Open the page size select | 10, 15, 25 (default 10); the footer reads "Show 10 assets per page · 1-10 of 40"; hidden while Loading and on an empty list | Other sizes, a pager on an empty list |
+| A27 | Open the page size select | 10, 15, 25 (default 10); the footer reads "Show 10 assets per page · 1-10 of 43"; hidden while Loading and on an empty list | Other sizes, a pager on an empty list |
 | A28 | Tick the header checkbox, change page, tick a row | Header ticks the current page only; "N selected" keeps counting across pages with "Export selected" and "Clear" beside it; Clear unticks all | Header ticks every page |
 | A29 | Export one row, then three rows; open the CSV | File `assets.csv`; columns Tag, Serial, Model, Type, Status, Sub-status, Tech Pack, Checked out to, Owner, Location; toast "1 asset exported" then "3 assets exported" | Plural wrong, other columns |
 | A30 | Click Find by QR, CSV and Add Asset | Nothing happens (no action in the prototype); they are outline, outline and primary | Treat as a bug only if the ported build lacks them |
@@ -65,7 +65,7 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | # | Steps | Expected | Bug if |
 |---|---|---|---|
 | B1 | Look at the toolbar | One row: search, Status, Asset Type, Asset Name, Ownership, Warranty Status, All filters (wraps on a phone) | A tall filter panel, a labelled card |
-| B2 | Open Status | Options under lane headings, every status listed (27), A to Z in a lane, a search box, a count pill on each | A status missing, no search, counts as plain text |
+| B2 | Open Status | Options under lane headings, every status listed (32: the 27 lane statuses and the 5 Legacy ones), A to Z in a lane, a Legacy group after the lanes, a search box, a count pill on each | A status missing, no search, counts as plain text |
 | B3 | Type "ret" in the Status search | Only matching statuses and their headings stay | The list does not narrow |
 | B4 | Pick In Use, then open Asset Type | Three options: CE - Computer Equipment, FF - Furniture and Fixtures, OE - Office Equipment; FF and OE show 0 | Only Computer Equipment is listed |
 | B5 | Asset Name before picking a type | Disabled; in the drawer the hint says "Pick an asset type first" | Enabled |
@@ -84,13 +84,16 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | B18 | Keyboard: Tab to a filter, Enter, arrows, Space, Esc | Opens, moves, selects, closes; visible focus ring | Mouse only |
 | B19 | Open Status, Brand, Checked Out To, then the others | Only those three have a search box, with the placeholders "Search statuses", "Search brands", "Search people" | A search box on Ownership, or a different placeholder |
 | B20 | Pick two Status values and one Asset Type; look at the toolbar | Status shows a pill "2", Asset Type "1"; the All filters button shows a badge "2" (filters on, not values) and turns subtle; "Clear" appears. Type only a search: "Clear" still appears, the badge and chips row do not | Badge counts values, or Clear missing for a search |
-| B21 | Open All filters with two filters on | Title "All filters" and helper "Results update as you choose. Counts show how many assets each value would match."; strip "N of 40 assets" and a pill "2 applied"; each section strip shows how many filters are on in it; Clear all enabled. With nothing on, Clear all is disabled. With one match the button reads "Show 1 asset" | Plural wrong, Clear all enabled with nothing on |
+| B21 | Open All filters with two filters on | Title "All filters" and helper "Results update as you choose. Counts show how many assets each value would match."; strip "N of 43 assets" and a pill "2 applied"; each section strip shows how many filters are on in it; Clear all enabled. With nothing on, Clear all is disabled. With one match the button reads "Show 1 asset" | Plural wrong, Clear all enabled with nothing on |
 | B22 | Look at a filter inside the drawer, before and after picking | 12 px label, placeholder "All {name}", one pick shows the value, several show "N selected"; the option rows show count pills; Asset Name shows the hint "Pick an asset type first" while disabled | Compact toolbar style in the drawer |
 | B23 | Filter Location Type = Supplier, User Address, Office Location | Supplier gives the Supplier Return units; User Address gives units with a custodian; Office Location gives units with none; a Client Pull-Out unit appears under none of the three | A client unit under Office Location |
 | B24 | Open Brand, Owner and Checked Out To | Brand: first word of each model, A to Z; Owner: the owners in the data; Checked Out To: "Name — Company" where the company is known, A to Z | Brand list empty, name without company |
 | B25 | Pick a status, then filter so that status has no units | It stays in the list with a 0 pill and can be unpicked | The pick disappears silently |
 | B26 | Type a search, then add a Status filter | Both apply (AND); the chips row shows Status only; Clear all removes both; with only a search and no match the empty state is "No assets match" | Search shown as a chip, or search kept after Clear all |
 | B27 | Check units with warranty ending today, in 30, 31, 60, 61 and 90 days and already ended; and a BYOD | 0 to 30 days: 30 Days; 31 to 60: 60 Days; 61 to 90: 90 Days; ended: Already Expired; BYOD (no warranty) in none | A unit in two buckets, BYOD in a bucket |
+| B28 | Open Status and scroll to the end | After the lanes, a heading "Legacy" lists Defective, For Inspection, In Transit, Pending Disposal, Under Repair (A to Z), each with a count pill of 0 (no sample unit has a legacy status) | No Legacy group, or a count that is not 0 |
+| B29 | Pick Defective in Status | The chip reads "Status: Defective"; the list shows "No assets match" with "Clear search and filters"; the pick stays in the menu with 0 and can be unpicked. Then do a Check In to an asset location with the status Defective on any unit (Move Asset QA Doc M9) and filter again | The pick disappears, or the moved unit is not found |
+| B30 | Search "def" in the Status search | Defective stays under its Legacy heading; the lane headings with no match are hidden | Legacy heading shown with no match |
 
 ### C. Asset detail (→ Dev Doc: 5. Detail header and details card, 6. Detail right rail)
 | # | Steps | Expected | Bug if |
@@ -111,15 +114,15 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | C14 | QR Print and Download | Print dialog; an SVG downloads; the scan hint has an icon | Nothing happens |
 | C15 | Overflow menu | Only "Delete asset" (shows a note) | Copy tag or Print QR listed |
 | C16 | Open `/assets/constructor` and `/assets/__proto__` | "We couldn't find that asset" | Error page |
-| C17 | Read the header of an In Use unit | Back arrow (tooltip "Back to Assets"), tag with copy button, then status badge with its date and any sub-status chip, "·", movement state, type, name, holder, each dot separated; right side Edit details, Move asset, a "More actions" menu | A missing part, dots missing |
-| C18 | Viewing as Read only, open a unit and Warranty = Needs PO | No Edit details, no Move asset, no Link PO; the More actions menu and Back still show | Any editing control visible |
+| C17 | Read the header of an In Use unit | Back arrow (tooltip "Back to Assets"), tag with copy button, then status badge with its date and any sub-status chip, "·", movement state, type, name, holder, each dot separated; right side Edit details, "Move asset" (a menu button with a truck icon and a chevron, opening the three kinds, see N in the Move Asset QA Doc), a "More actions" menu | A missing part, dots missing |
+| C18 | Viewing as Read only, open a unit and Warranty = Needs PO; then open an exited unit | No Edit details, no Move asset, no Link PO; the More actions menu and Back still show. On the exited unit "Move details" shows and opens the drawer (read only) | Any editing control visible |
 | C19 | Read the details card in view mode | Identity (Tag, Serial, Name, Model), Location, Ownership & finance (Owner with square avatar, "Acquisition Cost (PHP)" with the number only or the muted minus, Purchase Order or "Not linked"), Tech pack (Type badge, Currency), then Timestamps; every value has its icon | A field out of order, the cost with a prefix |
 | C20 | Click Timestamps | Opens (arrow turns down), shows Created and Updated like `17 Mar 2026, 1:49 PM`; collapsed by default and again on a new page | Open by default |
 | C21 | Click Edit details and read every field | Editable: Serial, Model, Location, Owner, Acquisition Cost, Purchase Order, Type, Currency (PHP or USD radio). Tag and Name stay text. Required ones have a red asterisk. Helper texts: "Manufacturer's serial number", "Pick the exact model this unit is", "Where this asset currently lives", "Legal owner entity of this asset", "Enter 0 if there was no cost", "Currency the acquisition cost is in" | Tag editable, helper missing |
 | C22 | Blank each required field and save | Messages: "Enter the serial number", "Pick the model", "Pick where the asset lives", "Pick the owner", "Enter the cost, 0 if there is none" (also for a negative number); they appear only after the first save attempt; the page scrolls the first error to the centre | Messages before any attempt, no scroll |
 | C23 | Edit then press Cancel; edit then Save changes | Banner reads "Editing asset details. Press Esc to cancel, Cmd+S or Ctrl+S to save."; Cancel toasts "Changes discarded"; Save toasts "Asset details saved" | Wrong text, no toast |
 | C24 | In edit mode press "Use GoTeam (default)"; pick a PO, then its X; switch Currency to USD | Owner becomes GoTeam; the PO returns to "Not linked" and X is disabled again; the cost label reads "Acquisition Cost (USD)" | X enabled with no PO, label stays PHP |
-| C25 | Start editing, then move to another asset (list, then another tag) | The other asset opens in view mode, no draft carried over; for an exited unit "Move asset" is not offered | Edit mode or the old draft remains |
+| C25 | Start editing, then move to another asset (list, then another tag) | The other asset opens in view mode, no draft carried over; for an exited unit "Move asset" is not offered and a "Move details" button opens the drawer instead | Edit mode or the old draft remains |
 | C26 | Click Model, Location (office unit), Owner, Purchase Order | Each shows a toast naming the page (model detail, location, client, purchase order) and that it is an existing view; a team member address, supplier and client are not clickable | A link that opens nothing, a plain address as link |
 | C27 | QR card: open two units, Print, Download | The pattern differs per tag and is the same on return; Download gives `{tag}-qr.svg` and a toast "QR code downloaded"; Print opens the print dialog with the tag below the code | Same pattern for every tag, no toast |
 | C28 | Warranty = Active, Expiring soon, Expired; read the Time remaining | Active "N mo remaining" (green); Expiring soon "12 days remaining" (amber, 30 days or fewer); Expired "Expired N mo ago" (red, at least 1); dates like "March 05, 2027" | Wrong tone, date format |
@@ -128,6 +131,8 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | C31 | Set State = Not found on any asset | "We couldn't find that asset", "The tag may be wrong or the unit may have been removed.", "Back to Assets" | Page renders the asset |
 | C32 | Open `/assets/{tag}`; narrow the window until the tabs overflow | It redirects to Activity feed; the active tab is blue text with a ring; left and right arrow buttons and fades appear only on the side with hidden tabs and scroll by about 160 px | Arrows when nothing overflows, no redirect |
 | C33 | On a unit whose model warranty is not 12 months (for example GT-CE-LTP-1226-0021, 24 months), read "Warranty period" and the dates | The period says the model's months ("24 months from the purchase date") and the expiration date is that many months after the purchase date | Period line disagrees with the expiry date |
+| C34 | Open the asset page of the Supplier Return unit and click "Move details"; reload with `?moveDetails=1` in the address | A floating panel opens from the right (at most 440 px wide) over the page; closing it removes `?moveDetails` from the address; the content is described in O of the Move Asset QA Doc | The drawer is a separate page |
+| C35 | In the asset page header, open "Move asset" with the keyboard | Enter opens the menu, arrows move, Enter picks, Esc closes and focus returns to the button | Mouse only |
 
 ### D. Detail tabs (→ Dev Doc: 7. Detail tabs)
 | # | Steps | Expected | Bug if |
@@ -155,7 +160,7 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | D21 | Under each event read the meta line; open the chevron | Icon, time, "·", kind (Added, Status change, Movement, Replacement); details are field pairs (Asset Status "A → B", Status Date, Reason or Note, Document, Movement Type, Movement Number, Location, Checked Out To, Resulting Status, Replaces, Linked on, Tag, Serial, Model) | A kind missing its detail rows |
 | D22 | Look at day pills for events today, yesterday and older; two events on one day | "Today", "Yesterday", then the date like `2026, Oct 23`; same day events share one pill and are joined by a thin rail | Raw ISO date |
 | D23 | Use an asset with more than 10 events; switch filter on page 2 | Pager appears only above 10 events; a filter change returns to page 1; counts are right ("Status changes" includes added and replacement events) | Pager on 10 or fewer |
-| D24 | Click a document chip in the Activity feed and in a movement card | Opens in a new tab; the chip has a paperclip and an arrow-up-right icon | Opens in the same tab |
+| D24 | Click a document chip in the Activity feed and in a movement card, then reload and click it again | Opens the real file in a new tab, before and after the reload, with no link back to the app; the chip has a paperclip and an arrow-up-right icon. A sample unit's paperwork opens a stand-in page reading "The file itself is not stored in this browser. Attach the document again to see it here." | Opens in the same tab, a stand-in for a file attached in this build |
 | D25 | Read a movement card | Header: Checked out or Checked in, status chip in the status colour, `#NNNN`, time on the right. Facts: Location with icon, Checked out to or Checked in by with an avatar, Recorded by (only for a check out to a member recorded by someone else), Note, Supporting document | Recorded by on a check in |
 | D26 | Transit = In transit; open Movements with the filter on All, then on Check ins | The newest card shows "Waiting for the custodian to confirm receipt." only on All | Note on other cards or filters |
 | D27 | Read the Movements summary cards | Movement summary: Total movements N with "X checked out" over "Y checked in", Last moved with date, time and ago; the untitled card: Currently (avatar, who or where, "Checked out"/"Checked in") over First recorded (date, "by {name}"); hidden while Loading or with no movements | Counts wrong |
@@ -170,6 +175,8 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | D36 | Legacy tags: add, rename, duplicate in another case, empty save, Enter key, remove and keep, remove and confirm, search, page through 11 tags | Modal "Add legacy tag" or "Edit legacy tag" with the placeholder "e.g. HP-LTP-0098"; Enter saves; errors "Enter the legacy tag." and "This asset already has that legacy tag."; toasts "Legacy tag added", "Legacy tag updated", "Legacy tag removed"; new tags appear first with "Added on {date}"; footer "N tag(s)" and "Page X of Y" with four buttons; empty states "No legacy tags yet. This asset has kept its original tag." and "No legacy tags match your search." | Duplicate in another case allowed |
 | D37 | Open Photos | Heading "Photos", line "Photos taken of this asset.", dashed card with a camera icon and "No photos uploaded yet."; no upload control | An upload control |
 | D38 | State = Loading on the list and each tab | List: 6 skeleton rows; Activity feed: 3 skeletons (its chip row stays); Movements: 3 skeletons, no chips or summary cards; Custody history: one "Loading custody history..." row and no summary cards; Photos and Legacy tags ignore Loading | A tab that jumps when data arrives |
+| D39 | Open the Activity feed of a unit moved with Charged Deduction and both documents | The status change shows the Authority to Deduct chip and, beside it, the chip "IT Clearance: {name}"; both open as real files in a new tab; the detail has the rows Document and IT Clearance | The IT Clearance is missing or cannot be opened |
+| D40 | Open the Activity feed of two units after a replacement was linked, changed and cleared (Move Asset QA Doc P) | "link" events with a verb on each unit: "linked this unit as the replacement for {tag}" on the replacement, "is no longer the replacement for {tag}" on a replaced one, and on the returned unit "set the replacement unit to", "changed the replacement unit to" or "cleared the replacement unit"; each opens with the details Replaces, Linked on, Was, Changed on | A link event without its verb |
 
 ### E. Data and shell (→ Dev Doc: 1. Data and seed, 8. Shell and simulator)
 | # | Steps | Expected | Bug if |
@@ -179,7 +186,7 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | E3 | Breadcrumbs on list and detail | List: Home > Assets. Detail (any tab): Home > Assets > {TAG}; the Assets crumb links back; the tab name is not added | Wrong trail |
 | E4 | Navigate list to detail and back | Same short entrance each way | Different animation |
 | E5 | Open the same tag in two tabs, edit in one | The other shows the change after reload | Data lost |
-| E6 | Tamper `ams:assets:v4` in storage (a bad status, a `__proto__` id) | Bad entries ignored, no error | A crash |
+| E6 | Tamper `ams:assets:v5` in storage (a bad status, a `__proto__` id) | Bad entries ignored, no error | A crash |
 | E7 | Add a comment and a legacy tag, then reload | In the prototype both are gone after a reload (memory only); the edited unit data stays. In the ported build they must persist | Treat as a bug only in the ported build |
 | E8 | Go through every simulator option: State (Populated, Loading, Not found), Viewing as (Asset officer, Read only), Scenario (Standard data, Empty list), and on a detail page Custody history (From the data, No custody history, Single checked out, Single returned, Long history), Warranty (From the data, Needs PO, Active, Expiring soon, Expired), Transit (From the data, In transit receipt open, In use receipt confirmed) | Each option changes the screen as in the Dev Doc's simulator table; the Custody option also changes the header holder text ("Currently with {name}", "Last held by {name}", "No custodian"); Empty list makes the title read "0 assets tracked" and the line "Assets you add will show here." | An option with no effect |
 | E9 | Click Hide on the strip; open a list page after a reload | The strip disappears until reload; Custody, Warranty and Transit appear only on a detail page; the strip is a row above the app (it pushes the page down) | The strip overlaps the page |
@@ -187,6 +194,8 @@ Backend and permissions; the Supplier Return and Client Pull-Out flow itself; th
 | E11 | Read the browser tab title | List "Assets - GoTeam Assets"; detail "{TAG} - GoTeam Assets" | Generic title |
 | E12 | Change Custody, Warranty and Transit, then press Reset sample data | The three selects return to "From the data"; units, comments and legacy tags reset; toast "Sample data reset" | A select keeps its value |
 | E13 | Hover links and buttons; press Tab from the top of a page | Pointer cursor on every clickable element, no underline on links even on hover; the first Tab stop is the skip link, and it moves focus to the main content | Underlined link, default arrow cursor |
+| E14 | Open Assets, then Reset sample data | The list has 43 units, including the three Available units `GT-CE-LTP-1180-0326-0043`, `GT-CE-LTP-1180-0526-0017`, `GT-CE-LTP-1233-0526-0018` and the supplier "Orbit Supply Co" in the Supplier column; the stored attachment files are cleared | 40 units, or an old snapshot (a `v4` key) is used |
+| E15 | Scroll a long region (the list's filter menu, a drawer body, the status picker, the Move form body) from top to bottom, then open a short menu | The fade shows only on an edge that still has content past it: none at the very top, none at the very bottom, none on a region that fits | A fade over nothing |
 
 ---
 
@@ -201,20 +210,22 @@ Run on the built app at 390, 360, 768, 1920 and 320 px, and drag 320 to 1920.
 - **Forms** (edit details) are one column on a phone. **Text** at least 12 px; addresses and tags wrap rather than overflow.
 - **200% zoom** reflows; **on-screen keyboard** open does not hide the confirm buttons; **landscape phone** works.
 - **Keyboard:** Tab reaches every control in a logical order with a visible 2 px focus ring; Esc closes menus, the drawer and the edit mode; Cmd or Ctrl+S saves the edit; the metric cards and chips toggle with Space or Enter.
-- **Dark mode:** every screen readable, badges, chips and pills keep contrast.
+- **Dark mode:** every screen readable, badges, chips and pills keep contrast. Check in both themes (WCAG 2.2 AA): the Activity and Movements filter chip with its count (dark count on the active chip in dark mode, a darker fill in light mode); the opaque dark row hover in the list and in Custody history, with nothing showing through the pinned columns; the date half of the status badge (a 1 px inset outline in the status colour, the status colours and fills unchanged); the grey address previews, selected toggles and cards (Move Asset QA Doc T). Known remaining items are library or inherited: the Reka combobox and listbox roles, aria-hidden-focus when a modal opens, the design system placeholder colour at 3.5 to 1, the existing All filters drawer headings at 4.34 to 1, and the simulator bar.
+- **Scroll fade:** see E15.
 
 ## Smoke flows (already automated in Playwright)
-The prototype ships `tests/e2e/assets-smoke.spec.ts` (10 tests, passing). Port or extend it against the real app. The flows that belong to the list and detail redesign:
+The prototype ships `tests/e2e/assets-smoke.spec.ts` (16 tests: 10 older and 6 under "Every kind of move", all passing; the Move tests are listed in the Move Asset QA Doc). Port or extend it against the real app. The flows that belong to the list and detail redesign:
 1. The list shows 17 columns and keeps Actions on one pixel; no cell is clipped.
 2. Filters narrow the list, show a named chip, share state with the drawer, and clear.
 3. Edit details with Ctrl+S, Esc, then reload.
 4. The five tabs switch without two pages on screen; removing a legacy tag asks to confirm.
 5. Tampered saved data is ignored.
+6. The Legacy statuses are in the list's Status filter; the Move asset menu on a list row offers the three kinds.
 
 ## Sign-off checklist
-- [ ] A1 to A32 · [ ] B1 to B27 · [ ] C1 to C33 · [ ] D1 to D38 · [ ] E1 to E13
+- [ ] A1 to A32 · [ ] B1 to B30 · [ ] C1 to C35 · [ ] D1 to D40 · [ ] E1 to E15
 - [ ] Every row of the Dev Doc's Feature coverage matrix points to a case above that passed
 - [ ] Responsive and touch block · [ ] Keyboard and dark mode · [ ] Simulator strip absent in production
 
 ## Quick regression pass (after a fix)
-List sideways scroll · a filter, its chip and Clear all · the All filters drawer · edit and save · tab switch · custody empty and populated · Reset sample data.
+List sideways scroll · the row Move menu · the Legacy group in the Status filter · a filter, its chip and Clear all · the All filters drawer · edit and save · tab switch · custody empty and populated · Reset sample data.

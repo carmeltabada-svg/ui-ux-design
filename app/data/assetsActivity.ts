@@ -3,7 +3,7 @@
 // real system these are separate backend records (activities, asset_movements); here they are computed
 // from `Asset.history`, so the dev can replace each function with the API call of the same name.
 import { DB_EMP_NO } from '~/data/assetsDbSeed'
-import { locationView, memberAddress, assetsSimCustody, assetsSimTransit, type Asset, type HistoryEntry } from '~/data/assets'
+import { locationView, memberAddress, memberCompany, assetsSimCustody, assetsSimTransit, type Asset, type HistoryEntry } from '~/data/assets'
 
 export interface AssetMovementRow {
   id: string
@@ -30,10 +30,12 @@ export function movementsOf(a: Asset): AssetMovementRow[] {
   const rows: AssetMovementRow[] = []
   a.history.forEach((h, i) => {
     if (h.movement) {
-      const exitedToClient = h.movement === 'Check Out'
-      const view = locationView({ status: h.status, custodian: '', client: a.client, supplier: a.supplier, location: h.location ?? '' })
+      const out = h.movement === 'Check Out'
+      const view = locationView({ status: h.status, custodian: '', client: a.client, supplier: a.supplier, location: h.location ?? '', locationKind: h.locationKind })
+      // A move names who it checked the unit out to; an older Client Pull-Out record keeps the custodian.
+      const who = out ? (h.member ?? (h.status === 'Client Pull-Out' ? a.custodian : '')) : ''
       rows.push({
-        id: h.id, type: exitedToClient ? 'check_out' : 'check_in', date: h.date, member: exitedToClient ? a.custodian : '', by: h.by,
+        id: h.id, type: out ? 'check_out' : 'check_in', date: h.date, member: who, by: h.by,
         location: h.location ?? view.text, locationIcon: view.icon, locationTip: view.tip, note: h.reason || h.note, status: h.status, sub: h.sub, doc: h.doc
       })
     } else if (h.status === 'In Use' && (h.member ?? a.custodian)) {
@@ -57,7 +59,7 @@ export function custodyOf(a: Asset, today: string): CustodyRow[] {
   const rows: CustodyRow[] = []
   asc.forEach((m, i) => {
     if (m.type !== 'check_out' || !m.member || m.status === 'Client Pull-Out') return
-    const next = asc.slice(i + 1).find(n => n.type === 'check_in' || n.status === 'Client Pull-Out')
+    const next = asc.slice(i + 1).find(n => n.type === 'check_in' || n.status === 'Client Pull-Out' || n.status === 'Supplier Return')
     const end = next?.date ?? null
     const days = Math.max(0, Math.round((new Date(`${end ?? today}T00:00:00`).getTime() - new Date(`${m.date}T00:00:00`).getTime()) / 86400000))
     rows.push({ member: m.member, from: m.date, to: end, days })
@@ -96,6 +98,21 @@ const EMP_NO: Record<string, string> = {
   'Kimberly M. Tolentino': '3796', 'Marco B. Santos': '3812', 'Jasmine R. Ilagan': '3901', 'Franklin L. Lumapas': '3643',
   'Elena V. Cruz': '4021', 'Lesther L. Montermoso': '2891', 'Princess Z. Fabrero': '4128', 'Ramon Jay F. Canizares': '3502'
 }
+export interface TeamMemberOption { name: string, empNo: string, email: string, company: string, address: string }
+
+/** The GoTeam address: first name, a dot, last name, as on the retrieval team members ("geraldene.delatorre@go.team"). */
+function emailOf(name: string): string {
+  const parts = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z\s-]/g, ' ').split(/\s+/).filter(Boolean)
+  const first = parts[0] ?? 'team'
+  const last = parts.length > 1 ? parts[parts.length - 1]! : 'member'
+  return `${first}.${last}@go.team`.toLowerCase()
+}
+
+/** The team members a unit can be checked out to: everyone the prototype knows, with employee number and client. */
+export function teamMemberOptions(): TeamMemberOption[] {
+  return Object.keys(EMP_NO).sort().map(name => ({ name, empNo: EMP_NO[name]!, email: emailOf(name), company: memberCompany(name), address: memberAddress(name) }))
+}
+
 export interface CustodyLine {
   seq: number
   member: string

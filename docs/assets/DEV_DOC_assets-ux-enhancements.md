@@ -2,8 +2,8 @@
 
 **Audience:** developers porting the Assets list and the Asset detail view into the R24 code base (`it/app/pages/app/assets`).
 **Source:** branch `wt-assets`. Front end only, mock data. Nuxt 4, Nuxt UI 4, Tailwind 4, Vue 3.
-**Scope of this doc:** the UI/UX redesign of the Assets list and detail. The Supplier Return and Client Pull-Out exit flow (Move Asset form, confirm step, exit panel, exit documents) is covered in `DEV_DOC_supplier-return-client-pull-out.md`. The two exit statuses do appear in the views below (status badge, filter list, metric card, location), and only that is covered here.
-**Round:** 1 as its own handoff (the work was built over three rounds, summarised under What changed). Design and layout are final.
+**Scope of this doc:** the UI/UX redesign of the Assets list and detail. The Move Asset flow (the move menu, the Check In or Check Out form, the Supplier Return and Client Pull-Out exits, the Move details drawer, the replacement unit and the file store) is covered in `DEV_DOC_supplier-return-client-pull-out.md`. The move entry points, the two exit statuses and the Legacy statuses do appear in the views below (the row and header Move asset menu, the Move details button, the status badge, the Status filter, the metric card, the location), and only that is covered here. The prototype is already signed off; this doc is the build reference.
+**Verified:** 3 Nov 2026. **Round:** 1 as its own handoff (the work was built over three rounds, summarised under What changed), with the 3 Nov updates listed there. Design and layout are final.
 
 **Contents:** Verification status · What changed · Modules · Flow diagram · Known Traps · Easy to miss (small behaviours) · Out of Scope · Edge Cases & Solutions · Responsive Spec · Simulator Scaffolding · Porting map · 1 to 8 behaviour sections · Implementation checklist · Known and accepted · Still open · Code inconsistencies to know about · Feature coverage matrix
 
@@ -11,39 +11,45 @@
 
 ---
 
-## Verification status (Step 6.0), 2 Nov 2026 pass
+## Verification status (Step 6.0), 3 Nov 2026 pass
 
 | Check | Result |
 |---|---|
-| Typecheck | 0 errors in the feature files. 10 pre-existing errors elsewhere (tiptap, DatePicker, ticket tracker) are not from this work. Command: `node node_modules/vue-tsc/bin/vue-tsc.js --noEmit -p .nuxt/tsconfig.app.json` (plain `vue-tsc -p .` checks nothing here). |
+| Typecheck | The same 10 errors as `main` (tiptap, DatePicker, ticket tracker), none in the Assets files. Command: `node node_modules/vue-tsc/bin/vue-tsc.js --noEmit -p .nuxt/tsconfig.app.json` (plain `vue-tsc -p .` checks nothing here). |
 | Production build | Passes (`node node_modules/nuxt/bin/nuxt.mjs build`). |
-| Code review | One independent read only review of the whole feature. Findings fixed: Reset sample data did not restore the database units (the seed is now cloned); a selection kept rows a filter had removed (it is pruned against the visible list); the header and the metric cards counted the full list under the Empty list scenario (they read the same list as the table); "Warranty ending in 90 days" was always 0 (four demo units added); `setMonth` overflowed on day 31 (new `addMonths` helper); the Warranty card and the list used different warranty maths (they now agree); an `Infinity` cost passed validation (`Number.isFinite`); stale stored snapshots hid new fixtures (storage key bumped to `ams:assets:v4`); CSV export had no formula guard (cells starting `= + - @` get a leading quote); hydration did not check every history field (now strict, ids checked); custody selection survived a state switch and the Activity feed and Movements pages did not clamp (both fixed). |
-| Security | No `v-html`, no `innerHTML`. The QR print page and the sample documents escape their output. `window.open` uses blob URLs with `noopener`. Comment uploads exclude HTML and SVG. Lookups use own-property checks. The storage key is namespaced. |
-| Merge safety | Global CSS is only `.assets-shell #main-content ...` (namespaced). The only module level mutable state is the mock store (`ASSETS`, the comment and legacy tag stores, the simulator refs). That is safe only because `nuxt.config.ts` sets `ssr: false` through `routeRules` for `/assets/**` and `/move-asset/**`. If that rule is lost in a merge the state would leak across requests. `app/data/assets.ts` has imports after an `export type` (an `import/first` lint warning, noted). No `console.*`, no `any` casts in the feature files. |
-| Accessibility | axe-core with the WCAG 2.2 AA rule set over 28 page states (7 screens, light and dark, desktop and phone). Only inherited failures remain: placeholder text at 3.5:1 (set on purpose by the design system) and `text-muted` at 4.47:1 on a tinted panel. Keyboard order and visible focus ring checked by hand, including the filter menus and the drawer. |
+| Code review | One independent read only review of the whole feature. Findings fixed: Reset sample data did not restore the database units (the seed is now cloned); a selection kept rows a filter had removed (it is pruned against the visible list); the header and the metric cards counted the full list under the Empty list scenario (they read the same list as the table); "Warranty ending in 90 days" was always 0 (four demo units added); `setMonth` overflowed on day 31 (new `addMonths` helper); the Warranty card and the list used different warranty maths (they now agree); an `Infinity` cost passed validation (`Number.isFinite`); stale stored snapshots hid new fixtures (storage key bumped, now `ams:assets:v5`); CSV export had no formula guard (cells starting `= + - @` get a leading quote); hydration did not check every history field (now strict, ids checked); custody selection survived a state switch and the Activity feed and Movements pages did not clamp (both fixed). A later review of the move menu, the generic move, the details drawer, the replacement picker and the file store gave 10 findings, all fixed; the matching security review found none. |
+| Security | No `v-html`, no `innerHTML`. The QR print page and the sample documents escape their output. `window.open` uses blob URLs with `noopener` (a document tab opened from the file store has its `opener` cleared). Comment uploads exclude HTML and SVG. Lookups use own-property checks. The storage key is namespaced. |
+| Merge safety | Layout CSS is namespaced under `.assets-shell #main-content ...`. The one app wide addition is the scroll fade: the `.fade-scroll-y` and `.fade-scroll-x` utilities in `main.css` plus `plugins/fadeScroll.client.ts` (see section 8); it changes only elements that carry those classes. The only module level mutable state is the mock store (`ASSETS`, `DOC_URLS`, the comment and legacy tag stores, the simulator refs). That is safe only because `nuxt.config.ts` sets `ssr: false` through `routeRules` for `/assets/**` and `/move-asset/**`. If that rule is lost in a merge the state would leak across requests. The imports in `app/data/assets.ts` are all at the top of the file. No `console.*`, no `any` casts in the feature files. |
+| Accessibility | WCAG 2.2 AA work covers the list and detail screens too: the opaque dark row hover (nothing shows through the pinned columns, also in Custody history), the Activity and Movements filter count badge (dark count on the active chip, a darker fill in light), and the date half of the status badge, which now has a 1 px inset outline in its status colour (3:1 or better against the row; the status colours and fills are unchanged). axe-core over 26 light states: only library or inherited items remain (reka combobox and listbox roles, `aria-hidden-focus` while a modal opens, the design system placeholder colour at 3.5:1, the existing All filters drawer headings at 4.34:1, the simulator bar). Lighthouse, desktop, on the Move form: accessibility 97, best practices 96, SEO 100; mobile, on `/assets`: 96, 100, 100. Keyboard order and visible focus ring checked by hand, including the filter menus and the drawers. |
 | Timezones | Pacific/Pago_Pago, America/Los_Angeles, UTC, Asia/Manila and Pacific/Kiritimati: every stored date, day pill and badge date renders identically. Dates are `YYYY-MM-DD` strings parsed at local midnight. |
-| Performance | Lighthouse on the production build, headless, with the Nitro preview server (no compression). Desktop 35 to 54, mobile 57 to 85, accessibility 96 to 97, best practices 96 to 100, CLS 0, LCP 2.3 s warm with occasional 14 s cold first loads. Page weight about 2.3 MB uncompressed, JS 1.4 to 1.7 MB, of which the feature is a small share: the rest is the shared app shell (framework, Nuxt UI, the Templates editor and shared data). |
-| End to end | Playwright, 10 of 10 pass on the production build (`tests/e2e/assets-smoke.spec.ts`), including the filters test (quick filter, drawer, chip removal). Run: `PLAYWRIGHT_BASE_URL=http://localhost:3200 npx playwright test tests/e2e/assets-smoke.spec.ts`. |
+| Performance | Production preview, not compressed. Desktop: LCP about 260 to 360 ms, CLS 0, page weight about 2.7 to 2.9 MB. Slow phone profile: LCP 4 to 5 s with 1 to 3.5 s of blocking time. The feature is a small share of the JavaScript: the rest is the shared app shell (framework, Nuxt UI, the Templates editor and shared data). The earlier Lighthouse performance scores (headless, Nitro preview) are superseded by these numbers; re-measure on the ported build, with compression on. |
+| End to end | Playwright, 16 of 16 pass (`tests/e2e/assets-smoke.spec.ts`): the 10 earlier tests (list, filters, no clipped cell, Move Asset, detail edit, tabs, legacy tags, tampered data) plus 6 "Every kind of move" tests (the row Move menu, a Check In with a legacy status, a Check Out to a team member, the Charged Deduction documents, the Move details drawer, the Legacy statuses in the Status filter). Run: `PLAYWRIGHT_BASE_URL=http://localhost:3200 npx playwright test tests/e2e/assets-smoke.spec.ts`. |
 | Widths | No sideways page overflow at 320, 375, 768 and 1440 on the list, the detail tabs and the Move Asset pages. The All filters drawer fits at every width (296 px at 320). |
 
 ## What changed since last round
 
 First handoff of this work.
 
-Removed and must not come back: the three lane pills (they duplicated the Status filter), the Legacy status group (left out for now), the Currency filter (switched off in the live code), the old three chip header (In use, Ready to deploy, Returned or pulled out), a description line that only repeated the status counts.
+**Updated 3 Nov 2026** (the Move Asset work, see `DEV_DOC_supplier-return-client-pull-out.md`, touched these screens):
+- The Move icon on a list row and the "Move asset" button on the asset detail header now open a menu of three kinds of move (`components/assets/MoveMenu.vue`): Check In or Check Out, Return to supplier, Client pull-out (off, with a reason, for a unit that cannot be pulled out). The detail header shows "Move details" for an exited unit, which opens a slide-over drawer on this page (`?moveDetails=1`).
+- The **Legacy status group is back**: the five retired statuses (Defective, For Inspection, In Transit, Pending Disposal, Under Repair, from the live status table) are in the list's Status filter after the lanes. No sample unit is on one, so their counts read 0.
+- The sample data is **43 units** (was 40) and the storage key is **`ams:assets:v5`** (was v4). Real attached files are kept in IndexedDB, so documents open from the Movements tab and the Activity Feed after a reload.
+- The status badge date half has a 1 px inset outline in its status colour; the dark row hover is opaque; the filter count badge on Activity and Movements has a stronger contrast; the scroll fade is edge aware.
+
+Removed and must not come back: the three lane pills (they duplicated the Status filter), the Currency filter (switched off in the live code), the old three chip header (In use, Ready to deploy, Returned or pulled out), a description line that only repeated the status counts.
 
 ## Modules
 
 | # | Module | Files |
 |---|---|---|
-| U1 | Data and seed | `app/data/assets.ts`, `assetsActivity.ts`, `assetsDetail.ts`, `assetsDbSeed.ts` |
+| U1 | Data and seed | `app/data/assets.ts`, `assetFiles.ts`, `assetsActivity.ts`, `assetsDetail.ts`, `assetsDbSeed.ts` |
 | U2 | List header and metric cards | `app/pages/assets/index.vue` (header) |
-| U3 | List table | `app/pages/assets/index.vue` (table, paging, selection, CSV) |
+| U3 | List table | `app/pages/assets/index.vue` (table, paging, selection, CSV, the row Move menu), `components/assets/MoveMenu.vue` |
 | U4 | List filters | `app/pages/assets/index.vue` (toolbar, chips, drawer), `components/assets/FilterMenu.vue`, `Truncate.vue` |
-| U5 | Detail header and details card | `app/pages/assets/[tag].vue` |
+| U5 | Detail header and details card | `app/pages/assets/[tag].vue` (header Move menu, Move details button), `components/assets/MoveMenu.vue`, `MoveDetailsDrawer.vue` |
 | U6 | Detail right rail | `app/pages/assets/[tag].vue` (rail) |
 | U7 | Detail tabs | `[tag]/activity-feed.vue`, `movements.vue`, `custody-history.vue`, `photos.vue`, `legacy-tags.vue`, `components/assets/SummaryCard.vue`, `SummaryCell.vue`, `FilterChips.vue`, `MovementComments.vue` |
-| U8 | Shell and simulator | `layouts/assets.vue`, `email/AmsSidebar.vue`, `email/TopNavbar.vue`, `nuxt.config.ts`, `components/assets/SimulatorBar.vue` |
+| U8 | Shell, scroll fade and simulator | `layouts/assets.vue`, `email/AmsSidebar.vue`, `email/TopNavbar.vue`, `nuxt.config.ts`, `plugins/fadeScroll.client.ts`, `assets/css/main.css`, `components/assets/SimulatorBar.vue` |
 
 ## Flow diagram
 
@@ -58,6 +64,10 @@ flowchart TD
   C -->|remove chip or Clear all| F
   F --> L
   L -->|tag link| D[Asset detail]
+  L -->|Move icon| MM{Move menu}
+  D -->|Move asset| MM
+  MM -->|Check In or Check Out, Return to supplier, Client pull-out| MV[Move Asset form]
+  D -->|exited unit: Move details| DR[Move details drawer]
   D --> T{Tab}
   T --> A[Activity feed]
   T --> M[Movements]
@@ -91,14 +101,14 @@ Each line is a real behaviour in the prototype that is easy to skip. The file th
 3. "Clear" in the toolbar also shows when only a search is typed; the applied chips row never shows the search, but "Clear all" clears it too. [`pages/assets/index.vue`]
 4. A metric card first clears the Status and Warranty filters, then applies its own; it shows the ring only when the filter equals its set exactly. [`pages/assets/index.vue`, `toggleMetric()`]
 5. Metric cards, the title and the line under it count the scenario list, not the filtered rows, so filters never change them. [`pages/assets/index.vue`]
-6. Actions shows the muted minus (not a blank) for an exited unit and for the read only role; the Move icon is a truck with the tooltip "Move asset" and the label "Move TAG". [`pages/assets/index.vue`]
+6. Actions shows the muted minus (not a blank) for an exited unit and for the read only role; the Move icon is a truck with the tooltip "Move asset" and the label "Move TAG", and it opens the move menu (Check In or Check Out, Return to supplier, Client pull-out) instead of going straight to the form. [`pages/assets/index.vue`, `components/assets/MoveMenu.vue`]
 7. Name icons are per name: Laptop, Monitor and Desktop have their own, any other name gets a tag icon; only "Computer Equipment" has a Type icon. [`pages/assets/index.vue`, `data/assets.ts`, `TYPE_ICON`]
 8. Status in the table is the solid badge with the lighter date half ("2026, Oct 23") and never a sub-status; the detail header badge does show the sub-status as a grey chip beside it. [`StatusPill.vue`]
 9. The Client column shows a value only when the unit is Checked Out and has a client; the Owner column is always filled. [`pages/assets/index.vue`]
 10. Acquisition Cost is `CUR 1,234.00` (currency prefix, two decimals, right aligned); a cost of 0 shows the muted minus. The detail field shows the number without the prefix and the currency sits in the label. [`pages/assets/index.vue`, `[tag].vue`]
 11. The export CSV has 10 columns that are not the table's 17: Tag, Serial, Model, Type, Status, Sub-status, Tech Pack, Checked out to, Owner, Location; the file is `assets.csv`; the toast says "N asset exported" or "N assets exported". [`pages/assets/index.vue`, `exportSelected()`]
 12. The select all checkbox in the header acts on the current page only; the selection count survives paging. [`pages/assets/index.vue`]
-13. The page size choices are 10, 15 and 25, default 10; the footer line reads "Show [10] assets per page · 1-10 of 40". The footer is hidden while loading, on the Not found state and when no row matches. [`pages/assets/index.vue`]
+13. The page size choices are 10, 15 and 25, default 10; the footer line reads "Show [10] assets per page · 1-10 of 43". The footer is hidden while loading, on the Not found state and when no row matches. [`pages/assets/index.vue`]
 14. State = Not found on the list shows "We couldn't load the assets" with a "Try again" button that sets the state back to Populated; the toolbar stays. [`pages/assets/index.vue`]
 15. Find by QR, CSV (page button) and Add Asset have no action in the prototype. Do not hunt for a handler. [`pages/assets/index.vue`]
 16. Warranty Status buckets: below 0 days Already Expired; 0 to 30 days; 31 to 60; 61 to 90; a unit with no warranty is in none. The Warranty metric card is the three "Expiring" buckets together. [`pages/assets/index.vue`, `warrantyBucket()`]
@@ -109,7 +119,7 @@ Each line is a real behaviour in the prototype that is easy to skip. The file th
 21. A tooltip appears on a truncated value only while it is truncated (measured with a ResizeObserver), including the search placeholder. [`Truncate.vue`, `pages/assets/index.vue`]
 22. The detail header badge row is separated by "·" dots and shows, in order: status badge (with sub-status chip), movement state, type, name, holder. The name icon in the header and details card is always the laptop. [`[tag].vue`]
 23. The holder text depends on the Custody simulator: with "From the data" it is the custodian, "At the supplier", "Pulled out by {client}" or "In stock"; with any forced Custody state it is "Currently with {member}", "Last held by {member}" or "No custodian". [`[tag].vue`]
-24. Read only role: no Edit details, no Move asset, no Link PO; the overflow menu (Delete asset) and Back still show. Move asset is also hidden for an exited unit. [`[tag].vue`]
+24. Read only role: no Edit details, no Move asset, no Link PO; the overflow menu (Delete asset) and Back still show. Move asset is also hidden for an exited unit, where the header shows "Move details" instead (it opens the drawer, and is not role gated). Move asset is a menu button, not a link: it offers the three kinds of move. [`[tag].vue`]
 25. Name and Tag are never editable. Edit mode edits Serial, Model, Location, Owner, Acquisition Cost, Purchase Order, Tech pack Type and Currency (PHP or USD radio); the cost label shows the currency being picked. [`[tag].vue`, `data/assetsDetail.ts`]
 26. Validation texts: "Enter the serial number", "Pick the model", "Pick where the asset lives", "Pick the owner", "Enter the cost, 0 if there is none". They show only after the first save attempt; a blocked save scrolls the first error to the centre. [`data/assetsDetail.ts`, `[tag].vue`]
 27. Helper texts under the fields in edit mode: "Manufacturer's serial number", "Pick the exact model this unit is", "Where this asset currently lives", "Legal owner entity of this asset", "Enter 0 if there was no cost", "Currency the acquisition cost is in". [`[tag].vue`]
@@ -137,24 +147,27 @@ Each line is a real behaviour in the prototype that is easy to skip. The file th
 49. Custody Used Age shows "< 1 mo" under one month, "N mo", and "—" when unknown; the first custodian is "Brand New", later ones "Refurbished"; Received Date shows an "Open" badge only while Transit = "In transit, receipt open". [`custody-history.vue`, `data/assetsActivity.ts`]
 50. Custody Location is the custodian's home address; a custodian name with `_` or `;` has them replaced by a space in the copied text. [`custody-history.vue`, `data/assets.ts`]
 51. Legacy tags: new tags are added at the top; duplicates are checked case insensitive; Enter in the modal saves; page size 10 with first, previous, next, last buttons and "Page X of Y"; the footer count reads "N tag(s)". Only the seeded unit `GT-CE-LTP-1233-0926-0013` has legacy tags. [`legacy-tags.vue`, `data/assetsDetail.ts`]
-52. Comments and legacy tags live in memory only: a reload loses them. Only the assets themselves are saved to `localStorage`. Reset sample data restores all of it. [`data/assetsDetail.ts`, `data/assets.ts`]
+52. Comments and legacy tags live in memory only: a reload loses them. Only the assets themselves are saved to `localStorage` (and the files attached to a move are kept in IndexedDB, see 57). Reset sample data restores all of it and empties the file store. [`data/assetsDetail.ts`, `data/assets.ts`, `data/assetFiles.ts`]
 53. Loading state: the list shows 6 skeleton rows; Activity feed and Movements show 3 skeleton rows; Custody history shows a single "Loading custody history..." row; Photos and Legacy tags ignore it. [`pages/assets/index.vue`, `[tag]/*.vue`]
 54. Links are `blue-700` (dark `blue-400`), never underlined, and every clickable element has a pointer cursor through the layout's own CSS. [`layouts/assets.vue`]
 55. The layout has a skip link and `#main-content` is focusable (`tabindex="-1"`). [`layouts/assets.vue`]
 56. Page titles: list "Assets - GoTeam Assets"; detail "{TAG} - GoTeam Assets". [`pages/assets/index.vue`, `[tag].vue`]
-57. Documents (activity chip, movement card) open a blob in a new tab with `noopener`; the chip ends with an arrow-up-right icon. [`data/assets.ts`, `openDoc()`]
+57. Documents (activity chip, movement card, the Move details drawer) open in a new tab: this session's object URL, else the real file read from the file store (IndexedDB, so it survives a reload), else, for the sample units' paperwork, a one page stand-in reading "The file itself is not stored in this browser. Attach the document again to see it here." The new tab has no link back to the app; the chip ends with an arrow-up-right icon. [`data/assets.ts`, `openDoc()`, `data/assetFiles.ts`]
 58. Breadcrumb on the detail page is Home > Assets > TAG. It does not add the tab name (the earlier version of this doc said it did). [`email/TopNavbar.vue`]
+59. The Charged Deduction feed event shows the IT Clearance beside the Authority to Deduct, and both open the real file; a replacement change shows as a "link" event with its own verb. [`data/assetsDetail.ts`, `[tag]/activity-feed.vue`]
+60. The scroll fade (the All filters drawer body, the Move details drawer, the status and replacement lists, the Move form body) shows only on an edge that still has content past it: no fade at the very top or the very bottom, none when the content fits. [`plugins/fadeScroll.client.ts`, `assets/css/main.css`]
 
 ## Out of Scope
 
 **Deferred / boundary**
 - Backend, API, auth and role permissions (the prototype's "Viewing as" control stands in). *(all)*
-- The Supplier Return and Client Pull-Out flow itself: Move Asset form, confirm step, exit documents. It is covered in `DEV_DOC_supplier-return-client-pull-out.md`. *(all)*
+- The Move Asset flow itself: the move menu's destinations (the generic Check In or Check Out form, Supplier Return, Client Pull-Out, confirm step, exit documents), the Move details drawer and the replacement unit. It is covered in `DEV_DOC_supplier-return-client-pull-out.md`; only the entry points on the list and the detail header are described here. *(all)*
 - The pages the prototype only links to: asset model, location, owner, purchase order. Each shows an "existing view" toast. *(U3, U5, U6)*
 - Add Asset, Find by QR and the CSV page button beyond the buttons; Add historical movement, Delete asset, photo upload, legacy tag server rules. *(U2, U5, U7)*
 - A real QR encoder and a camera scanner. *(U6)*
 - Server side counts: the metric cards count what the prototype holds. *(U2)*
-- Tech Pack Currency filter (switched off in the live code) and the Legacy status group (the 5 units on retired statuses are left out of the seed for now). *(U4)*
+- Tech Pack Currency filter (switched off in the live code). *(U4)*
+- Sample units on the five Legacy statuses: the Legacy group is in the Status filter, but no unit is on one yet, so each of its counts reads 0. *(U1, U4)*
 
 **Anticipated, not wanted**
 - Status group pills by lane in the header. They duplicate the Status filter. *(U2)*
@@ -183,7 +196,7 @@ Each line is a real behaviour in the prototype that is easy to skip. The file th
 | Unit never deployed | Total used age "—", "Across 0 custodians", "No usage yet", "Not currently deployed", "No deployments yet" |
 | Several events on one day | Grouped under one day pill; order is by date, then the order they were made |
 | Event with no note or document | The note box and the document line stay, saying "No note recorded" and "No document attached" |
-| Stored `ams:assets:v4` data tampered or malformed | Invalid entries ignored, valid ones applied, nothing thrown; `__proto__` ids rejected |
+| Stored `ams:assets:v5` data tampered or malformed | Invalid entries ignored, valid ones applied, nothing thrown; `__proto__` ids rejected |
 | Esc pressed while a select is open in edit mode | Closes the select only; the draft is kept |
 | Phone width | Header stacks, toolbar wraps, table scrolls sideways with Tag frozen, drawer fits, no page overflow |
 
@@ -219,28 +232,29 @@ The dark strip at the top (State, Viewing as, Scenario, plus Custody history, Wa
 | `MOVEMENT_COMMENTS`, `LEGACY_TAGS` | Comment and legacy tag endpoints |
 | `saveAssetDetails()` | Asset update endpoint |
 | `warrantyDaysLeft()`, `addMonths()` | The server's warranty expiry (order date plus model warranty months) |
-| `openDoc()` and `sampleDocBlob()` | Signed document URLs from the API |
+| `openDoc()`, `sampleDocBlob()`, `app/data/assetFiles.ts` (`saveFile`, `loadFile`, `clearFiles`) | Signed document URLs from the API; the file upload (the prototype keeps attached files in IndexedDB only so they open after a reload) |
+| `moveKindOptions()`, `moveHref()`, `components/assets/MoveMenu.vue` | The Move asset menu (which kinds a unit offers) and the move routes; the rest is in `DEV_DOC_supplier-return-client-pull-out.md` |
 | `qrSvg()` and the QR grid | A real QR encoder |
-| `app/data/assetsDbSeed.ts`, `watchAssetsToStorage()`, `plugins/assetsStorage.client.ts`, `resetAssets()` | Remove (mock data and persistence) |
+| `app/data/assetsDbSeed.ts`, `watchAssetsToStorage()`, `plugins/assetsStorage.client.ts`, `resetAssets()`, `app/data/assetFiles.ts` | Remove (mock data, persistence and file storage) |
 | `CURRENT_OFFICER`, `CURRENT_USER`, `assetsSimRole` | The signed in user and real permissions |
 
-Generic export names to rename or namespace when porting: `initialsOf`, `openDoc`, `fileSize`, `localToday`, `locationView`, `avatarTint`, `addMonths`, `isoOf`. Two bare `catch` blocks in `assets.ts` swallow storage errors on purpose; log them in real code. Attached files are not stored in the prototype (name, type and size only).
+Generic export names to rename or namespace when porting: `initialsOf`, `openDoc`, `fileSize`, `localToday`, `locationView`, `avatarTint`, `addMonths`, `isoOf`. Bare `catch` blocks in `assets.ts` and `assetFiles.ts` swallow storage errors on purpose; log them in real code. Attached files are kept in the browser's IndexedDB (`assetFiles.ts`) only so the prototype can open them again; the history keeps name, type and size.
 
 ---
 
 ## 1. Data and seed (U1)
 
-- **Seed.** `app/data/assetsDbSeed.ts` holds 30 units taken from a local copy of the R24 database, with every movement (106). It is generated fixture data. Beside it sit 10 hand made units that show Supplier Return, Client Pull-Out and BYOD; four of those carry a warranty that ends in 20, 55 and 85 days or ended 40 days ago (counted from today), so the warranty card and filter have something to show. 5 database units on retired statuses are left out for now. The list holds 40 units.
+- **Seed.** `app/data/assetsDbSeed.ts` holds 30 units taken from a local copy of the R24 database, with every movement from that copy (95 history entries). It is generated fixture data. Beside it sit the hand made units that show Supplier Return, Client Pull-Out, BYOD and the replacement picker (including three Available units added on 3 Nov: `GT-CE-LTP-1180-0326-0043`, `GT-CE-LTP-1180-0526-0017` and `GT-CE-LTP-1233-0526-0018`, and a new supplier, Orbit Supply Co); four of them carry a warranty that ends in 20, 55 and 85 days or ended 40 days ago (counted from today), so the warranty card and filter have something to show. The 5 retired statuses are defined (`LEGACY_STATUSES`) but no unit is on one. The list holds 43 units.
 - **Movements become history.** A check out keeps its team member on the history entry; a later check in keeps the location. `movementsOf()` turns history into movement rows (newest first).
-- **Statuses.** 27 statuses in 6 lifecycle lanes (Intake & Ready Pool, Active Use, Return & Triage, Review & Investigation, Decommissioning, Terminal). Status fills are the live `StatusBadge.vue` colours; the date half is a light tint of the fill. Do not change existing colours.
+- **Statuses.** 27 statuses in 6 lifecycle lanes (Intake & Ready Pool, Active Use, Return & Triage, Review & Investigation, Decommissioning, Terminal), plus 5 Legacy statuses in their own group after the lanes (`LEGACY_STATUSES`, from the live status table's `is_legacy`: Defective red, For Inspection yellow, In Transit purple, Pending Disposal orange, Under Repair yellow; kept out of `STATUSES` so the lane counts do not change, found by `statusDef`). Status fills are the live `StatusBadge.vue` colours; the date half is a light tint of the fill with a 1 px inset outline in the status colour (`STATUS_LIGHT`). Do not change existing colours.
 - **Asset types.** CE Computer Equipment, FF Furniture and Fixtures, OE Office Equipment, each with its list of asset names (`ASSET_TYPES`, `ASSET_NAMES`).
-- **Location rule** (`locationView`): a team member's address (house icon), a supplier (truck), a client (building), otherwise the GoTeam location (building). `kind` is `member`, `supplier`, `client` or `location`.
+- **Location rule** (`locationView`): a team member's address (house icon), a supplier (truck), a client (building), otherwise the GoTeam location (building). `kind` is `member`, `supplier`, `client` or `location`. A move stores `locationKind` on the unit, and `locationView` honours it first (a unit a generic move sent to a supplier or a team member keeps its truck or house icon even though its status is not Supplier Return or In Use).
 - **Warranty.** The end date is the order date plus the model's warranty months; with no order date, a year from the first record. `warrantyDaysLeft` returns days left, negative once ended, `null` with no warranty. Buckets for the filter: Already Expired (below 0), Expiring in 30 Days (0 to 30), 60 Days (31 to 60), 90 Days (61 to 90).
-- **Storage.** `ams:assets:v4`, validated on read: only known fields with the right shape are applied; history entries are checked field by field; ids must match `^[\w-]+$` and may not be `__proto__`.
+- **Storage.** `ams:assets:v5`, validated on read: only known fields with the right shape are applied; history entries are checked field by field; ids must match `^[\w-]+$` and may not be `__proto__`.
 - **Custody maths** (`custodyViewFor`): months are days / 30 rounded down; Actual age counts from the first "Available" record; Total used age is the sum of the rows; the maiden custodian is the first row; the current one has no end date.
 - **Date formats (four, do not mix them).** Status badge date half and Legacy "Added on": `2026, Oct 23` (`badgeDate`). Activity feed, Timestamps and custody summary: `17 Mar 2026, 1:49 PM` (`stampLabel`, the custody summary drops the comma). Custody table dates: `14 Oct 2026` (`dmy`). Warranty card dates: `March 05, 2027`. Comment time: `Nov 2, 2026 2:14 PM`. Day pills: `Today`, `Yesterday` or the badge date. "ago" labels: `today`, `1 day ago`, `N days ago`, `N months ago`, `N years ago`.
 - **Derived demo values to replace with real data:** the time of day of a record (hash of its id, 8:00 to 17:59), the movement number (`#` + 4 digits), the employee number fallback, custody Condition (first row "Brand New", the rest "Refurbished"), custody Location (the custodian's home address), and the tech pack tier of ten named units.
-- **Persistence.** Only `ASSETS` is saved to `localStorage` (and hydrated after mount). Comments, legacy tags and the simulator selections are memory only and reset on reload. Attached files are never stored (name, type, size only); a document attached in this session opens from its object URL, every other document opens a generated sample PDF or image.
+- **Persistence.** Only `ASSETS` is saved to `localStorage` (and hydrated after mount). Comments, legacy tags and the simulator selections are memory only and reset on reload. The history keeps only a document's name, type and size; the file itself is stored in IndexedDB (`app/data/assetFiles.ts`, database `ams-assets-files`) under the history entry id, so a document opens as the real file after a reload. A document attached before the file store existed cannot be recovered. The sample units' paperwork has no file and opens a one page stand-in reading "The file itself is not stored in this browser. Attach the document again to see it here." Reset sample data clears the file store.
 - **Status badge styles** are in `STATUS_BG` and `STATUS_LIGHT` (nine colours). Tech pack styles are in `TECH_PACK_STYLE` and `TIER_STYLE`: Monthly Rental blue with a repeat icon ("Rental"), Outright Purchase orange with badge-check ("Purchase"), BYOD teal with a laptop icon ("BYOD", no tier); tiers Standard (slate), High (green), Ultra (violet) as outline badges.
 - **Type icon:** only "Computer Equipment" has one (`i-lucide-monitor-speaker`); other types show their text with no icon. Name icons: Laptop, Monitor, Desktop have their own, any other name uses a tag icon.
 
@@ -259,7 +273,7 @@ Generic export names to rename or namespace when porting: `initialsOf`, `openDoc
 
 - One white card: the toolbar, the applied chips row (only while filters are on), the table, then "Show N per page" and pagination. Markup, spacing and the frozen header strip match the ticket tracker.
 - **17 columns in the live order:** Tag, Serial, Model, Name, Type, Status, Tech Pack, Ownership, Movement Status, Checked in by / Checked out to, Checked out to (Client), Owner, Location, Purchase Order, Supplier, Acquisition Cost, Actions. Checkbox column first. Table cells never truncate.
-- Tag opens the detail page. Model and Purchase Order are links that show a toast for the existing pages. Location is a link only for an office location, plain text with its icon otherwise. Ownership reads "GoTeam-Owned" or "Client-Owned". Actions is a single Move icon; for an exited unit and for the read only role the cell shows the muted minus instead.
+- Tag opens the detail page. Model and Purchase Order are links that show a toast for the existing pages. Location is a link only for an office location, plain text with its icon otherwise. Ownership reads "GoTeam-Owned" or "Client-Owned". Actions is a single Move icon that opens the move menu (Check In or Check Out, Return to supplier, Client pull-out); for an exited unit and for the read only role the cell shows the muted minus instead.
 - Selection survives paging but never holds rows a filter has removed. Export selected writes a CSV of the chosen rows; a cell starting with `= + - @` gets a leading quote.
 - Skeleton rows have the same 18 cells as the real rows (6 rows, each cell shaped like its real content: avatar circle, badge pill, link bar). Empty states: "No assets yet" with "Assets you add will show here." and "No assets match" with "Try removing a filter or changing the search." and a "Clear search and filters" button.
 - **Column by column** (width in px, the column order is the `<colgroup>` order; checkbox 48, then):
@@ -272,7 +286,7 @@ Generic export names to rename or namespace when porting: `initialsOf`, `openDoc
 | Model (220) | Blue button link, toasts the "asset model detail" note |
 | Name (150) | Icon (Laptop, Monitor, Desktop have their own, else a tag icon) plus text |
 | Type (200) | Icon only for Computer Equipment (`monitor-speaker`), then the text |
-| Status (300) | Solid badge plus lighter date half (`2026, Oct 23`); no sub-status |
+| Status (300) | Solid badge plus lighter date half (`2026, Oct 23`) with a 1 px inset outline in the status colour; no sub-status |
 | Tech Pack (180) | Plan badge (Rental, Purchase, BYOD) plus a tier badge (Standard, High, Ultra); BYOD has no tier |
 | Ownership (170) | "GoTeam-Owned" when the owner is GoTeam, otherwise "Client-Owned" |
 | Movement Status (170) | Icon plus text: log-in blue for Checked In, log-out purple for Checked Out |
@@ -283,12 +297,12 @@ Generic export names to rename or namespace when porting: `initialsOf`, `openDoc
 | Purchase Order (150) | Blue button link (toast) or the muted minus |
 | Supplier (230) | Square initials avatar plus the supplier, or the muted minus |
 | Acquisition Cost (180, right) | `PHP 1,234.00` style (currency, thousands separator, two decimals), tabular figures; the muted minus when the cost is 0 |
-| Actions (88, frozen right, centred) | Truck icon button to `/move-asset/{tag}/move`, tooltip "Move asset", label "Move {tag}"; the muted minus for an exited unit or the read only role |
+| Actions (88, frozen right, centred) | Truck icon button that opens the move menu (`MoveMenu.vue`, then `/move-asset/{tag}/move` with an optional `?kind=supplier|client`), tooltip "Move asset", label "Move {tag}"; the muted minus for an exited unit or the read only role |
 
 - **Frozen offsets:** Tag sticks at 48 px, Serial at 298 px, Actions at 0 from the right. Header cells are `z-20`, body cells `z-10`; the header is `bg-slate-50` (`dark:bg-gray-800`); a body cell hover colour is applied to every cell of the row (`group-hover`) including the frozen ones. The header's top left and top right corners are rounded, and a radial gradient `::after` on Actions paints the outside of the corner in the card colour so nothing shows through.
 - **Selection bar:** once a row is ticked the toolbar's right side shows "N selected" (primary), "Export selected" (ghost, download icon) and "Clear" (ghost). Selection is a set of tags: it survives paging, and any tag that a filter, the search or the scenario removes is dropped.
 - **Export:** the rows come in list order (not tick order). The columns are Tag, Serial, Model, Type, Status, Sub-status, Tech Pack, Checked out to, Owner, Location. A cell that starts with `= + - @`, a tab or a carriage return gets a leading `'`; a cell with a comma, quote or newline is quoted. File `assets.csv`; toast "N asset(s) exported".
-- **Paging:** sizes 10, 15, 25 (default 10). Footer: "Show", the size select, "assets per page · 1-10 of 40", then the pager. Hidden while loading, on Not found and when nothing matches. A change of search, filter or size returns to page 1; a shrinking result clamps the page.
+- **Paging:** sizes 10, 15, 25 (default 10). Footer: "Show", the size select, "assets per page · 1-10 of 43", then the pager. Hidden while loading, on Not found and when nothing matches. A change of search, filter or size returns to page 1; a shrinking result clamps the page.
 - **Not found state (list):** "We couldn't load the assets", "Check your connection and try again.", and a "Try again" button.
 
 ## 4. List filters (U4)
@@ -298,7 +312,7 @@ Generic export names to rename or namespace when porting: `initialsOf`, `openDoc
 
 | Filter | Options |
 |---|---|
-| Status | Grouped under lane headings, every status listed (27), A to Z inside a lane, with a search box |
+| Status | Grouped under lane headings, every status listed (27 in the lanes, then a Legacy group of 5: Defective, For Inspection, In Transit, Pending Disposal, Under Repair), A to Z inside a group, with a search box |
 | Asset Type | "CE - Computer Equipment", "FF - Furniture and Fixtures", "OE - Office Equipment" (all three, even at 0) |
 | Asset Name | The names of the picked types; disabled with "Pick an asset type first" until then |
 | Ownership | GoTeam-Owned, Client-Owned (in that order) |
@@ -326,7 +340,7 @@ Generic export names to rename or namespace when porting: `initialsOf`, `openDoc
 - **Details card** sections: Identity, Location, Ownership & finance, Tech pack, Timestamps (collapsed, `14 Oct 2026, 1:34 PM`). Serial and Model have copy buttons; Model, Location (office only), Owner and Purchase Order are blue links that show the "existing view" toast.
 - **Edit details:** scrolls the card to the top, card gets a primary border and ring, banner shows. Esc cancels, Cmd or Ctrl+S saves. Required fields marked; Owner has "Use GoTeam (default)"; PO has Clear. A BYOD unit saves with cost 0.
 - Copy buttons use `useCopyFlash` (check icon, green, "Copied" tooltip, no toast). There are four: tag (in the title), serial, model (in the details card); the flash lasts 1.5 s, each button has its own key, and a failed clipboard write still flashes.
-- **Header row order:** back arrow (tooltip "Back to Assets"), the tag in a 24 px heading (long tags break anywhere) with its copy button, then the badge row separated by "·": status badge with date and the sub-status chip, movement state (log-in blue or log-out purple icon, from the newest movement), type with icon, name (laptop icon), holder (users icon). Actions on the right: "Edit details" (pencil, hidden while editing and for the read only role), "Move asset" (truck, hidden for an exited unit and the read only role), overflow ("More actions", ellipsis, one item: Delete asset in red, toast "Delete Asset"). The header is sticky from `sm` with the border below it.
+- **Header row order:** back arrow (tooltip "Back to Assets"), the tag in a 24 px heading (long tags break anywhere) with its copy button, then the badge row separated by "·": status badge with date and the sub-status chip, movement state (log-in blue or log-out purple icon, from the newest movement), type with icon, name (laptop icon), holder (users icon). Actions on the right: "Edit details" (pencil, hidden while editing and for the read only role), "Move asset" (truck and a chevron, a menu of the three kinds of move; hidden for an exited unit and the read only role, where an exited unit shows "Move details" with a clipboard icon, which opens the drawer), overflow ("More actions", ellipsis, one item: Delete asset in red, toast "Delete Asset"). The header is sticky from `sm` with the border below it.
 - **Details card, view mode, in order.** Identity: Tag (tag icon), Serial (hash icon, copy), Name (laptop icon), Model (cpu icon, blue link, copy). Location: icon from the location rule plus the text with a tooltip, a link only for an office. Ownership & finance: Owner (square initials avatar, blue link, toast says it opens the client page), Acquisition Cost (`Acquisition Cost (PHP)`, number with no prefix or the muted minus), Purchase Order (file icon, blue link or "Not linked" in placeholder colour). Tech pack: Type (badge), Currency (banknote icon). Timestamps (collapsed): Created and Updated with a calendar icon. Labels are 12 px `text-muted`; values are 14 px `text-highlighted`; section labels are 12 px semibold uppercase `text-dimmed`.
 - **Edit mode fields:** Serial (text, placeholder "e.g. 5CD5281W0J", id `serial-field`), Model (select of 11 models), Location (select of 8 locations), Owner (select of 4 owners plus "Use GoTeam (default)"), Acquisition Cost (number, step 0.01, min 0, placeholder 0.00), Purchase Order (select, "Not linked" plus 9 POs, with a Clear X), Tech pack Type (select: Monthly Rental, Outright Purchase, BYOD), Currency (horizontal radio: PHP, USD). Required (red asterisk): Serial, Model, Location, Owner, Acquisition Cost, Type, Currency. Tag, Name and the timestamps are not editable.
 - **Edit behaviour:** the draft starts from the saved unit (PO from the same `effectivePo` the card uses). Cost passes when it is a finite number of 0 or more (`1e999`, negative and blank fail). Save writes serial (trimmed), model, location, owner, cost, PO, tech pack and currency to the store and persists them. A blocked save marks the failing fields (`color="error"` plus the message under it, red 12 px) and scrolls the first one to the centre. Cmd or Ctrl+S is captured on the whole window while editing (browser Save is blocked).
@@ -398,7 +412,8 @@ Three cards in the retrieval side card style (slate strip header, `text-xs` labe
 - **Sidebar:** Assets is active on `/assets` and `/assets/**`. The Move Asset item now links to `/move-asset` and is active on `/move-asset/**` (shared with the Move Asset pages; do not merge the two back into one active state).
 - **Layout CSS (namespaced to `.assets-shell #main-content`):** pointer cursor on links, buttons, `[role=button]`, `summary`, `label[for]` and `select` unless disabled; no underline on links or buttons, hover included. Tailwind 4 leaves buttons on the default cursor, so this rule is needed. The layout also renders a skip link, antialiased text and `h-dvh` with the sidebar toggle bound to the navbar.
 - **Page titles:** list "Assets - GoTeam Assets" with the description "Track every unit's status, custody and location."; detail "{TAG} - GoTeam Assets".
-- **Route behaviour:** the detail page is keyed by the tag (`definePageMeta key`), so moving between assets rebuilds it; `/assets/{tag}` redirects to `/assets/{tag}/activity-feed`.
+- **Route behaviour:** the detail page is keyed by the tag (`definePageMeta key`), so moving between assets rebuilds it; `/assets/{tag}` redirects to `/assets/{tag}/activity-feed`. `?moveDetails=1` on the asset URL opens the Move details drawer and is removed from the URL when the drawer closes.
+- **Scroll fade (app wide, `plugins/fadeScroll.client.ts` and `assets/css/main.css`):** an element with the class `fade-scroll-y` or `fade-scroll-x` fades its edges only while it really scrolls and only on an edge that still has content past it. One client plugin watches the marked elements (a `MutationObserver` for ones that appear or go, because menus and drawers are teleported; a `ResizeObserver`; a passive scroll listener on each) and batches its reads and writes on a 16 ms timer. It sets three classes: `is-overflowing` (content larger than the box), `is-at-start` (scrolled to the very top or left) and `is-at-end` (scrolled to the very bottom or right). The CSS (`--fade-scroll-size`, 20 px) turns the start fade off at the start and the end fade off at the end, so there is no fade at the very top or very bottom and none on a short list. Keep the class names or port the plugin.
 - **Simulator controls, every option:**
 
 | Control | Where | Options and effect |
@@ -422,7 +437,7 @@ Every item has an id (U3.2 and so on). The Feature coverage matrix at the end us
 - [ ] U1.1 Real list, detail, movements, assignment history and filters endpoints behind the same shapes
 - [ ] U1.2 Warranty end = order date + model warranty months, one shared helper; bucket edges (below 0, 0 to 30, 31 to 60, 61 to 90)
 - [ ] U1.3 Month counting days / 30 per row; total is the sum of the rows
-- [ ] U1.4 Mock seed, storage, hydration plugin and simulator refs removed
+- [ ] U1.4 Mock seed, storage, hydration plugin, mock file store (`assetFiles.ts`) and simulator refs removed
 - [ ] U1.5 The five date formats used exactly as listed in section 1
 - [ ] U1.6 Location rule (`locationView`) with its icon and tooltip text per kind
 - [ ] U1.7 Persistence: only the assets are saved; comments and legacy tags come from the real endpoints; hydration after mount
@@ -445,12 +460,12 @@ Every item has an id (U3.2 and so on). The Feature coverage matrix at the end us
 - [ ] U3.5 CSV: 10 columns, formula guard, quoting, `assets.csv`, toast with singular and plural
 - [ ] U3.6 Paging 10, 15, 25 with the footer text; page returns to 1 on a change and clamps
 - [ ] U3.7 Skeleton (6 rows, 18 cells), "No assets yet", "No assets match" with its button, Not found with Try again
-- [ ] U3.8 Actions cell: Move icon for an officer on a unit that has not exited, the minus otherwise
+- [ ] U3.8 Actions cell: Move icon that opens the move menu, for an officer on a unit that has not exited; the minus otherwise
 - [ ] U3.9 Only office locations are links; the tooltip text per kind
 - [ ] U3.10 Tag, Model and Purchase Order links styled blue, no underline, pointer; Model and PO toast
 
 **U4 List filters**
-- [ ] U4.1 The 11 filters with the live option lists, option order and "how each filter reads a unit"
+- [ ] U4.1 The 11 filters with the live option lists (the Status filter has the Legacy group after the lanes), option order and "how each filter reads a unit"
 - [ ] U4.2 Faceted counts in neutral subtle pills; a picked value with no units stays at 0
 - [ ] U4.3 Toolbar: search, five promoted filters with count pills, All filters with badge, Clear
 - [ ] U4.4 Asset Name depends on Asset Type (disabled, hint, dropped names)
@@ -463,7 +478,7 @@ Every item has an id (U3.2 and so on). The Feature coverage matrix at the end us
 
 **U5 Detail header and details card**
 - [ ] U5.1 Header row order, badge row with dots, sub-status chip, sticky from `sm`
-- [ ] U5.2 Role gating: Edit details, Move asset (also hidden when exited), Link PO; overflow menu with Delete asset only
+- [ ] U5.2 Role gating: Edit details, Move asset menu (also hidden when exited, where Move details shows instead), Link PO; overflow menu with Delete asset only
 - [ ] U5.3 Details card sections and fields in order with icons, empty states ("Not linked", muted minus)
 - [ ] U5.4 Edit mode fields, required marks, helper texts, Use GoTeam, PO Clear, currency radio
 - [ ] U5.5 Validation texts, finite cost check, first error scrolled to the centre
@@ -502,13 +517,13 @@ Every item has an id (U3.2 and so on). The Feature coverage matrix at the end us
 - [ ] U8.4 Pointer cursor and no underline rule; page titles
 - [ ] U8.5 Simulator bar, its refs and the hydration plugin removed from production
 - [ ] U8.6 Every page root and tab root uses `stage-enter`
+- [ ] U8.7 Scroll fade: marker classes, the plugin (or equivalent) setting `is-overflowing`, `is-at-start` and `is-at-end`, and the CSS that fades only an edge with content past it
 
 ## Known and accepted
 
 | Item | Why it stays |
 |---|---|
 | Placeholder text 3.5:1 and `text-muted` 4.47:1 on a tinted panel | Inherited from the design system; not changed here |
-| Mid file imports in `app/data/assets.ts` | An `import/first` lint warning only |
 | Module level mutable state in the mock store | Safe with `ssr: false`; removed with the mock |
 | Brand options derived from the model's first word | The database brand list is empty |
 | Asset Name lists are static | They come from the type's name list; a real API supplies them |
@@ -520,7 +535,7 @@ Every item has an id (U3.2 and so on). The Feature coverage matrix at the end us
 |---|---|
 | Route level splitting of the shared shell (667 KB gzip JS on the detail route, 104 files) | Over the 300 KB target for reasons outside this feature; split the shell by route in the real app |
 | Re-run Lighthouse on the ported build, warm, with compression on | The prototype numbers above are indicative only |
-| The 5 units on retired statuses (Defective, For Inspection, In Transit, Pending Disposal, Under Repair) are left out of the seed | The Legacy status group is not shown; add both back together |
+| No sample unit is on a Legacy status (Defective, For Inspection, In Transit, Pending Disposal, Under Repair) | The Legacy group is in the Status filter but every count reads 0; add sample units if reviewers want to see a count |
 | Two consecutive check outs with no check in between would give two open custody rows | None in today's data; the real assignment history decides |
 | Store hydrates after mount (brief flash of seed data) | Cosmetic; vanishes with a real API |
 | Open questions for the product owner: the status title wording, whether metric cards count server side, the 30/60/90 day bucket edges | A copy or query change each |
@@ -568,7 +583,7 @@ One row per feature. If a row is unticked in your head, the port is incomplete. 
 | Owner and Supplier cells | list | 3 | U3.2 | A22 |
 | Acquisition Cost cell | list (`money`) | 3, Easy to miss 10 | U3.2 | A23 |
 | Empty value mark (muted minus, "None") | comp `EmptyMark.vue` | 3 | U3.2 | A11 |
-| Actions cell and Move link | list | 3, Easy to miss 6 | U3.8 | A15, A24 |
+| Actions cell and Move menu | list, comp `MoveMenu.vue` | 3, Easy to miss 6 | U3.8 | A15, A24 |
 | Location icon, text, tooltip, office link only | list, `data/assets.ts` (`locationView`) | 1, 3, Known Traps 8 | U3.9, U1.6 | A13 |
 | Frozen columns, corners, hover | list | 3, Known Traps 1 | U3.3 | A7, A25 |
 | Skeleton rows | list | 3, Easy to miss 53 | U3.7 | A14, D38 |
@@ -655,7 +670,7 @@ One row per feature. If a row is unticked in your head, the port is incomplete. 
 | Legacy tag remove confirm | tab `legacy-tags.vue` | 7 | U7.8 | D17, D36 |
 | Empty and no match states per tab | tabs | 7, Edge Cases | U7.11 | D5, D29 |
 | Loading states per tab | tabs, list | Easy to miss 53 | U7.11 | D38 |
-| Documents open in a new tab | `data/assets.ts` (`openDoc`) | Easy to miss 57 | U7.10 | D24 |
+| Documents open in a new tab (real file from the file store, stand-in for sample paperwork) | `data/assets.ts` (`openDoc`), `data/assetFiles.ts` | Easy to miss 57 | U7.10 | D24 |
 | Layout, skip link, sizes | `layouts/assets.vue` | 8 | U8.1 | E13 |
 | Sidebar active states | `email/AmsSidebar.vue` | 8 | U8.2 | E10 |
 | Breadcrumbs | `email/TopNavbar.vue` | 8, Easy to miss 58 | U8.2 | E3 |
@@ -666,7 +681,12 @@ One row per feature. If a row is unticked in your head, the port is incomplete. 
 | Simulator controls (State, Viewing as, Scenario) | comp `SimulatorBar.vue` | 8 | U8.5 | E8 |
 | Simulator detail controls (Custody, Warranty, Transit) | comp `SimulatorBar.vue` | 8 | U8.5 | D13, C10, E8 |
 | Reset sample data, Hide | comp `SimulatorBar.vue` | 8 | U8.5 | E2, E9, E12 |
-| Persistence and tamper checks | `data/assets.ts`, `plugins/assetsStorage.client.ts` | 1, Easy to miss 52 | U1.7 | E1, E5, E6, E7 |
+| Persistence and tamper checks (`ams:assets:v5`) | `data/assets.ts`, `plugins/assetsStorage.client.ts` | 1, Easy to miss 52 | U1.7 | E1, E5, E6, E7 |
+| Real attached files kept so documents open after a reload | `data/assetFiles.ts`, `data/assets.ts` (`openDoc`) | 1, Easy to miss 57 | U1.4, U7.10 | D24 |
+| Legacy group in the Status filter | list (`facets`, `FILTERS`), `data/assets.ts` (`LEGACY_STATUSES`) | 1, 4 | U4.1 | B2, B3 |
+| Move menu on the list row and the detail header; Move details button | list, detail, comp `MoveMenu.vue`, `MoveDetailsDrawer.vue` | 3, 5, Easy to miss 6, 24 | U3.8, U5.2 | A15, A24 |
+| Charged Deduction and replacement link events in the Activity feed | `data/assetsDetail.ts` (`feedOf`), tab `activity-feed.vue` | Easy to miss 59 | U7.2 | D1, D20 |
+| Edge aware scroll fade | `plugins/fadeScroll.client.ts`, `assets/css/main.css` | 8, Easy to miss 60 | U8.7 | Visual check |
 | Date formats | `data/assets.ts`, `data/assetsDetail.ts` | 1 | U1.5 | D33, D35 |
 | Derived demo values | `data/assetsDetail.ts`, `data/assetsActivity.ts` | 1, Easy to miss 41 | U1.8 | D21 |
 | Month counting | `data/assetsActivity.ts` | Known Traps 6 | U1.3 | D12 |

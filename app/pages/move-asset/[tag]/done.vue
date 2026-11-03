@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Move Asset done (live: move-asset/[assetTag]/done.vue). Confirms the move, counts down 5 seconds, then
 // opens the asset, where the move is already in the Activity Feed and Movements tabs.
-import { findAsset } from '~/data/assets'
+import { findAsset, isExited } from '~/data/assets'
 
 definePageMeta({ layout: 'assets' })
 useSeoMeta({ title: 'Asset moved - GoTeam Assets' })
@@ -11,6 +11,8 @@ const router = useRouter()
 const tag = computed(() => String(route.params.tag ?? ''))
 // An unknown tag has nowhere to go but the entry page.
 const known = computed(() => !!findAsset(tag.value))
+// Move details exist for the two exits only.
+const exited = computed(() => { const a = findAsset(tag.value); return !!a && isExited(a) })
 const assetPath = computed(() => known.value ? `/assets/${encodeURIComponent(tag.value)}/movements` : '/move-asset')
 
 const countdown = ref(5)
@@ -55,6 +57,13 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
               variant="ghost"
               label="Move Another Asset"
               @click="go('/move-asset')"
+            />
+            <UButton
+              v-if="exited"
+              color="neutral"
+              variant="outline"
+              label="View Move Details"
+              @click="go(`/assets/${encodeURIComponent(tag)}?moveDetails=1`)"
             />
             <UButton
               color="primary"

@@ -237,26 +237,26 @@ const COLUMNS = ['Asset Tag', 'Seq', 'Emp No.', 'Custodian', 'Condition', 'Deplo
                 :key="l.seq"
                 class="group"
               >
-                <td class="px-4 py-5 text-center border-b border-default bg-card group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 text-center border-b border-default bg-card group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   <UCheckbox
                     :model-value="selected.includes(l.seq)"
                     :aria-label="`Select ${l.member}`"
                     @update:model-value="toggleRow(l.seq)"
                   />
                 </td>
-                <td class="px-4 py-5 text-sm text-blue-600 dark:text-blue-400 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 text-sm text-blue-600 dark:text-blue-400 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   {{ asset?.tag }}
                 </td>
-                <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   <span
                     class="inline-flex items-center justify-center size-5 rounded-full text-xs font-medium"
                     :class="l.isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
                   >{{ l.seq }}</span>
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   {{ l.empNo }}
                 </td>
-                <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   <span class="flex items-center gap-3">
                     <span
                       class="inline-flex items-center justify-center shrink-0 rounded-full size-6 text-xs font-normal bg-elevated text-muted"
@@ -279,7 +279,7 @@ const COLUMNS = ['Asset Tag', 'Seq', 'Emp No.', 'Custodian', 'Condition', 'Deplo
                     />
                   </span>
                 </td>
-                <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   <UBadge
                     :label="l.condition"
                     :color="l.condition === 'Brand New' ? 'primary' : 'neutral'"
@@ -287,10 +287,10 @@ const COLUMNS = ['Asset Tag', 'Seq', 'Emp No.', 'Custodian', 'Condition', 'Deplo
                     size="md"
                   />
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   {{ dmy(l.deployed) }}
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   <UBadge
                     v-if="l.inTransit"
                     label="Open"
@@ -300,10 +300,10 @@ const COLUMNS = ['Asset Tag', 'Seq', 'Emp No.', 'Custodian', 'Condition', 'Deplo
                   />
                   <span v-else>{{ dmy(l.received) }}</span>
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[300px] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60">
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[300px] group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))]">
                   {{ l.location }}
                 </td>
-                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[110px] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/60 tabular-nums">
+                <td class="px-4 py-5 text-sm text-muted whitespace-nowrap border-b border-default min-w-[110px] group-hover:bg-gray-50 dark:group-hover:bg-[color-mix(in_srgb,var(--color-gray-800)_60%,var(--color-card))] tabular-nums">
                   {{ ageLabel(l.usedMonths) }}
                 </td>
               </tr>

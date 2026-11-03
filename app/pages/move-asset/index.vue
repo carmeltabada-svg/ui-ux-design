@@ -3,7 +3,7 @@
 // tag typed by hand, then checks the tag exists before opening the move form. The camera scanner needs
 // the device and is not rebuilt here: the typed tag is the same path, and the sample tags below make it
 // quick to try.
-import { findAsset, allAssets, isExited, assetsSimRole } from '~/data/assets'
+import { findAsset, allAssets, isExited, assetsSimRole, moveHref, pullOutReason, type MoveKind } from '~/data/assets'
 
 definePageMeta({ layout: 'assets' })
 useSeoMeta({ title: 'Move Asset - GoTeam Assets' })
@@ -18,7 +18,8 @@ const exited = ref(false)
 const samples = computed(() => allAssets().filter(a => !isExited(a)).slice(0, 4).map(a => a.tag))
 const canMove = computed(() => assetsSimRole.value === 'officer')
 
-async function onSubmit() {
+// Enter in the tag field opens a Check In or Check Out; the Move Asset menu picks any of the three kinds.
+async function onSubmit(kind: MoveKind = 'move') {
   notFound.value = false
   exited.value = false
   const t = tag.value.trim()
@@ -33,7 +34,12 @@ async function onSubmit() {
     return
   }
   if (isExited(a)) { exited.value = true; return }
-  router.push(`/move-asset/${a.tag}/move`)
+  const blocked = kind === 'client' ? pullOutReason(a) : ''
+  if (blocked) {
+    toast.add({ title: 'Client Pull-Out isn\'t available for this unit', description: blocked, icon: 'i-lucide-info', color: 'info' })
+    return
+  }
+  router.push(moveHref(a.tag, kind))
 }
 </script>
 
@@ -66,7 +72,7 @@ async function onSubmit() {
         <form
           v-else
           class="p-5 flex flex-col gap-4"
-          @submit.prevent="onSubmit"
+          @submit.prevent="onSubmit('move')"
         >
           <div class="flex flex-col items-center justify-center gap-2 min-h-[220px] rounded-lg border border-dashed border-default bg-elevated/40 text-muted text-center px-6">
             <UIcon
@@ -107,6 +113,10 @@ async function onSubmit() {
               class="text-xs text-red-600 mt-1.5"
             >
               This unit has already been returned or pulled out, so it can't be moved again.
+              <NuxtLink
+                :to="`/assets/${encodeURIComponent(tag.trim())}?moveDetails=1`"
+                class="text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >View move details</NuxtLink>
             </p>
           </div>
 
@@ -127,12 +137,15 @@ async function onSubmit() {
           </div>
 
           <div class="flex justify-end">
-            <UButton
-              type="submit"
-              color="primary"
-              :loading="loading"
-              label="Find Asset"
-            />
+            <AssetsMoveMenu @select="onSubmit">
+              <UButton
+                type="button"
+                color="primary"
+                :loading="loading"
+                label="Move Asset"
+                trailing-icon="i-lucide-chevron-down"
+              />
+            </AssetsMoveMenu>
           </div>
         </form>
       </section>

@@ -9,10 +9,6 @@ const IN_USE = 'GT-CE-LTP-1233-0926-0013' // Monthly Rental, in use by a team me
 const BYOD = 'GT-CE-MNT-1151-0426-0037' // BYOD, so Client Pull-Out is allowed
 const EXITED = 'GT-CE-LTP-0826-0005' // already a Supplier Return
 
-async function pickStatus(page: Page, name: string) {
-  await page.getByRole('button', { name: /Select status/ }).click()
-  await page.getByText(name, { exact: true }).last().click()
-}
 
 async function attach(page: Page, name = 'agreement.pdf') {
   await page.locator('input[type=file]').setInputFiles({ name, mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') })
@@ -68,8 +64,7 @@ test.describe('Assets list', () => {
 
 test.describe('Move Asset', () => {
   test('a blocked save scrolls to the banner and marks the missing fields', async ({ page }) => {
-    await page.goto(`/move-asset/${BYOD}/move`)
-    await pickStatus(page, 'Client Pull-Out')
+    await page.goto(`/move-asset/${BYOD}/move?kind=client`)
     await page.getByRole('button', { name: 'Move Asset' }).last().click()
     const banner = page.getByRole('alert')
     await expect(banner).toBeVisible()
@@ -78,8 +73,7 @@ test.describe('Move Asset', () => {
   })
 
   test('Supplier Return with a document: confirm, persists after a reload, shows in Movements, document opens in a new tab', async ({ page }) => {
-    await page.goto(`/move-asset/${IN_USE}/move`)
-    await pickStatus(page, 'Supplier Return')
+    await page.goto(`/move-asset/${IN_USE}/move?kind=supplier`)
     await attach(page)
     await page.locator('#reason').fill('Battery swelling on arrival.')
     await page.getByRole('button', { name: 'Move Asset' }).last().click()
@@ -91,7 +85,7 @@ test.describe('Move Asset', () => {
 
     await page.goto(`/assets/${IN_USE}/movements`)
     await page.reload() // the saved data must survive a refresh
-    await expect(page.getByRole('heading', { name: 'Checked in', exact: true }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Checked out', exact: true }).first()).toBeVisible()
     await expect(page.getByText('Supplier Return').first()).toBeVisible()
     // the earlier check out to the team member is still there
     await expect(page.getByText('Mara Lim').first()).toBeVisible()
@@ -154,10 +148,82 @@ test.describe('Asset detail', () => {
 
   test('tampered saved data is ignored', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('ams:assets:v4', JSON.stringify({ '__proto__': { status: 'In Use', history: [], cost: 1, polluted: true }, 'GT-CE-LTP-1233-0926-0013': { status: 'Nope', history: 'x', cost: 1 } }))
+      localStorage.setItem('ams:assets:v5', JSON.stringify({ '__proto__': { status: 'In Use', history: [], cost: 1, polluted: true }, 'GT-CE-LTP-1233-0926-0013': { status: 'Nope', history: 'x', cost: 1 } }))
     })
     await page.goto('/assets')
     await expect(page.locator('tbody tr').first()).toBeVisible()
     expect(await page.evaluate(() => ({} as Record<string, unknown>).polluted)).toBeUndefined()
+  })
+})
+
+const OUTRIGHT = 'GT-CE-LTP-1180-0326-0042' // Outright Purchase: has same-supplier units to offer as a replacement
+
+test.describe('Every kind of move', () => {
+  test('the Move asset menu on the list row offers the three kinds and explains the one that is off', async ({ page }) => {
+    await page.goto('/assets')
+    await page.getByRole('button', { name: `Move ${IN_USE}` }).click()
+    await expect(page.getByRole('menuitem', { name: /Check In or Check Out/ })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /Return to supplier/ })).toBeVisible()
+    await page.getByRole('menuitem', { name: /Client pull-out/ }).click() // a Monthly Rental: toast, no form
+    await expect(page.locator('[data-slot=title]').filter({ hasText: 'available for this unit' })).toBeVisible()
+    await expect(page).toHaveURL(/\/assets$/)
+  })
+
+  test('a Check In to an asset location with a legacy status shows in Movements', async ({ page }) => {
+    await page.goto(`/move-asset/${IN_USE}/move`)
+    await expect(page.getByRole('radio', { name: 'Check In' })).toHaveAttribute('aria-checked', 'true') // the unit is out
+    await page.locator('#asset-location').click()
+    await page.getByRole('option', { name: /IT Storage Room/ }).click()
+    await page.locator('label[for=new-status] + div button').click()
+    await expect(page.getByText('Legacy', { exact: true })).toBeVisible() // the Legacy group is in the list
+    await page.getByRole('button', { name: 'Under Repair', exact: true }).click()
+    await page.getByRole('button', { name: 'Move Asset', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/move-asset/${IN_USE}/done`))
+    await page.goto(`/assets/${IN_USE}/movements`)
+    await expect(page.getByText('IT Storage Room').first()).toBeVisible()
+    await expect(page.getByText('Under Repair').first()).toBeVisible()
+  })
+
+  test('a Check Out to a team member, chosen by employee number or email, records the custodian', async ({ page }) => {
+    await page.goto(`/move-asset/${IN_USE}/move`)
+    await page.getByRole('radio', { name: 'Check Out' }).click()
+    await page.locator('#member-to').fill('go.team') // part of an email
+    await page.getByRole('listbox').getByRole('option').first().click()
+    await page.locator('label[for=new-status] + div button').click()
+    await page.getByRole('button', { name: 'In Use', exact: true }).click()
+    await page.getByRole('button', { name: 'Move Asset', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/move-asset/${IN_USE}/done`))
+  })
+
+  test('Charged Deduction documents stay on screen and switch on only for that status', async ({ page }) => {
+    await page.goto(`/move-asset/${IN_USE}/move`)
+    const docs = page.locator('fieldset').filter({ hasText: 'Authority to Deduct' })
+    expect(await docs.evaluate(e => (e as HTMLFieldSetElement).disabled)).toBe(true)
+    await page.locator('label[for=new-status] + div button').click()
+    await page.getByRole('button', { name: 'Charged Deduction', exact: true }).click()
+    expect(await docs.evaluate(e => (e as HTMLFieldSetElement).disabled)).toBe(false)
+  })
+
+  test('the Move details drawer opens from a link, and the replacement can be added later', async ({ page }) => {
+    await page.goto(`/move-asset/${OUTRIGHT}/move?kind=supplier`)
+    await attach(page)
+    await page.locator('#reason').fill('Battery swelling on arrival.')
+    await page.getByRole('button', { name: 'Move Asset', exact: true }).click()
+    await page.getByRole('button', { name: 'Return to supplier' }).click()
+    await expect(page).toHaveURL(/done/)
+    await page.goto(`/assets/${OUTRIGHT}?moveDetails=1`)
+    await expect(page.getByText('What was recorded when this unit left')).toBeVisible()
+    await page.getByRole('button', { name: 'Add replacement' }).click()
+    await page.locator('#rep-edit').click()
+    await page.getByRole('button', { name: /GT-CE-LTP-1180-0326-0043/ }).first().click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('GT-CE-LTP-1180-0326-0043 · Lenovo ThinkPad E14')).toBeVisible()
+  })
+
+  test('the Legacy statuses are in the list\'s Status filter', async ({ page }) => {
+    await page.goto('/assets')
+    await page.getByLabel('Filter by Status').click()
+    await expect(page.getByRole('option', { name: /Under Repair/ })).toBeVisible()
+    await expect(page.getByRole('option', { name: /Pending Disposal/ })).toBeVisible()
   })
 })
